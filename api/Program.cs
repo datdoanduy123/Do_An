@@ -1,0 +1,117 @@
+using Infrastructure.Persistence;
+using Infrastructure.Services;
+using Infrastructure.Repositories;
+using Apllication.IService;
+using Apllication.Service;
+using Apllication.IRepositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using api.Attributes;
+using Microsoft.AspNetCore.Authorization;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Dang ky Repository
+builder.Services.AddScoped<INguoiDungRepository, NguoiDungRepository>();
+builder.Services.AddScoped<IQuyenRepository, QuyenRepository>();
+builder.Services.AddScoped<IVaiTroRepository, VaiTroRepository>();
+builder.Services.AddScoped<INhomQuyenRepository, NhomQuyenRepository>();
+builder.Services.AddScoped<IDuAnRepository, DuAnRepository>();
+builder.Services.AddScoped<ICongViecRepository, CongViecRepository>();
+
+// Dang ky Service
+builder.Services.AddScoped<IDichVuToken, DichVuToken>();
+builder.Services.AddScoped<ITaiKhoanService, TaiKhoanService>();
+builder.Services.AddScoped<INguoiDungService, NguoiDungService>();
+builder.Services.AddScoped<IMatKhauService, MatKhauService>();
+builder.Services.AddScoped<IQuyenService, QuyenService>();
+builder.Services.AddScoped<IVaiTroService, VaiTroService>();
+builder.Services.AddScoped<INhomQuyenService, NhomQuyenService>();
+builder.Services.AddScoped<IDuAnService, DuAnService>();
+builder.Services.AddScoped<ICongViecService, CongViecService>();
+
+// Dang ky Phan quyen Attribute
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, QuyenHanPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, QuyenHanHandler>();
+
+// Cấu hình xác thực bằng JWT
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(tùyChỉnh =>
+    {
+        tùyChỉnh.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:KhoaBimat"]!)),
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:NguoiPhatHanh"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:NguoiDung"],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+            NameClaimType = System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.UniqueName,
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role
+        };
+    });
+
+// Add services to the container.
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "DoAn API", Version = "v1" });
+    
+    // Cau hinh JWT cho Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+            },
+            new List<string>()
+        }
+    });
+});
+
+var app = builder.Build();
+
+// Sử dụng Middleware xử lý lỗi toàn cục
+app.UseMiddleware<api.Middlewares.ExceptionMiddleware>();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+app.UseAuthentication(); // Thêm dòng này để kích hoạt xác thực
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();

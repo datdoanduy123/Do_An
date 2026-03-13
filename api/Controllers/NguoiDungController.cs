@@ -1,0 +1,97 @@
+using api.Attributes;
+using Apllication.DTOs;
+using Apllication.IService;
+using Microsoft.AspNetCore.Mvc;
+
+namespace api.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class NguoiDungController : BaseController
+    {
+        private readonly INguoiDungService _nguoiDungService;
+
+        public NguoiDungController(INguoiDungService nguoiDungService)
+        {
+            _nguoiDungService = nguoiDungService;
+        }
+
+        [QuyenHan("USER_CREATE")]
+        [HttpPost("tao-nguoi-dung")]
+        public async Task<IActionResult> TaoNguoiDung(TaoNguoiDungDto taoNguoiDungDto)
+        {
+            try
+            {
+                var user = await _nguoiDungService.TaoNguoiDungAsync(taoNguoiDungDto);
+                return SuccessResponse(user, "Tao nguoi dung thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        // [QuyenHan("USER_VIEW")] // Gia su can quyen de xem
+        [HttpGet("danh-sach")]
+        public async Task<IActionResult> LayDanhSach([FromQuery] NguoiDungQueryDto query)
+        {
+            try
+            {
+                var result = await _nguoiDungService.LayDanhSachNguoiDungAsync(query);
+                return SuccessResponse(result, "Lay danh sach nguoi dung thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        // [QuyenHan("USER_VIEW")]
+        [HttpGet("{id}")]
+        public async Task<IActionResult> ChiTiet(int id)
+        {
+            try
+            {
+                var result = await _nguoiDungService.LayTheoIdAsync(id);
+                if (result == null) return ErrorResponse(404, "Khong tim thay nguoi dung.");
+                return SuccessResponse(result, "Lay thong tin chi tiet thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        // [QuyenHan("USER_UPDATE")]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatNguoiDungDto dto)
+        {
+            try
+            {
+                var result = await _nguoiDungService.CapNhatAsync(id, dto);
+                if (result) return SuccessResponse(null!, "Cap nhat thong tin thanh cong.");
+                return ErrorResponse(400, "Khong the cap nhat thong tin.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        // [QuyenHan("USER_DELETE")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Xoa(int id)
+        {
+            try
+            {
+                var result = await _nguoiDungService.XoaMemAsync(id);
+                if (result) return SuccessResponse(null!, "Xoa nguoi dung thanh cong (Xoa mem).");
+                return ErrorResponse(400, "Khong the xoa nguoi dung.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+    }
+}
