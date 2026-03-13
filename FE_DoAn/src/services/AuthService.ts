@@ -25,10 +25,22 @@ class AuthService {
   async login(data: DangNhapDto): Promise<LoginResponse> {
     try {
       const response = await axios.post(`${API_URL}/dang-nhap`, data);
-      return response.data;
+      // Backend trả về { StatusCode, Message, Data }
+      const resData = response.data;
+      
+      return {
+        success: resData.statusCode === 200,
+        message: resData.message,
+        data: resData.data
+      };
     } catch (error: any) {
-      if (error.response) {
-        return error.response.data;
+      if (error.response && error.response.data) {
+        const resData = error.response.data;
+        return {
+          success: false,
+          message: resData.message || 'Lỗi đăng nhập.',
+          data: resData.details
+        };
       }
       return {
         success: false,

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AuthService from '../../services/AuthService';
 import './Login.css';
 
@@ -7,6 +8,7 @@ import './Login.css';
  * Hiển thị giao diện đăng nhập với phong cách Glassmorphism.
  */
 const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const [tenDangNhap, setTenDangNhap] = useState('');
   const [matKhau, setMatKhau] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +30,9 @@ const LoginPage: React.FC = () => {
         if (response.data && response.data.token) {
           AuthService.setSession(response.data.token);
         }
-        alert('Đăng nhập thành công!');
-        // Chuyển hướng người dùng (Redirect) ở đây nếu cần
+        
+        // Chuyển hướng người dùng sang trang Dashboard
+        navigate('/dashboard');
       } else {
         setError(response.message || 'Tên đăng nhập hoặc mật khẩu không đúng.');
       }
