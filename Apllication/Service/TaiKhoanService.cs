@@ -18,7 +18,7 @@ namespace Apllication.Service
             _matKhauService = matKhauService;
         }
 
-        public async Task<NguoiDungDto?> DangNhapAsync(DangNhapDto dangNhapDto)
+        public async Task<DangNhapKetQuaDto?> DangNhapAsync(DangNhapDto dangNhapDto)
         {
             var nguoiDung = await _nguoiDungRepo.LayTheoTenDangNhapAsync(dangNhapDto.TenDangNhap);
 
@@ -28,17 +28,25 @@ namespace Apllication.Service
             }
 
             // Lay danh sach vai tro cua nguoi dung
-            var vaiTroMas = await _nguoiDungRepo.LayDanhSachMaVaiTroCuaNguoiDungAsync(nguoiDung.Id);
+            var vaiTros = await _nguoiDungRepo.LayDanhSachMaVaiTroCuaNguoiDungAsync(nguoiDung.Id);
 
-            return new NguoiDungDto
+            // Tao Token JWT
+            var token = _tokenService.TaoToken(nguoiDung, vaiTros);
+
+            return new DangNhapKetQuaDto
             {
-                Id = nguoiDung.Id,
-                TenDangNhap = nguoiDung.Username,
-                HoTen = nguoiDung.FullName,
-                Email = nguoiDung.Email,
-                DienThoai = nguoiDung.DienThoai,
-                CreatedAt = nguoiDung.CreatedAt,
-                VaiTros = nguoiDung.NguoiDungVaiTros.Select(uv => uv.VaiTro.TenVaiTro).ToList()            };
+                NguoiDung = new NguoiDungDto
+                {
+                    Id = nguoiDung.Id,
+                    TenDangNhap = nguoiDung.Username,
+                    HoTen = nguoiDung.FullName,
+                    Email = nguoiDung.Email,
+                    DienThoai = nguoiDung.DienThoai,
+                    CreatedAt = nguoiDung.CreatedAt,
+                    VaiTros = vaiTros
+                },
+                Token = token
+            };
         }
     }
 }
