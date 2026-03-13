@@ -46,7 +46,7 @@ namespace api.Controllers
             }
         }
 
-        // [QuyenHan("USER_VIEW")]
+        [QuyenHan("XEM_USER")]
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
