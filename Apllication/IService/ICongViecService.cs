@@ -16,6 +16,6 @@ namespace Apllication.IService
         /// <summary>
         /// Luồng giao việc thủ công từ PM đến nhân viên.
         /// </summary>
-        Task<bool> GiaoViecThuCongAsync(GiaoViecThuCongDto dto);
+        Task<bool> GiaoViecThuCongAsync(GiaoViecThuCongDto dto, int assignerId);
     }
 }

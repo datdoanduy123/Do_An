@@ -80,7 +80,13 @@ namespace Apllication.Service
 
             // 1. Cập nhật trạng thái và thời gian thực tế của Task
             cv.TrangThai = dto.TrangThai;
-            cv.ThoiGianThucTe = (cv.ThoiGianThucTe ?? 0) + dto.ThoiGianLamViecThem;
+            cv.ThoiGianThucTe = (cv.ThoiGianThucTe ?? 0) + (dto.ThoiGianLamViecThem > 0 ? dto.ThoiGianLamViecThem : 0);
+
+            // Tự động gán ngày kết thúc nếu hoàn thành
+            if (dto.TrangThai == TrangThaiCongViec.Done)
+            {
+                cv.NgayKetThuc = DateTime.UtcNow;
+            }
 
             // 2. Tạo bản ghi nhật ký (Task Log)
             var log = new NhatKyCongViec
@@ -88,7 +94,7 @@ namespace Apllication.Service
                 CongViecId = id,
                 NguoiCapNhatId = updaterId,
                 SoGioLamViec = dto.ThoiGianLamViecThem,
-                GhiChu = dto.GhiChu,
+                GhiChu = dto.GhiChu ?? $"Cập nhật trạng thái sang {dto.TrangThai}",
                 NgayCapNhat = DateTime.UtcNow
             };
 
@@ -98,13 +104,24 @@ namespace Apllication.Service
             return await _repository.UpdateAsync(cv);
         }
 
-        public async Task<bool> GiaoViecThuCongAsync(GiaoViecThuCongDto dto)
+        public async Task<bool> GiaoViecThuCongAsync(GiaoViecThuCongDto dto, int assignerId)
         {
             var cv = await _repository.GetByIdAsync(dto.CongViecId);
             if (cv == null) return false;
 
             var user = await _userRepository.LayTheoIdAsync(dto.AssigneeId);
             if (user == null) return false;
+
+            // Ghi nhận lịch sử giao việc
+            var log = new NhatKyCongViec
+            {
+                CongViecId = dto.CongViecId,
+                NguoiCapNhatId = assignerId,
+                SoGioLamViec = 0,
+                GhiChu = $"Giao việc cho nhân viên: {user.FullName}",
+                NgayCapNhat = DateTime.UtcNow
+            };
+            await _taskLogRepository.AddAsync(log);
 
             cv.AssigneeId = dto.AssigneeId;
             cv.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; 

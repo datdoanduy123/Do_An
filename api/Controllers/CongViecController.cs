@@ -99,7 +99,7 @@ namespace api.Controllers
         {
             try
             {
-                var result = await _congViecService.GiaoViecThuCongAsync(dto);
+                var result = await _congViecService.GiaoViecThuCongAsync(dto, CurrentUserId);
                 if (result) return SuccessResponse(null!, "Giao viec thu cong thanh cong.");
                 return ErrorResponse(400, "Khong the giao viec cho nhan vien nay.");
             }
