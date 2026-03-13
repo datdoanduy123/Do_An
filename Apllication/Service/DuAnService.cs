@@ -2,6 +2,7 @@ using Apllication.DTOs.DuAn;
 using Apllication.IRepositories;
 using Apllication.IService;
 using Domain.Entities;
+using Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,7 +59,7 @@ namespace Apllication.Service
                 MoTa = dto.MoTa,
                 NgayBatDau = dto.NgayBatDau,
                 NgayKetThuc = dto.NgayKetThuc,
-                TrangThai = "Planning",
+                TrangThai = TrangThaiDuAn.Planning,
                 CreatedAt = DateTime.UtcNow
             };
 

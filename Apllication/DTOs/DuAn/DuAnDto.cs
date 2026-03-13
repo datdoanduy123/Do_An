@@ -1,3 +1,4 @@
+using Domain.Enums;
 using System;
 
 namespace Apllication.DTOs.DuAn
@@ -9,7 +10,7 @@ namespace Apllication.DTOs.DuAn
         public string? MoTa { get; set; }
         public DateTime NgayBatDau { get; set; }
         public DateTime? NgayKetThuc { get; set; }
-        public string TrangThai { get; set; } = string.Empty;
+        public TrangThaiDuAn TrangThai { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
@@ -27,6 +28,6 @@ namespace Apllication.DTOs.DuAn
         public string? MoTa { get; set; }
         public DateTime NgayBatDau { get; set; }
         public DateTime? NgayKetThuc { get; set; }
-        public string TrangThai { get; set; } = string.Empty;
+        public TrangThaiDuAn TrangThai { get; set; }
     }
 }

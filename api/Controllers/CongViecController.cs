@@ -1,5 +1,6 @@
 using Apllication.DTOs.CongViec;
 using Apllication.IService;
+using Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
@@ -61,7 +62,7 @@ namespace api.Controllers
         }
 
         [HttpPatch("{id}/cap-nhat-trang-thai")]
-        public async Task<IActionResult> CapNhatTrangThai(int id, [FromQuery] string status)
+        public async Task<IActionResult> CapNhatTrangThai(int id, [FromQuery] TrangThaiCongViec status)
         {
             try
             {

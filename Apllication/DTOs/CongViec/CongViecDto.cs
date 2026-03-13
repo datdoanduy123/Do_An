@@ -1,3 +1,4 @@
+using Domain.Enums;
 using System;
 
 namespace Apllication.DTOs.CongViec
@@ -9,13 +10,13 @@ namespace Apllication.DTOs.CongViec
         public int? SprintId { get; set; }
         public string TieuDe { get; set; } = string.Empty;
         public string? MoTa { get; set; }
-        public string LoaiCongViec { get; set; } = string.Empty;
-        public string DoUuTien { get; set; } = string.Empty;
-        public string TrangThai { get; set; } = string.Empty;
+        public LoaiCongViec LoaiCongViec { get; set; }
+        public DoUuTien DoUuTien { get; set; }
+        public TrangThaiCongViec TrangThai { get; set; }
         public int StoryPoints { get; set; }
         public int? AssigneeId { get; set; }
         public string? AssigneeName { get; set; }
-        public string PhuongThucGiaoViec { get; set; } = string.Empty;
+        public PhuongThucGiaoViec PhuongThucGiaoViec { get; set; }
         public double ThoiGianUocTinh { get; set; }
         public double? ThoiGianThucTe { get; set; }
         public DateTime? NgayBatDau { get; set; }
@@ -28,8 +29,8 @@ namespace Apllication.DTOs.CongViec
         public int? SprintId { get; set; }
         public string TieuDe { get; set; } = string.Empty;
         public string? MoTa { get; set; }
-        public string LoaiCongViec { get; set; } = string.Empty;
-        public string DoUuTien { get; set; } = "Medium";
+        public LoaiCongViec LoaiCongViec { get; set; }
+        public DoUuTien DoUuTien { get; set; } = DoUuTien.Medium;
         public int StoryPoints { get; set; }
         public double ThoiGianUocTinh { get; set; }
         public DateTime? NgayBatDau { get; set; }

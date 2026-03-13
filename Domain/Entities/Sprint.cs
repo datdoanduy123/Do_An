@@ -1,3 +1,4 @@
+using Domain.Enums;
 using System;
 using System.Collections.Generic;
 
@@ -25,7 +26,7 @@ namespace Domain.Entities
         /// </summary>
         public int MucTieuStoryPoints { get; set; }
 
-        public string TrangThai { get; set; } = "Planned"; // Planned, Active, Closed
+        public TrangThaiSprint TrangThai { get; set; } = TrangThaiSprint.New;
 
         // Một Sprint chứa nhiều công việc
         public ICollection<CongViec> CongViecs { get; set; } = new List<CongViec>();

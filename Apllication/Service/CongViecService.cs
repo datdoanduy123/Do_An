@@ -2,6 +2,7 @@ using Apllication.DTOs.CongViec;
 using Apllication.IRepositories;
 using Apllication.IService;
 using Domain.Entities;
+using Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,12 +45,12 @@ namespace Apllication.Service
                 MoTa = dto.MoTa,
                 LoaiCongViec = dto.LoaiCongViec,
                 DoUuTien = dto.DoUuTien,
-                TrangThai = "Todo",
+                TrangThai = TrangThaiCongViec.Todo,
                 StoryPoints = dto.StoryPoints,
                 ThoiGianUocTinh = dto.ThoiGianUocTinh,
                 NgayBatDau = dto.NgayBatDau,
                 NgayKetThuc = dto.NgayKetThuc,
-                PhuongThucGiaoViec = "Manual",
+                PhuongThucGiaoViec = PhuongThucGiaoViec.Manual,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -57,7 +58,7 @@ namespace Apllication.Service
             return MapToDto(ketQua);
         }
 
-        public async Task<bool> UpdateStatusAsync(int id, string status)
+        public async Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status)
         {
             var cv = await _repository.GetByIdAsync(id);
             if (cv == null) return false;
@@ -75,7 +76,7 @@ namespace Apllication.Service
             if (user == null) return false;
 
             cv.AssigneeId = dto.AssigneeId;
-            cv.PhuongThucGiaoViec = "Manual"; // Luôn là Manual khi PM gán thủ công
+            cv.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; 
             cv.NgayBatDau = DateTime.UtcNow;
 
             return await _repository.UpdateAsync(cv);

@@ -12,7 +12,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(x => x.Id);
 
             builder.Property(x => x.TenDuAn).IsRequired().HasMaxLength(255);
-            builder.Property(x => x.TrangThai).HasMaxLength(50);
+            builder.Property(x => x.TrangThai).HasConversion<string>().HasMaxLength(50);
 
             // Cấu hình quan hệ: Một Dự án có nhiều tài liệu
             builder.HasMany(x => x.TaiLieuDuAns)

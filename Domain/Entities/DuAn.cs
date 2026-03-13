@@ -1,3 +1,4 @@
+using Domain.Enums;
 using System;
 using System.Collections.Generic;
 
@@ -22,7 +23,7 @@ namespace Domain.Entities
         /// <summary>
         /// Trạng thái dự án (Ví dụ: Planning, Active, Completed, Cancelled)
         /// </summary>
-        public string TrangThai { get; set; } = "Planning";
+        public TrangThaiDuAn TrangThai { get; set; } = TrangThaiDuAn.Planning;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

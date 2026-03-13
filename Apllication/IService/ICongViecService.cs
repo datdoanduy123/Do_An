@@ -1,4 +1,5 @@
 using Apllication.DTOs.CongViec;
+using Domain.Enums;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -9,7 +10,7 @@ namespace Apllication.IService
         Task<CongViecDto> GetByIdAsync(int id);
         Task<IEnumerable<CongViecDto>> GetByProjectIdAsync(int projectId);
         Task<CongViecDto> CreateAsync(TaoCongViecDto dto);
-        Task<bool> UpdateStatusAsync(int id, string status);
+        Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status);
         
         /// <summary>
         /// Luồng giao việc thủ công từ PM đến nhân viên.

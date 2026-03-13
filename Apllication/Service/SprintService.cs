@@ -2,6 +2,7 @@ using Apllication.DTOs.Sprint;
 using Apllication.IRepositories;
 using Apllication.IService;
 using Domain.Entities;
+using Domain.Enums;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,7 +41,7 @@ namespace Apllication.Service
                 NgayBatDau = dto.NgayBatDau,
                 NgayKetThuc = dto.NgayKetThuc,
                 MucTieuStoryPoints = dto.MucTieuStoryPoints,
-                TrangThai = "New"
+                TrangThai = TrangThaiSprint.New
             };
 
             var ketQua = await _repository.AddAsync(s);

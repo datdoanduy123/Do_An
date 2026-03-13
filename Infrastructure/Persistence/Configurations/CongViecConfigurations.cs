@@ -12,10 +12,10 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(x => x.Id);
 
             builder.Property(x => x.TieuDe).IsRequired().HasMaxLength(500);
-            builder.Property(x => x.LoaiCongViec).HasMaxLength(100);
-            builder.Property(x => x.DoUuTien).HasMaxLength(50);
-            builder.Property(x => x.TrangThai).HasMaxLength(50);
-            builder.Property(x => x.PhuongThucGiaoViec).HasMaxLength(50);
+            builder.Property(x => x.LoaiCongViec).HasConversion<string>().HasMaxLength(50);
+            builder.Property(x => x.DoUuTien).HasConversion<string>().HasMaxLength(50);
+            builder.Property(x => x.TrangThai).HasConversion<string>().HasMaxLength(50);
+            builder.Property(x => x.PhuongThucGiaoViec).HasConversion<string>().HasMaxLength(50);
 
             builder.Property(x => x.ThoiGianUocTinh).IsRequired();
             builder.Property(x => x.ThoiGianThucTe).IsRequired(false);

@@ -1,3 +1,4 @@
+using Domain.Enums;
 using System;
 
 namespace Apllication.DTOs.Sprint
@@ -10,7 +11,7 @@ namespace Apllication.DTOs.Sprint
         public DateTime NgayBatDau { get; set; }
         public DateTime NgayKetThuc { get; set; }
         public int MucTieuStoryPoints { get; set; }
-        public string TrangThai { get; set; } = string.Empty;
+        public TrangThaiSprint TrangThai { get; set; }
     }
 
     public class TaoSprintDto
@@ -28,6 +29,6 @@ namespace Apllication.DTOs.Sprint
         public DateTime NgayBatDau { get; set; }
         public DateTime NgayKetThuc { get; set; }
         public int MucTieuStoryPoints { get; set; }
-        public string TrangThai { get; set; } = string.Empty;
+        public TrangThaiSprint TrangThai { get; set; }
     }
 }

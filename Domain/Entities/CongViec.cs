@@ -1,3 +1,4 @@
+using Domain.Enums;
 using System;
 using System.Collections.Generic;
 
@@ -24,17 +25,17 @@ namespace Domain.Entities
         /// <summary>
         /// Loại công việc: Frontend, Backend, Tester, DevOps...
         /// </summary>
-        public string LoaiCongViec { get; set; } = string.Empty;
+        public LoaiCongViec LoaiCongViec { get; set; }
 
         /// <summary>
         /// Độ ưu tiên: Low, Medium, High, Urgent
         /// </summary>
-        public string DoUuTien { get; set; } = "Medium";
+        public DoUuTien DoUuTien { get; set; } = DoUuTien.Medium;
 
         /// <summary>
         /// Trạng thái: Todo, InProgress, Review, Done
         /// </summary>
-        public string TrangThai { get; set; } = "Todo";
+        public TrangThaiCongViec TrangThai { get; set; } = TrangThaiCongViec.Todo;
 
         /// <summary>
         /// Điểm độ khó (Story Points) theo dãy Fibonacci (1, 2, 3, 5, 8, 13...).
@@ -50,7 +51,7 @@ namespace Domain.Entities
         /// <summary>
         /// Phương thức giao việc: "Manual" (Thủ công) hoặc "AI" (Tự động bởi AI).
         /// </summary>
-        public string PhuongThucGiaoViec { get; set; } = "Manual";
+        public PhuongThucGiaoViec PhuongThucGiaoViec { get; set; } = PhuongThucGiaoViec.Manual;
 
         /// <summary>
         /// Giải thích của AI tại sao lại chọn người này hoặc tại sao lại đưa vào Sprint này.
