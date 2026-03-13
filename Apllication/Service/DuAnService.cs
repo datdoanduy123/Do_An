@@ -51,7 +51,7 @@ namespace Apllication.Service
             });
         }
 
-        public async Task<DuAnDto> CreateAsync(TaoDuAnDto dto)
+        public async Task<DuAnDto> CreateAsync(TaoDuAnDto dto, int creatorId)
         {
             var duAn = new DuAn
             {
@@ -60,6 +60,7 @@ namespace Apllication.Service
                 NgayBatDau = dto.NgayBatDau,
                 NgayKetThuc = dto.NgayKetThuc,
                 TrangThai = TrangThaiDuAn.Planning,
+                CreatedBy = creatorId,
                 CreatedAt = DateTime.UtcNow
             };
 

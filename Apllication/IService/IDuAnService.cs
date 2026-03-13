@@ -9,7 +9,7 @@ namespace Apllication.IService
     {
         Task<DuAnDto> GetByIdAsync(int id);
         Task<IEnumerable<DuAnDto>> GetAllAsync();
-        Task<DuAnDto> CreateAsync(TaoDuAnDto dto);
+        Task<DuAnDto> CreateAsync(TaoDuAnDto dto, int creatorId);
         Task<bool> UpdateAsync(int id, CapNhatDuAnDto dto);
         Task<bool> DeleteAsync(int id);
     }

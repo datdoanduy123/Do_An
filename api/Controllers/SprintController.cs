@@ -51,7 +51,7 @@ namespace api.Controllers
         {
             try
             {
-                var result = await _sprintService.CreateAsync(dto);
+                var result = await _sprintService.CreateAsync(dto, CurrentUserId);
                 return SuccessResponse(result, "Tao sprint thanh cong.");
             }
             catch (Exception ex)

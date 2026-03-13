@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260313045011_AddCreatedByToEntities")]
+    partial class AddCreatedByToEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -202,39 +205,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("VaiTroId");
 
                     b.ToTable("NguoiDungVaiTros");
-                });
-
-            modelBuilder.Entity("Domain.Entities.NhatKyCongViec", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CongViecId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("GhiChu")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime>("NgayCapNhat")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("NguoiCapNhatId")
-                        .HasColumnType("int");
-
-                    b.Property<double>("SoGioLamViec")
-                        .HasColumnType("float");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CongViecId");
-
-                    b.HasIndex("NguoiCapNhatId");
-
-                    b.ToTable("NhatKyCongViecs", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.NhomQuyen", b =>
@@ -614,25 +584,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("NguoiDung");
 
                     b.Navigation("VaiTro");
-                });
-
-            modelBuilder.Entity("Domain.Entities.NhatKyCongViec", b =>
-                {
-                    b.HasOne("Domain.Entities.CongViec", "CongViec")
-                        .WithMany()
-                        .HasForeignKey("CongViecId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entities.User", "NguoiCapNhat")
-                        .WithMany()
-                        .HasForeignKey("NguoiCapNhatId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("CongViec");
-
-                    b.Navigation("NguoiCapNhat");
                 });
 
             modelBuilder.Entity("Domain.Entities.Quyen", b =>

@@ -24,7 +24,8 @@ namespace Domain.Entities
         /// Trạng thái dự án (Ví dụ: Planning, Active, Completed, Cancelled)
         /// </summary>
         public TrangThaiDuAn TrangThai { get; set; } = TrangThaiDuAn.Planning;
-
+        public int? CreatedBy { get; set; }
+        public User? Creator { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Quan hệ: Một dự án có nhiều tài liệu đi kèm

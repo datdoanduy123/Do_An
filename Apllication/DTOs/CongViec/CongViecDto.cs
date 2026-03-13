@@ -42,4 +42,11 @@ namespace Apllication.DTOs.CongViec
         public int CongViecId { get; set; }
         public int AssigneeId { get; set; }
     }
+
+    public class CapNhatTienDoDto
+    {
+        public TrangThaiCongViec TrangThai { get; set; }
+        public double ThoiGianLamViecThem { get; set; } // Số giờ làm thêm trong lần cập nhật này
+        public string? GhiChu { get; set; }
+    }
 }

@@ -31,6 +31,11 @@ namespace Infrastructure.Persistence.Configurations
                    .WithOne(x => x.DuAn)
                    .HasForeignKey(x => x.DuAnId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(x => x.Creator)
+                   .WithMany()
+                   .HasForeignKey(x => x.CreatedBy)
+                   .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

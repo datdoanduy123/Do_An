@@ -27,6 +27,11 @@ namespace Infrastructure.Persistence.Configurations
                    .WithMany()
                    .HasForeignKey(x => x.AssigneeId)
                    .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasOne(x => x.Creator)
+                   .WithMany()
+                   .HasForeignKey(x => x.CreatedBy)
+                   .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

@@ -14,11 +14,16 @@ namespace Apllication.Service
     {
         private readonly ICongViecRepository _repository;
         private readonly INguoiDungRepository _userRepository;
+        private readonly INhatKyCongViecRepository _taskLogRepository;
 
-        public CongViecService(ICongViecRepository repository, INguoiDungRepository userRepository)
+        public CongViecService(
+            ICongViecRepository repository, 
+            INguoiDungRepository userRepository,
+            INhatKyCongViecRepository taskLogRepository)
         {
             _repository = repository;
             _userRepository = userRepository;
+            _taskLogRepository = taskLogRepository;
         }
 
         public async Task<CongViecDto> GetByIdAsync(int id)
@@ -35,7 +40,7 @@ namespace Apllication.Service
             return dsCv.Select(MapToDto);
         }
 
-        public async Task<CongViecDto> CreateAsync(TaoCongViecDto dto)
+        public async Task<CongViecDto> CreateAsync(TaoCongViecDto dto, int creatorId)
         {
             var cv = new CongViec
             {
@@ -51,6 +56,7 @@ namespace Apllication.Service
                 NgayBatDau = dto.NgayBatDau,
                 NgayKetThuc = dto.NgayKetThuc,
                 PhuongThucGiaoViec = PhuongThucGiaoViec.Manual,
+                CreatedBy = creatorId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -64,6 +70,31 @@ namespace Apllication.Service
             if (cv == null) return false;
 
             cv.TrangThai = status;
+            return await _repository.UpdateAsync(cv);
+        }
+
+        public async Task<bool> CapNhatTienDoAsync(int id, CapNhatTienDoDto dto, int updaterId)
+        {
+            var cv = await _repository.GetByIdAsync(id);
+            if (cv == null) return false;
+
+            // 1. Cập nhật trạng thái và thời gian thực tế của Task
+            cv.TrangThai = dto.TrangThai;
+            cv.ThoiGianThucTe = (cv.ThoiGianThucTe ?? 0) + dto.ThoiGianLamViecThem;
+
+            // 2. Tạo bản ghi nhật ký (Task Log)
+            var log = new NhatKyCongViec
+            {
+                CongViecId = id,
+                NguoiCapNhatId = updaterId,
+                SoGioLamViec = dto.ThoiGianLamViecThem,
+                GhiChu = dto.GhiChu,
+                NgayCapNhat = DateTime.UtcNow
+            };
+
+            await _taskLogRepository.AddAsync(log);
+
+            // 3. Lưu Task
             return await _repository.UpdateAsync(cv);
         }
 

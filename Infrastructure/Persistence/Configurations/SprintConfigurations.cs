@@ -19,6 +19,11 @@ namespace Infrastructure.Persistence.Configurations
                    .WithOne(x => x.Sprint)
                    .HasForeignKey(x => x.SprintId)
                    .OnDelete(DeleteBehavior.NoAction);
+
+            builder.HasOne(x => x.Creator)
+                   .WithMany()
+                   .HasForeignKey(x => x.CreatedBy)
+                   .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

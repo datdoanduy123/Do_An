@@ -9,8 +9,9 @@ namespace Apllication.IService
     {
         Task<CongViecDto> GetByIdAsync(int id);
         Task<IEnumerable<CongViecDto>> GetByProjectIdAsync(int projectId);
-        Task<CongViecDto> CreateAsync(TaoCongViecDto dto);
+        Task<CongViecDto> CreateAsync(TaoCongViecDto dto, int creatorId);
         Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status);
+        Task<bool> CapNhatTienDoAsync(int id, CapNhatTienDoDto dto, int updaterId);
         
         /// <summary>
         /// Luồng giao việc thủ công từ PM đến nhân viên.

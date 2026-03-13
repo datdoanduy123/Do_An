@@ -8,7 +8,7 @@ namespace Apllication.IService
     {
         Task<SprintDto> GetByIdAsync(int id);
         Task<IEnumerable<SprintDto>> GetByProjectIdAsync(int projectId);
-        Task<SprintDto> CreateAsync(TaoSprintDto dto);
+        Task<SprintDto> CreateAsync(TaoSprintDto dto, int creatorId);
         Task<bool> UpdateAsync(int id, CapNhatSprintDto dto);
         Task<bool> DeleteAsync(int id);
     }

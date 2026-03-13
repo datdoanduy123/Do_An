@@ -32,7 +32,7 @@ namespace Apllication.Service
             return ds.Select(MapToDto);
         }
 
-        public async Task<SprintDto> CreateAsync(TaoSprintDto dto)
+        public async Task<SprintDto> CreateAsync(TaoSprintDto dto, int creatorId)
         {
             var s = new Sprint
             {
@@ -41,7 +41,8 @@ namespace Apllication.Service
                 NgayBatDau = dto.NgayBatDau,
                 NgayKetThuc = dto.NgayKetThuc,
                 MucTieuStoryPoints = dto.MucTieuStoryPoints,
-                TrangThai = TrangThaiSprint.New
+                TrangThai = TrangThaiSprint.New,
+                CreatedBy = creatorId
             };
 
             var ketQua = await _repository.AddAsync(s);

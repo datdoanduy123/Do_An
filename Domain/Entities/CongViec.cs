@@ -84,6 +84,8 @@ namespace Domain.Entities
         public DateTime? NgayKetThuc { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public int? CreatedBy { get; set; }
+        public User? Creator { get; set; }
 
         // Quan hệ: Một công việc có thể đòi hỏi nhiều kỹ năng
         public ICollection<YeuCauCongViec> YeuCauCongViecs { get; set; } = new List<YeuCauCongViec>();

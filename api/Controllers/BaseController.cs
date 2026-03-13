@@ -6,6 +6,15 @@ namespace api.Controllers
     [Route("api/[controller]")]
     public class BaseController : ControllerBase
     {
+        protected int CurrentUserId
+        {
+            get
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1; // Mac dinh la 1 neu chua co Auth de test
+            }
+        }
+
         // Helper method de tra ve ket qua thanh cong
         protected IActionResult SuccessResponse(object data, string message = "Thanh cong")
         {

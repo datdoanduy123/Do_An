@@ -51,7 +51,7 @@ namespace api.Controllers
         {
             try
             {
-                var result = await _duAnService.CreateAsync(dto);
+                var result = await _duAnService.CreateAsync(dto, CurrentUserId);
                 return SuccessResponse(result, "Tao du an thanh cong.");
             }
             catch (Exception ex)

@@ -27,6 +27,8 @@ namespace Domain.Entities
         public int MucTieuStoryPoints { get; set; }
 
         public TrangThaiSprint TrangThai { get; set; } = TrangThaiSprint.New;
+        public int? CreatedBy { get; set; }
+        public User? Creator { get; set; }
 
         // Một Sprint chứa nhiều công việc
         public ICollection<CongViec> CongViecs { get; set; } = new List<CongViec>();

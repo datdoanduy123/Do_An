@@ -52,7 +52,7 @@ namespace api.Controllers
         {
             try
             {
-                var result = await _congViecService.CreateAsync(dto);
+                var result = await _congViecService.CreateAsync(dto, CurrentUserId);
                 return SuccessResponse(result, "Tao cong viec thanh cong.");
             }
             catch (Exception ex)
@@ -69,6 +69,21 @@ namespace api.Controllers
                 var result = await _congViecService.UpdateStatusAsync(id, status);
                 if (result) return SuccessResponse(null!, "Cap nhat trang thai thanh cong.");
                 return ErrorResponse(400, "Khong the cap nhat trang thai.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpPut("{id}/cap-nhat-tien-do")]
+        public async Task<IActionResult> CapNhatTienDo(int id, [FromBody] CapNhatTienDoDto dto)
+        {
+            try
+            {
+                var result = await _congViecService.CapNhatTienDoAsync(id, dto, CurrentUserId);
+                if (result) return SuccessResponse(null!, "Cap nhat tien do thanh cong.");
+                return ErrorResponse(400, "Khong the cap nhat tien do.");
             }
             catch (Exception ex)
             {

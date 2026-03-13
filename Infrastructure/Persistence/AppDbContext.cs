@@ -23,6 +23,7 @@ namespace Infrastructure.Persistence
         public DbSet<TaiLieuDuAn> TaiLieuDuAns { get; set; }
         public DbSet<Sprint> Sprints { get; set; }
         public DbSet<CongViec> CongViecs { get; set; }
+        public DbSet<NhatKyCongViec> NhatKyCongViecs { get; set; }
         public DbSet<KyNang> KyNangs { get; set; }
         public DbSet<KyNangNguoiDung> KyNangNguoiDungs { get; set; }
         public DbSet<YeuCauCongViec> YeuCauCongViecs { get; set; }
