@@ -13,6 +13,18 @@ using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Cấu hình CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        });
+});
+
 // Dang ky Repository
 builder.Services.AddScoped<INguoiDungRepository, NguoiDungRepository>();
 builder.Services.AddScoped<IQuyenRepository, QuyenRepository>();
@@ -131,6 +143,8 @@ var app = builder.Build();
 
 // Sử dụng Middleware xử lý lỗi toàn cục
 app.UseMiddleware<api.Middlewares.ExceptionMiddleware>();
+
+app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
