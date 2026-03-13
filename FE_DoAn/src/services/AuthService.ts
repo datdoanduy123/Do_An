@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/TaiKhoan'; // Cần điều chỉnh URL phù hợp với môi trường chạy Backend
+const API_URL = 'http://localhost:5095/api/TaiKhoan'; // Cần điều chỉnh URL phù hợp với môi trường chạy Backend
 
 export interface DangNhapDto {
   tenDangNhap: string;
