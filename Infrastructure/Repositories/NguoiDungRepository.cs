@@ -69,7 +69,7 @@ namespace Infrastructure.Repositories
             if (user == null) return new List<string>();
 
             // Lay tat ca ma vai tro cua user
-            var maVaiTros = user.NguoiDungVaiTros.Select(x => x.VaiTro.MaVaiTro).ToList();
+            var maVaiTros = user.NguoiDungVaiTros.Select(x => x.VaiTro.MaVaiTro.ToUpper()).ToList();
 
             // Neu la QUAN_LY -> Lay tat ca quyen trong he thong
             if (maVaiTros.Contains("QUAN_LY"))
@@ -135,6 +135,8 @@ namespace Infrastructure.Repositories
             return await _boiCanh.Users
                 .Include(u => u.NguoiDungVaiTros)
                 .ThenInclude(uv => uv.VaiTro)
+                .Include(u => u.KyNangNguoiDungs)
+                .ThenInclude(un => un.KyNang)
                 .FirstOrDefaultAsync(u => u.Id == id && u.IsActive);
         }
 

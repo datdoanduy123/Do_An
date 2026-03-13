@@ -29,7 +29,7 @@ namespace Infrastructure.Services
             // Dinh nghia cac yeu cau (claims) trong Token
             var danhSachYeuCau = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.NameId, nguoiDung.Id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, nguoiDung.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.UniqueName, nguoiDung.Username)
             };
 

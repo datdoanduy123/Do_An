@@ -23,6 +23,8 @@ builder.Services.AddScoped<ICongViecRepository, CongViecRepository>();
 builder.Services.AddScoped<ISprintRepository, SprintRepository>();
 builder.Services.AddScoped<ITaiLieuDuAnRepository, TaiLieuDuAnRepository>();
 builder.Services.AddScoped<INhatKyCongViecRepository, NhatKyCongViecRepository>();
+builder.Services.AddScoped<IQuyTacGiaoViecAIRepository, QuyTacGiaoViecAIRepository>();
+builder.Services.AddScoped<IKyNangRepository, KyNangRepository>();
 
 // Dang ky Service
 builder.Services.AddScoped<IDichVuToken, DichVuToken>();
@@ -37,6 +39,7 @@ builder.Services.AddScoped<ICongViecService, CongViecService>();
 builder.Services.AddScoped<ISprintService, SprintService>();
 builder.Services.AddScoped<ITaiLieuDuAnService, TaiLieuDuAnService>();
 builder.Services.AddScoped<INhatKyCongViecService, NhatKyCongViecService>();
+builder.Services.AddScoped<IGiaoViecAIService, GiaoViecAIService>();
 
 // Dang ky Phan quyen Attribute
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, QuyenHanPolicyProvider>();
@@ -58,6 +61,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero,
             NameClaimType = System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.UniqueName,
             RoleClaimType = System.Security.Claims.ClaimTypes.Role
+        };
+
+        // Logic de hỗ trợ nhận Token không cần chữ 'Bearer '
+        tùyChỉnh.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var authorization = context.Request.Headers["Authorization"].ToString();
+
+                if (!string.IsNullOrEmpty(authorization))
+                {
+                    // Nếu có chữ 'Bearer ' thì cắt bỏ, nếu không có thì lấy nguyên chuỗi
+                    if (authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        context.Token = authorization.Substring("Bearer ".Length).Trim();
+                    }
+                    else
+                    {
+                        context.Token = authorization.Trim();
+                    }
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 

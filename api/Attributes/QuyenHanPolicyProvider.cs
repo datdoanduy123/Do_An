@@ -22,6 +22,7 @@ namespace api.Attributes
         {
             // Neu policyName kien kieu MaQuyen (vi du: USER_CREATE)
             var policy = new AuthorizationPolicyBuilder();
+            policy.RequireAuthenticatedUser(); // Bat buoc phai dang nhap
             policy.AddRequirements(new QuyenHanRequirement(policyName));
             return Task.FromResult<AuthorizationPolicy?>(policy.Build());
         }

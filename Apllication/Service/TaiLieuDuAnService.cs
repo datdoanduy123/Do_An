@@ -2,6 +2,7 @@ using Apllication.DTOs.TaiLieuDuAn;
 using Apllication.IRepositories;
 using Apllication.IService;
 using Domain.Entities;
+using Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -16,11 +17,22 @@ namespace Apllication.Service
     {
         private readonly ITaiLieuDuAnRepository _repository;
         private readonly IHostEnvironment _env;
+        private readonly IGiaoViecAIService _giaoViecAiService;
+        private readonly ICongViecRepository _congViecRepo;
+        private readonly IKyNangRepository _kyNangRepo;
 
-        public TaiLieuDuAnService(ITaiLieuDuAnRepository repository, IHostEnvironment env)
+        public TaiLieuDuAnService(
+            ITaiLieuDuAnRepository repository, 
+            IHostEnvironment env,
+            IGiaoViecAIService giaoViecAiService,
+            ICongViecRepository congViecRepo,
+            IKyNangRepository kyNangRepo)
         {
             _repository = repository;
             _env = env;
+            _giaoViecAiService = giaoViecAiService;
+            _congViecRepo = congViecRepo;
+            _kyNangRepo = kyNangRepo;
         }
 
         public async Task<TaiLieuDuAnDto> UploadAsync(int duAnId, IFormFile file, int userId)
@@ -65,15 +77,109 @@ namespace Apllication.Service
             var taiLieu = await _repository.GetByIdAsync(taiLieuId);
             if (taiLieu == null || taiLieu.IsProcessed) return false;
 
-            // --- GIẢ LẬP LOGIC AI Ở ĐÂY ---
-            // 1. AI đọc nội dung file từ taiLieu.FilePath
-            // 2. AI bóc tách các Task, Priority, Story Points...
-            // 3. AI tạo các bản ghi CongViec tương ứng
-            // 4. AI gán người và chia Sprint (như mô hình chúng ta đã thiết kế)
+            try
+            {
+                if (!File.Exists(taiLieu.FilePath)) return false;
 
-            // Hiện tại chúng ta đánh dấu là đã xử lý thành công
-            taiLieu.IsProcessed = true;
-            return await _repository.UpdateAsync(taiLieu);
+                using (var stream = new FileStream(taiLieu.FilePath, FileMode.Open, FileAccess.Read))
+                {
+                    var doc = new NPOI.XWPF.UserModel.XWPFDocument(stream);
+                    var tables = doc.Tables;
+
+                    foreach (var table in tables)
+                    {
+                        // Kiểm tra nếu bảng có tiêu đề "STT" và "Tên công việc"
+                        var firstRow = table.GetRow(0);
+                        if (firstRow == null || firstRow.GetTableCells().Count < 3) continue;
+
+                        var headers = firstRow.GetTableCells().Select(c => c.GetText().Trim().ToLower()).ToList();
+                        if (headers.Contains("stt") && (headers.Contains("tên công việc") || headers.Contains("title")))
+                        {
+                            // Đây là bảng công việc, bắt đầu bóc tách từ dòng 1
+                            for (int i = 1; i < table.Rows.Count; i++)
+                            {
+                                var row = table.GetRow(i);
+                                var cells = row.GetTableCells();
+                                if (cells.Count < 5) continue;
+
+                                var title = cells[1].GetText().Trim();
+                                var desc = cells[2].GetText().Trim();
+                                var typeStr = cells[3].GetText().Trim();
+                                var skillStr = cells[4].GetText().Trim(); // Cột Kỹ năng yêu cầu
+                                var priorityStr = cells[5].GetText().Trim();
+                                var spStr = cells[6].GetText().Trim();
+
+                                if (string.IsNullOrEmpty(title)) continue;
+
+                                var task = new CongViec
+                                {
+                                    DuAnId = taiLieu.DuAnId,
+                                    TieuDe = title,
+                                    MoTa = desc,
+                                    LoaiCongViec = MapLoaiCongViec(typeStr),
+                                    DoUuTien = MapDoUuTien(priorityStr),
+                                    StoryPoints = int.TryParse(spStr, out int sp) ? sp : 1,
+                                    ThoiGianUocTinh = (int.TryParse(spStr, out int sp2) ? sp2 : 1) * 4,
+                                    TrangThai = TrangThaiCongViec.Todo,
+                                    PhuongThucGiaoViec = PhuongThucGiaoViec.AI,
+                                    CreatedAt = DateTime.UtcNow,
+                                    CreatedBy = taiLieu.UploadedBy
+                                };
+
+                                // Xử lý bóc tách kỹ năng
+                                if (!string.IsNullOrEmpty(skillStr))
+                                {
+                                    var skillNames = skillStr.Split(',').Select(s => s.Trim());
+                                    foreach (var sName in skillNames)
+                                    {
+                                        var kynang = await _kyNangRepo.GetByNameAsync(sName);
+                                        if (kynang != null)
+                                        {
+                                            task.YeuCauCongViecs.Add(new YeuCauCongViec
+                                            {
+                                                KyNangId = kynang.Id,
+                                                MucDoYeuCau = 3 // Mặc định level 3
+                                            });
+                                        }
+                                    }
+                                }
+
+                                await _congViecRepo.AddAsync(task);
+                            }
+                        }
+                    }
+                }
+
+                // Sau khi tạo Task xong, kích hoạt AI tự động giao việc cho dự án này
+                await _giaoViecAiService.TuDongGiaoViecDuAnAsync(taiLieu.DuAnId);
+
+                taiLieu.IsProcessed = true;
+                return await _repository.UpdateAsync(taiLieu);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private LoaiCongViec MapLoaiCongViec(string text)
+        {
+            text = text.ToLower();
+            if (text.Contains("back")) return LoaiCongViec.Backend;
+            if (text.Contains("front")) return LoaiCongViec.Frontend;
+            if (text.Contains("test")) return LoaiCongViec.Tester;
+            if (text.Contains("ux") || text.Contains("ui")) return LoaiCongViec.UIUX;
+            if (text.Contains("dev")) return LoaiCongViec.DevOps;
+            return LoaiCongViec.Fullstack;
+        }
+
+        private DoUuTien MapDoUuTien(string text)
+        {
+            text = text.ToLower();
+            if (text.Contains("urgent") || text.Contains("khẩn")) return DoUuTien.Urgent;
+            if (text.Contains("high") || text.Contains("cao")) return DoUuTien.High;
+            if (text.Contains("low") || text.Contains("thấp")) return DoUuTien.Low;
+            return DoUuTien.Medium;
         }
 
         public async Task<IEnumerable<TaiLieuDuAnDto>> GetByProjectIdAsync(int projectId)

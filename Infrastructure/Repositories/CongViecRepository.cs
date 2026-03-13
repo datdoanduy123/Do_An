@@ -46,5 +46,36 @@ namespace Infrastructure.Repositories
             _context.CongViecs.Update(congViec);
             return await _context.SaveChangesAsync() > 0;
         }
+
+        public async Task<Apllication.DTOs.PagedResultDto<CongViec>> LayDanhSachCongViecAsync(Apllication.DTOs.CongViecQueryDto query)
+        {
+            var dbQuery = _context.CongViecs
+                .Include(c => c.Assignee)
+                .AsQueryable();
+
+            if (query.DuAnId.HasValue)
+            {
+                dbQuery = dbQuery.Where(c => c.DuAnId == query.DuAnId.Value);
+            }
+
+            if (!string.IsNullOrEmpty(query.SearchTerm))
+            {
+                dbQuery = dbQuery.Where(c => c.TieuDe.Contains(query.SearchTerm) || c.MoTa!.Contains(query.SearchTerm));
+            }
+
+            var totalCount = await dbQuery.CountAsync();
+            var items = await dbQuery
+                .Skip((query.PageNumber - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync();
+
+            return new Apllication.DTOs.PagedResultDto<CongViec>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize
+            };
+        }
     }
 }
