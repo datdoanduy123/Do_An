@@ -47,6 +47,8 @@ namespace Apllication.Service
                 TrangThai = "Todo",
                 StoryPoints = dto.StoryPoints,
                 ThoiGianUocTinh = dto.ThoiGianUocTinh,
+                NgayBatDau = dto.NgayBatDau,
+                NgayKetThuc = dto.NgayKetThuc,
                 PhuongThucGiaoViec = "Manual",
                 CreatedAt = DateTime.UtcNow
             };

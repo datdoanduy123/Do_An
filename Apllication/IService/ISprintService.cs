@@ -1,0 +1,15 @@
+using Apllication.DTOs.Sprint;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace Apllication.IService
+{
+    public interface ISprintService
+    {
+        Task<SprintDto> GetByIdAsync(int id);
+        Task<IEnumerable<SprintDto>> GetByProjectIdAsync(int projectId);
+        Task<SprintDto> CreateAsync(TaoSprintDto dto);
+        Task<bool> UpdateAsync(int id, CapNhatSprintDto dto);
+        Task<bool> DeleteAsync(int id);
+    }
+}

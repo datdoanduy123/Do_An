@@ -20,6 +20,8 @@ builder.Services.AddScoped<IVaiTroRepository, VaiTroRepository>();
 builder.Services.AddScoped<INhomQuyenRepository, NhomQuyenRepository>();
 builder.Services.AddScoped<IDuAnRepository, DuAnRepository>();
 builder.Services.AddScoped<ICongViecRepository, CongViecRepository>();
+builder.Services.AddScoped<ISprintRepository, SprintRepository>();
+builder.Services.AddScoped<ITaiLieuDuAnRepository, TaiLieuDuAnRepository>();
 
 // Dang ky Service
 builder.Services.AddScoped<IDichVuToken, DichVuToken>();
@@ -31,6 +33,8 @@ builder.Services.AddScoped<IVaiTroService, VaiTroService>();
 builder.Services.AddScoped<INhomQuyenService, NhomQuyenService>();
 builder.Services.AddScoped<IDuAnService, DuAnService>();
 builder.Services.AddScoped<ICongViecService, CongViecService>();
+builder.Services.AddScoped<ISprintService, SprintService>();
+builder.Services.AddScoped<ITaiLieuDuAnService, TaiLieuDuAnService>();
 
 // Dang ky Phan quyen Attribute
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, QuyenHanPolicyProvider>();

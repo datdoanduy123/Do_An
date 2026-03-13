@@ -32,6 +32,8 @@ namespace Apllication.DTOs.CongViec
         public string DoUuTien { get; set; } = "Medium";
         public int StoryPoints { get; set; }
         public double ThoiGianUocTinh { get; set; }
+        public DateTime? NgayBatDau { get; set; }
+        public DateTime? NgayKetThuc { get; set; }
     }
 
     public class GiaoViecThuCongDto
