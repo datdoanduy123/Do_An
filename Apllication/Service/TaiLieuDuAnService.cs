@@ -85,6 +85,7 @@ namespace Apllication.Service
                 {
                     var doc = new NPOI.XWPF.UserModel.XWPFDocument(stream);
                     var tables = doc.Tables;
+                    var moduleMapping = new Dictionary<string, string>(); // Lưu trữ Mã -> Tên đầy đủ
 
                     foreach (var table in tables)
                     {
@@ -93,7 +94,23 @@ namespace Apllication.Service
                         if (firstRow == null || firstRow.GetTableCells().Count < 3) continue;
 
                         var headers = firstRow.GetTableCells().Select(c => c.GetText().Trim().ToLower()).ToList();
-                        if (headers.Contains("stt") && (headers.Contains("tên công việc") || headers.Contains("title")))
+
+                        // 1. Kiểm tra nếu là bảng Tra cứu Module (Mapping Table)
+                        if (headers.Contains("mã module") && (headers.Contains("tên module") || headers.Contains("tên đầy đủ")))
+                        {
+                            for (int i = 1; i < table.Rows.Count; i++)
+                            {
+                                var row = table.GetRow(i);
+                                var cells = row.GetTableCells();
+                                if (cells.Count < 2) continue;
+                                moduleMapping[cells[0].GetText().Trim()] = cells[1].GetText().Trim();
+                            }
+                            continue;
+                        }
+
+                        // 2. Kiểm tra nếu là bảng danh sách công việc
+                        if ((headers.Contains("stt") || headers.Contains("module")) && 
+                            (headers.Contains("tên công việc") || headers.Contains("title")))
                         {
                             string currentModuleName = "";
                             var sprintCache = new Dictionary<string, int>();
@@ -116,33 +133,40 @@ namespace Apllication.Service
                                 var typeStr = cells.Count > 3 ? cells[3].GetText().Trim() : "";
                                 var skillStr = cells.Count > 4 ? cells[4].GetText().Trim() : "";
                                 var priorityStr = cells.Count > 5 ? cells[5].GetText().Trim() : "";
-                                var spStr = cells.Count > 6 ? cells[6].GetText().Trim() : "";
 
                                 if (string.IsNullOrEmpty(title)) continue;
 
-                                // Xử lý Sprint từ Module
+                                // AI Tự động ước lượng Story Points dựa trên Tiêu đề và Loại công việc
+                                int estimatedSp = UocLuongStoryPointsAI(title, typeStr);
+
+                                // Xử lý Sprint từ Module (Dùng Mapping nếu có)
                                 int? sprintId = null;
                                 if (!string.IsNullOrEmpty(currentModuleName))
                                 {
-                                    if (!sprintCache.TryGetValue(currentModuleName, out int sId))
+                                    string fullSprintName = moduleMapping.ContainsKey(currentModuleName) 
+                                        ? moduleMapping[currentModuleName] 
+                                        : currentModuleName;
+
+                                    if (!sprintCache.TryGetValue(fullSprintName, out int sId))
                                     {
-                                        var Sprints = await _giaoViecAiService.GetOrCreateSprintByModuleNameAsync(taiLieu.DuAnId, currentModuleName);
+                                        var Sprints = await _giaoViecAiService.GetOrCreateSprintByModuleNameAsync(taiLieu.DuAnId, fullSprintName);
                                         sId = Sprints.Id;
-                                        sprintCache[currentModuleName] = sId;
+                                        sprintCache[fullSprintName] = sId;
                                     }
                                     sprintId = sId;
                                 }
 
+                                var loai = MapLoaiCongViec(typeStr);
                                 var task = new CongViec
                                 {
                                     DuAnId = taiLieu.DuAnId,
                                     SprintId = sprintId,
                                     TieuDe = title,
                                     MoTa = desc,
-                                    LoaiCongViec = MapLoaiCongViec(typeStr),
+                                    LoaiCongViec = loai,
                                     DoUuTien = MapDoUuTien(priorityStr),
-                                    StoryPoints = int.TryParse(spStr, out int sp) ? sp : 1,
-                                    ThoiGianUocTinh = (int.TryParse(spStr, out int sp2) ? sp2 : 1) * 4,
+                                    StoryPoints = estimatedSp,
+                                    ThoiGianUocTinh = estimatedSp * 4, // 1 SP = 4h
                                     TrangThai = TrangThaiCongViec.Todo,
                                     PhuongThucGiaoViec = PhuongThucGiaoViec.AI,
                                     CreatedAt = DateTime.UtcNow,
@@ -204,6 +228,28 @@ namespace Apllication.Service
             if (text.Contains("high") || text.Contains("cao")) return DoUuTien.High;
             if (text.Contains("low") || text.Contains("thấp")) return DoUuTien.Low;
             return DoUuTien.Medium;
+        }
+
+        private int UocLuongStoryPointsAI(string title, string typeStr)
+        {
+            title = title.ToLower();
+            typeStr = typeStr.ToLower();
+
+            // 1. Dựa trên từ khóa phức tạp
+            if (title.Contains("kiến trúc") || title.Contains("architecture") || title.Contains("tích hợp") || title.Contains("payment") || title.Contains("thanh toán"))
+                return 8;
+
+            // 2. Dựa trên từ khóa trung bình
+            if (title.Contains("api") || title.Contains("database") || title.Contains("logic") || title.Contains("xử lý"))
+                return 5;
+
+            // 3. Dựa trên loại công việc
+            if (typeStr.Contains("back")) return 5;
+            if (typeStr.Contains("front")) return 3;
+            if (typeStr.Contains("ux") || typeStr.Contains("ui")) return 3;
+            if (typeStr.Contains("test")) return 2;
+
+            return 3; // Mặc định
         }
 
         public async Task<IEnumerable<TaiLieuDuAnDto>> GetByProjectIdAsync(int projectId)
