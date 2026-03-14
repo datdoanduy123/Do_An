@@ -93,5 +93,35 @@ namespace api.Controllers
                 return ErrorResponse(500, ex.Message);
             }
         }
+
+        [HttpPost("gan-kynang")]
+        public async Task<IActionResult> GanKyNang([FromBody] GanKyNangDto dto)
+        {
+            try
+            {
+                var result = await _nguoiDungService.GanKyNangAsync(dto);
+                if (result) return SuccessResponse(null!, "Gan ky nang thanh cong.");
+                return ErrorResponse(400, "Khong the gan ky nang.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpPost("go-kynang")]
+        public async Task<IActionResult> GoKyNang([FromBody] GanKyNangDto dto)
+        {
+            try
+            {
+                var result = await _nguoiDungService.GoKyNangAsync(dto);
+                if (result) return SuccessResponse(null!, "Go ky nang thanh cong.");
+                return ErrorResponse(400, "Khong the go ky nang.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
     }
 }

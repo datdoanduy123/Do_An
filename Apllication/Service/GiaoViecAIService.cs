@@ -111,21 +111,41 @@ namespace Apllication.Service
                     task.AiReasoning = bestMatch.LyDo;
                 }
 
-                // Phân chia nhiệm vụ vào Sprint
-                if (currentSprintSp + task.StoryPoints > sprintCapacity)
+                // Phân chia nhiệm vụ vào Sprint (Chỉ thực hiện nếu Task CHƯA được gán Sprint từ tài liệu)
+                if (task.SprintId == null)
                 {
-                    // Sprint hiện tại đầy -> Tạo Sprint mới
-                    currentSprint = await CreateNextSprintAsync(duAnId, currentSprint.TenSprint, sprintCapacity);
-                    currentSprintSp = 0;
-                }
+                    if (currentSprintSp + task.StoryPoints > sprintCapacity)
+                    {
+                        // Sprint hiện tại đầy -> Tạo Sprint mới
+                        currentSprint = await CreateNextSprintAsync(duAnId, currentSprint.TenSprint, sprintCapacity);
+                        currentSprintSp = 0;
+                    }
 
-                task.SprintId = currentSprint.Id;
-                currentSprintSp += task.StoryPoints;
+                    task.SprintId = currentSprint.Id;
+                    currentSprintSp += task.StoryPoints;
+                }
 
                 await _congViecRepo.UpdateAsync(task);
             }
 
             return true;
+        }
+
+        public async Task<Sprint> GetOrCreateSprintByModuleNameAsync(int duAnId, string moduleName)
+        {
+            var Sprints = await _sprintRepo.GetByProjectIdAsync(duAnId);
+            var existing = Sprints.FirstOrDefault(s => s.TenSprint == moduleName);
+            if (existing != null) return existing;
+
+            return await _sprintRepo.AddAsync(new Sprint
+            {
+                DuAnId = duAnId,
+                TenSprint = moduleName,
+                NgayBatDau = DateTime.UtcNow,
+                NgayKetThuc = DateTime.UtcNow.AddDays(14),
+                MucTieuStoryPoints = 30, // Mặc định 30 SP
+                TrangThai = TrangThaiSprint.New
+            });
         }
 
         private async Task<Sprint> GetOrCreateActiveSprintAsync(int duAnId, int capacity)
@@ -247,5 +267,6 @@ namespace Apllication.Service
             if (rule != null && double.TryParse(rule.GiaTri, out double val)) return val;
             return defaultValue;
         }
+
     }
 }

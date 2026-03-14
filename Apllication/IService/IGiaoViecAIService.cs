@@ -1,4 +1,5 @@
 using Apllication.DTOs.CongViec;
+using Domain.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -15,5 +16,6 @@ namespace Apllication.IService
         /// Tự động giao việc cho toàn bộ backlog hoặc dự án (Sử dụng cho luồng AI Auto-Assign).
         /// </summary>
         Task<bool> TuDongGiaoViecDuAnAsync(int duAnId);
+        Task<Sprint> GetOrCreateSprintByModuleNameAsync(int duAnId, string moduleName);
     }
 }

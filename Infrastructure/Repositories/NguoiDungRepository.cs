@@ -107,6 +107,8 @@ namespace Infrastructure.Repositories
                 .Where(u => u.IsActive) // Chi lay nguoi dung dang hoat dong
                 .Include(u => u.NguoiDungVaiTros)
                 .ThenInclude(uv => uv.VaiTro)
+                .Include(u => u.KyNangNguoiDungs)
+                .ThenInclude(uk => uk.KyNang)
                 .AsQueryable();
 
             // Loc theo tu khoa
@@ -126,7 +128,15 @@ namespace Infrastructure.Repositories
                     Email = x.Email,
                     DienThoai = x.DienThoai,
                     CreatedAt = x.CreatedAt,
-                    VaiTros = x.NguoiDungVaiTros.Select(uv => uv.VaiTro.TenVaiTro).ToList()                })
+                    VaiTros = x.NguoiDungVaiTros.Select(uv => uv.VaiTro.TenVaiTro).ToList(),
+                    KyNangs = x.KyNangNguoiDungs.Select(kn => new UserSkillDto
+                    {
+                        KyNangId = kn.KyNangId,
+                        TenKyNang = kn.KyNang!.TenKyNang,
+                        Level = kn.Level,
+                        SoNamKinhNghiem = kn.SoNamKinhNghiem
+                    }).ToList()
+                })
                 .ToPagedListAsync(query.PageIndex, query.PageSize);
         }
 
@@ -158,6 +168,43 @@ namespace Infrastructure.Repositories
             if (user == null) return false;
 
             user.IsActive = false;
+            return await _boiCanh.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> GanKyNangAsync(GanKyNangDto dto)
+        {
+            var existing = await _boiCanh.KyNangNguoiDungs
+                .FirstOrDefaultAsync(x => x.UserId == dto.NguoiDungId && x.KyNangId == dto.KyNangId);
+
+            if (existing != null)
+            {
+                existing.Level = dto.Level;
+                existing.SoNamKinhNghiem = dto.SoNamKinhNghiem;
+                _boiCanh.KyNangNguoiDungs.Update(existing);
+            }
+            else
+            {
+                var link = new KyNangNguoiDung
+                {
+                    UserId = dto.NguoiDungId,
+                    KyNangId = dto.KyNangId,
+                    Level = dto.Level,
+                    SoNamKinhNghiem = dto.SoNamKinhNghiem
+                };
+                _boiCanh.KyNangNguoiDungs.Add(link);
+            }
+
+            return await _boiCanh.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> GoKyNangAsync(GanKyNangDto dto)
+        {
+            var existing = await _boiCanh.KyNangNguoiDungs
+                .FirstOrDefaultAsync(x => x.UserId == dto.NguoiDungId && x.KyNangId == dto.KyNangId);
+
+            if (existing == null) return false;
+
+            _boiCanh.KyNangNguoiDungs.Remove(existing);
             return await _boiCanh.SaveChangesAsync() > 0;
         }
     }

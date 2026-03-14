@@ -52,6 +52,36 @@ class RoleService {
     const response = await axios.delete(`${API_URL}/VaiTro/${id}`);
     return response.data.statusCode === 200;
   }
+
+  /**
+   * Lấy danh sách quyền của một vai trò.
+   */
+  async getPermissionsByRole(roleId: number): Promise<any[]> {
+    const response = await axios.get(`${API_URL}/VaiTro/${roleId}/quyens`);
+    return response.data.data;
+  }
+
+  /**
+   * Gán quyền cho vai trò.
+   */
+  async assignPermission(roleId: number, quyenId: number): Promise<any> {
+    const response = await axios.post(`${API_URL}/VaiTro/gan-quyen-cho-vaitro`, {
+      vaiTroId: roleId,
+      quyenId: quyenId
+    });
+    return response.data;
+  }
+
+  /**
+   * Gỡ quyền khỏi vai trò.
+   */
+  async removePermission(roleId: number, quyenId: number): Promise<any> {
+    const response = await axios.post(`${API_URL}/VaiTro/go-quyen`, {
+      vaiTroId: roleId,
+      quyenId: quyenId
+    });
+    return response.data;
+  }
 }
 
 export default new RoleService();

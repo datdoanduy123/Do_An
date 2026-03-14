@@ -10,5 +10,7 @@ namespace Apllication.IService
         Task<NguoiDungDto?> LayTheoIdAsync(int id);
         Task<bool> CapNhatAsync(int id, CapNhatNguoiDungDto dto);
         Task<bool> XoaMemAsync(int id);
+        Task<bool> GanKyNangAsync(GanKyNangDto dto);
+        Task<bool> GoKyNangAsync(GanKyNangDto dto);
     }
 }

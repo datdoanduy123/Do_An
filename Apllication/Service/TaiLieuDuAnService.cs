@@ -95,25 +95,48 @@ namespace Apllication.Service
                         var headers = firstRow.GetTableCells().Select(c => c.GetText().Trim().ToLower()).ToList();
                         if (headers.Contains("stt") && (headers.Contains("tên công việc") || headers.Contains("title")))
                         {
-                            // Đây là bảng công việc, bắt đầu bóc tách từ dòng 1
+                            string currentModuleName = "";
+                            var sprintCache = new Dictionary<string, int>();
+
                             for (int i = 1; i < table.Rows.Count; i++)
                             {
                                 var row = table.GetRow(i);
                                 var cells = row.GetTableCells();
-                                if (cells.Count < 5) continue;
+                                if (cells.Count < 3) continue;
+
+                                // Xử lý ô gộp cho Module
+                                var moduleName = cells[0].GetText().Trim();
+                                if (!string.IsNullOrEmpty(moduleName))
+                                {
+                                    currentModuleName = moduleName;
+                                }
 
                                 var title = cells[1].GetText().Trim();
                                 var desc = cells[2].GetText().Trim();
-                                var typeStr = cells[3].GetText().Trim();
-                                var skillStr = cells[4].GetText().Trim(); // Cột Kỹ năng yêu cầu
-                                var priorityStr = cells[5].GetText().Trim();
-                                var spStr = cells[6].GetText().Trim();
+                                var typeStr = cells.Count > 3 ? cells[3].GetText().Trim() : "";
+                                var skillStr = cells.Count > 4 ? cells[4].GetText().Trim() : "";
+                                var priorityStr = cells.Count > 5 ? cells[5].GetText().Trim() : "";
+                                var spStr = cells.Count > 6 ? cells[6].GetText().Trim() : "";
 
                                 if (string.IsNullOrEmpty(title)) continue;
+
+                                // Xử lý Sprint từ Module
+                                int? sprintId = null;
+                                if (!string.IsNullOrEmpty(currentModuleName))
+                                {
+                                    if (!sprintCache.TryGetValue(currentModuleName, out int sId))
+                                    {
+                                        var Sprints = await _giaoViecAiService.GetOrCreateSprintByModuleNameAsync(taiLieu.DuAnId, currentModuleName);
+                                        sId = Sprints.Id;
+                                        sprintCache[currentModuleName] = sId;
+                                    }
+                                    sprintId = sId;
+                                }
 
                                 var task = new CongViec
                                 {
                                     DuAnId = taiLieu.DuAnId,
+                                    SprintId = sprintId,
                                     TieuDe = title,
                                     MoTa = desc,
                                     LoaiCongViec = MapLoaiCongViec(typeStr),
@@ -123,10 +146,11 @@ namespace Apllication.Service
                                     TrangThai = TrangThaiCongViec.Todo,
                                     PhuongThucGiaoViec = PhuongThucGiaoViec.AI,
                                     CreatedAt = DateTime.UtcNow,
-                                    CreatedBy = taiLieu.UploadedBy
+                                    CreatedBy = taiLieu.UploadedBy,
+                                    AiReasoning = !string.IsNullOrEmpty(currentModuleName) ? $"Module: {currentModuleName}. " : ""
                                 };
 
-                                // Xử lý bóc tách kỹ năng
+                                // Khôi phục logic bóc tách kỹ năng
                                 if (!string.IsNullOrEmpty(skillStr))
                                 {
                                     var skillNames = skillStr.Split(',').Select(s => s.Trim());
@@ -138,7 +162,7 @@ namespace Apllication.Service
                                             task.YeuCauCongViecs.Add(new YeuCauCongViec
                                             {
                                                 KyNangId = kynang.Id,
-                                                MucDoYeuCau = 3 // Mặc định level 3
+                                                MucDoYeuCau = 3 
                                             });
                                         }
                                     }

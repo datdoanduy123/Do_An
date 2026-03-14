@@ -42,7 +42,14 @@ namespace Apllication.Service
                 Email = user.Email,
                 DienThoai = user.DienThoai,
                 CreatedAt = user.CreatedAt,
-                VaiTros = user.NguoiDungVaiTros.Select(uv => uv.VaiTro.TenVaiTro).ToList()
+                VaiTros = user.NguoiDungVaiTros.Select(uv => uv.VaiTro.TenVaiTro).ToList(),
+                KyNangs = user.KyNangNguoiDungs.Select(kn => new UserSkillDto
+                {
+                    KyNangId = kn.KyNangId,
+                    TenKyNang = kn.KyNang!.TenKyNang,
+                    Level = kn.Level,
+                    SoNamKinhNghiem = kn.SoNamKinhNghiem
+                }).ToList()
             };
         }
 
@@ -54,6 +61,16 @@ namespace Apllication.Service
         public async Task<bool> XoaMemAsync(int id)
         {
             return await _nguoiDungRepo.XoaMemAsync(id);
+        }
+
+        public async Task<bool> GanKyNangAsync(GanKyNangDto dto)
+        {
+            return await _nguoiDungRepo.GanKyNangAsync(dto);
+        }
+
+        public async Task<bool> GoKyNangAsync(GanKyNangDto dto)
+        {
+            return await _nguoiDungRepo.GoKyNangAsync(dto);
         }
     }
 }

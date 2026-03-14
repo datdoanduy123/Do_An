@@ -11,6 +11,9 @@ namespace Apllication.DTOs
         
         // Danh sach cac vai tro cua nguoi dung
         public List<string> VaiTros { get; set; } = new List<string>();
+
+        // Danh sach cac ky nang cua nguoi dung
+        public List<UserSkillDto> KyNangs { get; set; } = new List<UserSkillDto>();
         
         // Thoi gian tao
         public DateTime CreatedAt { get; set; }

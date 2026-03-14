@@ -3,6 +3,8 @@ import LoginPage from './pages/Auth/LoginPage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
 import PermissionsPage from './pages/Management/PermissionsPage';
 import RolesPage from './pages/Management/RolesPage';
+import UsersPage from './pages/Management/UsersPage';
+import SkillsPage from './pages/Management/SkillsPage';
 import MainLayout from './layouts/MainLayout';
 import './App.css';
 
@@ -32,8 +34,10 @@ function App() {
         {/* Có thể thêm các route khác tại đây */}
         <Route path="/projects" element={<MainLayout><div>Trang Dự án</div></MainLayout>} />
         <Route path="/members" element={<MainLayout><div>Trang Thành viên</div></MainLayout>} />
+        <Route path="/management/users" element={<MainLayout><UsersPage /></MainLayout>} />
         <Route path="/management/roles" element={<MainLayout><RolesPage /></MainLayout>} />
         <Route path="/management/permissions" element={<MainLayout><PermissionsPage /></MainLayout>} />
+        <Route path="/management/skills" element={<MainLayout><SkillsPage /></MainLayout>} />
         <Route path="/management/permission-groups" element={<MainLayout><div>Trang Quản lý Nhóm quyền</div></MainLayout>} />
         <Route path="/settings" element={<MainLayout><div>Trang Cấu hình</div></MainLayout>} />
       </Routes>

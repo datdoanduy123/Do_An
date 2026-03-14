@@ -55,9 +55,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       label: 'Quản lý', 
       icon: <ShieldCheck size={20} />,
       subItems: [
+        { path: '/management/users', label: 'Người dùng', icon: <Users size={18} /> },
         { path: '/management/roles', label: 'Vai trò', icon: <UserCheck size={18} /> },
         { path: '/management/permissions', label: 'Quyền', icon: <Key size={18} /> },
         { path: '/management/permission-groups', label: 'Nhóm quyền', icon: <Layers size={18} /> },
+        { path: '/management/skills', label: 'Kỹ năng', icon: <Search size={18} /> },
       ]
     },
     { path: '/settings', icon: <Settings size={20} />, label: 'Cấu hình' },
