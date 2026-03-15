@@ -28,8 +28,8 @@ namespace Infrastructure.Migrations
                 DECLARE @RoleId INT = (SELECT Id FROM VaiTros WHERE MaVaiTro = 'QUAN_LY');
                 IF @UserId IS NOT NULL AND @RoleId IS NOT NULL
                 BEGIN
-                    IF NOT EXISTS (SELECT 1 FROM NguoiDungVaiTros WHERE UserId = @UserId AND VaiTroId = @RoleId)
-                    INSERT INTO NguoiDungVaiTros (UserId, VaiTroId) VALUES (@UserId, @RoleId);
+                    IF NOT EXISTS (SELECT 1 FROM NguoiDungVaiTros WHERE NguoiDungId = @UserId AND VaiTroId = @RoleId)
+                    INSERT INTO NguoiDungVaiTros (NguoiDungId, VaiTroId) VALUES (@UserId, @RoleId);
                 END
             ");
         }

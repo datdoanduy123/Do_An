@@ -79,24 +79,23 @@ namespace Apllication.Service
 
         public async Task<bool> TuDongGiaoViecDuAnAsync(int duAnId)
         {
-            // 1. Lấy danh sách quy tắc AI để biết Capacity của Sprint (Mặc định 30 SP)
             var rules = await _ruleRepo.GetAllActiveRulesAsync();
             int sprintCapacity = (int)GetRuleValue(rules, "SPRINT_CAPACITY", 30);
 
-            // 2. Lấy danh sách task chưa được giao của dự án
             var query = new CongViecQueryDto { DuAnId = duAnId, PageSize = 1000 };
             var pagedTasks = await _congViecRepo.LayDanhSachCongViecAsync(query);
-            var tasks = pagedTasks.Items.Where(t => t.AssigneeId == null || t.SprintId == null).ToList();
+            var tasks = pagedTasks.Items
+                .Where(t => t.AssigneeId == null || t.SprintId == null)
+                .OrderBy(t => t.ViTri)
+                .ThenByDescending(t => (int)t.DoUuTien)
+                .ToList();
 
             if (!tasks.Any()) return true;
 
-            // 3. Khởi tạo Sprint đầu tiên
             var currentSprint = await GetOrCreateActiveSprintAsync(duAnId, sprintCapacity);
-            int currentSprintSp = currentSprint.CongViecs?.Sum(c => c.StoryPoints) ?? 0;
 
             foreach (var tDto in tasks)
             {
-                // Giao việc cho User (Match Score)
                 var suggestions = await GoiYAssigneeAsync(tDto.Id);
                 var bestMatch = suggestions.FirstOrDefault();
 
@@ -111,38 +110,112 @@ namespace Apllication.Service
                     task.AiReasoning = bestMatch.LyDo;
                 }
 
-                // Phân chia nhiệm vụ vào Sprint (Chỉ thực hiện nếu Task CHƯA được gán Sprint từ tài liệu)
                 if (task.SprintId == null)
                 {
-                    if (currentSprintSp + task.StoryPoints > sprintCapacity)
-                    {
-                        // Sprint hiện tại đầy -> Tạo Sprint mới
-                        currentSprint = await CreateNextSprintAsync(duAnId, currentSprint.TenSprint, sprintCapacity);
-                        currentSprintSp = 0;
-                    }
-
                     task.SprintId = currentSprint.Id;
-                    currentSprintSp += task.StoryPoints;
                 }
-
                 await _congViecRepo.UpdateAsync(task);
             }
 
+            await LapKeHoachTimelineDuAnAsync(duAnId);
             return true;
         }
 
+        private async Task LapKeHoachTimelineDuAnAsync(int duAnId)
+        {
+            var query = new CongViecQueryDto { DuAnId = duAnId, PageSize = 1000 };
+            var pagedTasks = await _congViecRepo.LayDanhSachCongViecAsync(query);
+            var allTasks = pagedTasks.Items;
+
+            var tasksBySprint = allTasks.Where(t => t.SprintId != null).GroupBy(t => t.SprintId);
+
+            foreach (var sprintGroup in tasksBySprint)
+            {
+                var sprint = await _sprintRepo.GetByIdAsync(sprintGroup.Key.Value);
+                if (sprint == null) continue;
+
+                var tasksByAssignee = sprintGroup.Where(t => t.AssigneeId != null).GroupBy(t => t.AssigneeId);
+
+                foreach (var userGroup in tasksByAssignee)
+                {
+                    var sortedTasks = userGroup
+                        .OrderBy(t => t.ViTri)
+                        .ThenByDescending(t => (int)t.DoUuTien)
+                        .ToList();
+
+                    DateTime currentPointer = sprint.NgayBatDau;
+
+                    foreach (var tDto in sortedTasks)
+                    {
+                        var task = await _congViecRepo.GetByIdAsync(tDto.Id);
+                        if (task == null) continue;
+
+                        DateTime taskStart = currentPointer;
+
+                        if (task.Dependencies != null && task.Dependencies.Any())
+                        {
+                            foreach (var dep in task.Dependencies)
+                            {
+                                var predecessor = await _congViecRepo.GetByIdAsync(dep.DependsOnTaskId);
+                                if (predecessor != null && predecessor.NgayKetThucDuKien.HasValue)
+                                {
+                                    DateTime minStart = SkipWeekends(predecessor.NgayKetThucDuKien.Value.AddDays(1));
+                                    if (minStart > taskStart) taskStart = minStart;
+                                }
+                            }
+                        }
+
+                        task.NgayBatDauDuKien = SkipWeekends(taskStart);
+                        
+                        int hoursRemaining = (int)Math.Ceiling(task.ThoiGianUocTinh);
+                        DateTime endPointer = task.NgayBatDauDuKien.Value;
+
+                        while (hoursRemaining > 0)
+                        {
+                            if (hoursRemaining <= 8) hoursRemaining = 0;
+                            else
+                            {
+                                hoursRemaining -= 8;
+                                endPointer = endPointer.AddDays(1);
+                                endPointer = SkipWeekends(endPointer);
+                            }
+                        }
+
+                        task.NgayKetThucDuKien = endPointer;
+
+                        if (task.NgayKetThucDuKien > sprint.NgayKetThuc)
+                            task.NgayKetThucDuKien = sprint.NgayKetThuc;
+
+                        currentPointer = SkipWeekends(task.NgayKetThucDuKien.Value.AddDays(1));
+                        await _congViecRepo.UpdateAsync(task);
+                    }
+                }
+            }
+        }
+
+        private DateTime SkipWeekends(DateTime date)
+        {
+            while (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+            {
+                date = date.AddDays(1);
+            }
+            return date;
+        }
         public async Task<Sprint> GetOrCreateSprintByModuleNameAsync(int duAnId, string moduleName)
         {
-            var Sprints = await _sprintRepo.GetByProjectIdAsync(duAnId);
-            var existing = Sprints.FirstOrDefault(s => s.TenSprint == moduleName);
+            var sprints = await _sprintRepo.GetByProjectIdAsync(duAnId);
+            var existing = sprints.FirstOrDefault(s => s.TenSprint == moduleName);
             if (existing != null) return existing;
+
+            var duAn = await _duAnRepo.GetByIdAsync(duAnId);
+            DateTime startDate = duAn?.NgayBatDau ?? DateTime.UtcNow;
 
             return await _sprintRepo.AddAsync(new Sprint
             {
                 DuAnId = duAnId,
                 TenSprint = moduleName,
-                NgayBatDau = DateTime.UtcNow,
-                NgayKetThuc = DateTime.UtcNow.AddDays(14),
+                NgayBatDau = startDate,
+                NgayKetThuc = startDate.AddDays(14),
                 MucTieuStoryPoints = 30, // Mặc định 30 SP
                 TrangThai = TrangThaiSprint.New
             });
@@ -155,18 +228,21 @@ namespace Apllication.Service
             
             if (activeSprint != null) return activeSprint;
 
+            var duAn = await _duAnRepo.GetByIdAsync(duAnId);
+            DateTime startDate = duAn?.NgayBatDau ?? DateTime.UtcNow;
+
             return await _sprintRepo.AddAsync(new Sprint
             {
                 DuAnId = duAnId,
                 TenSprint = "Sprint 1",
-                NgayBatDau = DateTime.UtcNow,
-                NgayKetThuc = DateTime.UtcNow.AddDays(14),
+                NgayBatDau = startDate,
+                NgayKetThuc = startDate.AddDays(14),
                 MucTieuStoryPoints = capacity,
                 TrangThai = TrangThaiSprint.New
             });
         }
 
-        private async Task<Sprint> CreateNextSprintAsync(int duAnId, string lastSprintName, int capacity)
+        private async Task<Sprint> CreateNextSprintAsync(int duAnId, string lastSprintName, DateTime lastSprintEndDate, int capacity)
         {
             int nextNumber = 1;
             if (lastSprintName.Contains("Sprint"))
@@ -179,8 +255,8 @@ namespace Apllication.Service
             {
                 DuAnId = duAnId,
                 TenSprint = $"Sprint {nextNumber}",
-                NgayBatDau = DateTime.UtcNow,
-                NgayKetThuc = DateTime.UtcNow.AddDays(14),
+                NgayBatDau = lastSprintEndDate,
+                NgayKetThuc = lastSprintEndDate.AddDays(14),
                 MucTieuStoryPoints = capacity,
                 TrangThai = TrangThaiSprint.New
             });

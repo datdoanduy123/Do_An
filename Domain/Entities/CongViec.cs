@@ -12,6 +12,11 @@ namespace Domain.Entities
     {
         public int Id { get; set; }
 
+        /// <summary>
+        /// Thứ tự sắp xếp của Task trong danh sách (giúp PM điều chỉnh thủ công).
+        /// </summary>
+        public int ViTri { get; set; }
+
         public int DuAnId { get; set; }
         public DuAn? DuAn { get; set; }
 
@@ -74,14 +79,16 @@ namespace Domain.Entities
         public double? ThoiGianThucTe { get; set; }
 
         /// <summary>
-        /// Ngày bắt đầu dự kiến hoặc thực tế.
+        /// Lịch trình Dự kiến (do AI hoặc PM lập kế hoạch).
         /// </summary>
-        public DateTime? NgayBatDau { get; set; }
+        public DateTime? NgayBatDauDuKien { get; set; }
+        public DateTime? NgayKetThucDuKien { get; set; }
 
         /// <summary>
-        /// Ngày kết thúc dự kiến hoặc thực tế.
+        /// Lịch trình Thực tế (ghi nhận khi User thay đổi trạng thái).
         /// </summary>
-        public DateTime? NgayKetThuc { get; set; }
+        public DateTime? NgayBatDauThucTe { get; set; }
+        public DateTime? NgayKetThucThucTe { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int? CreatedBy { get; set; }
@@ -89,5 +96,8 @@ namespace Domain.Entities
 
         // Quan hệ: Một công việc có thể đòi hỏi nhiều kỹ năng
         public ICollection<YeuCauCongViec> YeuCauCongViecs { get; set; } = new List<YeuCauCongViec>();
+
+        // Quan hệ: Một công việc có thể phụ thuộc vào nhiều công việc khác
+        public ICollection<PhuThuocCongViec> Dependencies { get; set; } = new List<PhuThuocCongViec>();
     }
 }

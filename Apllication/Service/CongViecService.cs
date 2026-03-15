@@ -53,8 +53,8 @@ namespace Apllication.Service
                 TrangThai = TrangThaiCongViec.Todo,
                 StoryPoints = dto.StoryPoints,
                 ThoiGianUocTinh = dto.ThoiGianUocTinh,
-                NgayBatDau = dto.NgayBatDau,
-                NgayKetThuc = dto.NgayKetThuc,
+                NgayBatDauDuKien = dto.NgayBatDauDuKien,
+                NgayKetThucDuKien = dto.NgayKetThucDuKien,
                 PhuongThucGiaoViec = PhuongThucGiaoViec.Manual,
                 CreatedBy = creatorId,
                 CreatedAt = DateTime.UtcNow
@@ -70,6 +70,19 @@ namespace Apllication.Service
             if (cv == null) return false;
 
             cv.TrangThai = status;
+
+            // Tự động ghi nhận ngày bắt đầu thực tế
+            if (status == TrangThaiCongViec.InProgress && cv.NgayBatDauThucTe == null)
+            {
+                cv.NgayBatDauThucTe = DateTime.UtcNow;
+            }
+
+            // Tự động ghi nhận ngày kết thúc thực tế
+            if (status == TrangThaiCongViec.Done)
+            {
+                cv.NgayKetThucThucTe = DateTime.UtcNow;
+            }
+
             return await _repository.UpdateAsync(cv);
         }
 
@@ -85,7 +98,13 @@ namespace Apllication.Service
             // Tự động gán ngày kết thúc nếu hoàn thành
             if (dto.TrangThai == TrangThaiCongViec.Done)
             {
-                cv.NgayKetThuc = DateTime.UtcNow;
+                cv.NgayKetThucThucTe = DateTime.UtcNow;
+            }
+            
+            // Tự động gán ngày bắt đầu nếu mới bắt đầu
+            if (dto.TrangThai == TrangThaiCongViec.InProgress && cv.NgayBatDauThucTe == null)
+            {
+                cv.NgayBatDauThucTe = DateTime.UtcNow;
             }
 
             // 2. Tạo bản ghi nhật ký (Task Log)
@@ -125,7 +144,6 @@ namespace Apllication.Service
 
             cv.AssigneeId = dto.AssigneeId;
             cv.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; 
-            cv.NgayBatDau = DateTime.UtcNow;
 
             return await _repository.UpdateAsync(cv);
         }
@@ -148,8 +166,10 @@ namespace Apllication.Service
                 PhuongThucGiaoViec = cv.PhuongThucGiaoViec,
                 ThoiGianUocTinh = cv.ThoiGianUocTinh,
                 ThoiGianThucTe = cv.ThoiGianThucTe,
-                NgayBatDau = cv.NgayBatDau,
-                NgayKetThuc = cv.NgayKetThuc
+                NgayBatDauDuKien = cv.NgayBatDauDuKien,
+                NgayKetThucDuKien = cv.NgayKetThucDuKien,
+                NgayBatDauThucTe = cv.NgayBatDauThucTe,
+                NgayKetThucThucTe = cv.NgayKetThucThucTe
             };
         }
     }

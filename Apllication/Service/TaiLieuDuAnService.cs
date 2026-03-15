@@ -37,25 +37,21 @@ namespace Apllication.Service
 
         public async Task<TaiLieuDuAnDto> UploadAsync(int duAnId, IFormFile file, int userId)
         {
-            // Đường dẫn lưu trữ file (Trong thư mục uploads của API)
             string uploadPath = Path.Combine(_env.ContentRootPath, "uploads", "documents");
             if (!Directory.Exists(uploadPath))
             {
                 Directory.CreateDirectory(uploadPath);
             }
 
-            // Tạo tên file duy nhất để tránh trùng lặp
             string fileExtension = Path.GetExtension(file.FileName);
             string uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
             string filePath = Path.Combine(uploadPath, uniqueFileName);
 
-            // Lưu file vào server
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream);
             }
 
-            // Lưu thông tin vào Database
             var taiLieu = new TaiLieuDuAn
             {
                 DuAnId = duAnId,
@@ -85,17 +81,15 @@ namespace Apllication.Service
                 {
                     var doc = new NPOI.XWPF.UserModel.XWPFDocument(stream);
                     var tables = doc.Tables;
-                    var moduleMapping = new Dictionary<string, string>(); // Lưu trữ Mã -> Tên đầy đủ
+                    var moduleMapping = new Dictionary<string, string>();
 
                     foreach (var table in tables)
                     {
-                        // Kiểm tra nếu bảng có tiêu đề "STT" và "Tên công việc"
                         var firstRow = table.GetRow(0);
                         if (firstRow == null || firstRow.GetTableCells().Count < 3) continue;
 
                         var headers = firstRow.GetTableCells().Select(c => c.GetText().Trim().ToLower()).ToList();
 
-                        // 1. Kiểm tra nếu là bảng Tra cứu Module (Mapping Table)
                         if (headers.Contains("mã module") && (headers.Contains("tên module") || headers.Contains("tên đầy đủ")))
                         {
                             for (int i = 1; i < table.Rows.Count; i++)
@@ -108,12 +102,14 @@ namespace Apllication.Service
                             continue;
                         }
 
-                        // 2. Kiểm tra nếu là bảng danh sách công việc
-                        if ((headers.Contains("stt") || headers.Contains("module")) && 
-                            (headers.Contains("tên công việc") || headers.Contains("title")))
+                        bool isTaskTable = (headers.Any(h => h.Contains("stt") || h.Contains("module"))) && 
+                                           (headers.Any(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ")));
+
+                        if (isTaskTable)
                         {
                             string currentModuleName = "";
                             var sprintCache = new Dictionary<string, int>();
+                            var tasksInTable = new List<(CongViec Task, string DepStr)>(); 
 
                             for (int i = 1; i < table.Rows.Count; i++)
                             {
@@ -121,31 +117,41 @@ namespace Apllication.Service
                                 var cells = row.GetTableCells();
                                 if (cells.Count < 3) continue;
 
-                                // Xử lý ô gộp cho Module
                                 var moduleName = cells[0].GetText().Trim();
-                                if (!string.IsNullOrEmpty(moduleName))
-                                {
-                                    currentModuleName = moduleName;
-                                }
+                                if (!string.IsNullOrEmpty(moduleName)) currentModuleName = moduleName;
 
                                 var title = cells[1].GetText().Trim();
                                 var desc = cells[2].GetText().Trim();
                                 var typeStr = cells.Count > 3 ? cells[3].GetText().Trim() : "";
                                 var skillStr = cells.Count > 4 ? cells[4].GetText().Trim() : "";
                                 var priorityStr = cells.Count > 5 ? cells[5].GetText().Trim() : "";
+                                var dependencyStr = cells.Count > 6 ? cells[6].GetText().Trim() : "";
+                                var positionStr = cells.Count > 0 ? cells[0].GetText().Trim() : "0";
 
                                 if (string.IsNullOrEmpty(title)) continue;
 
-                                // AI Tự động ước lượng Story Points dựa trên Tiêu đề và Loại công việc
-                                int estimatedSp = UocLuongStoryPointsAI(title, typeStr);
+                                double estimatedHours = 8;
+                                int storyPoints = 2;
 
-                                // Xử lý Sprint từ Module (Dùng Mapping nếu có)
+                                var normalizedPriority = priorityStr.ToLower();
+                                if (normalizedPriority.Contains("high") || normalizedPriority.Contains("cao")) {
+                                    estimatedHours = 16;
+                                    storyPoints = 5;
+                                } else if (normalizedPriority.Contains("small") || normalizedPriority.Contains("thấp")) {
+                                    estimatedHours = 4;
+                                    storyPoints = 1;
+                                } else {
+                                    estimatedHours = 8;
+                                    storyPoints = 3;
+                                }
+
+                                int.TryParse(new string(positionStr.Where(char.IsDigit).ToArray()), out int viTri);
+
                                 int? sprintId = null;
                                 if (!string.IsNullOrEmpty(currentModuleName))
                                 {
                                     string fullSprintName = moduleMapping.ContainsKey(currentModuleName) 
-                                        ? moduleMapping[currentModuleName] 
-                                        : currentModuleName;
+                                        ? moduleMapping[currentModuleName] : currentModuleName;
 
                                     if (!sprintCache.TryGetValue(fullSprintName, out int sId))
                                     {
@@ -161,12 +167,13 @@ namespace Apllication.Service
                                 {
                                     DuAnId = taiLieu.DuAnId,
                                     SprintId = sprintId,
+                                    ViTri = viTri,
                                     TieuDe = title,
                                     MoTa = desc,
                                     LoaiCongViec = loai,
                                     DoUuTien = MapDoUuTien(priorityStr),
-                                    StoryPoints = estimatedSp,
-                                    ThoiGianUocTinh = estimatedSp * 4, // 1 SP = 4h
+                                    StoryPoints = storyPoints,
+                                    ThoiGianUocTinh = estimatedHours,
                                     TrangThai = TrangThaiCongViec.Todo,
                                     PhuongThucGiaoViec = PhuongThucGiaoViec.AI,
                                     CreatedAt = DateTime.UtcNow,
@@ -174,7 +181,6 @@ namespace Apllication.Service
                                     AiReasoning = !string.IsNullOrEmpty(currentModuleName) ? $"Module: {currentModuleName}. " : ""
                                 };
 
-                                // Khôi phục logic bóc tách kỹ năng
                                 if (!string.IsNullOrEmpty(skillStr))
                                 {
                                     var skillNames = skillStr.Split(',').Select(s => s.Trim());
@@ -183,24 +189,40 @@ namespace Apllication.Service
                                         var kynang = await _kyNangRepo.GetByNameAsync(sName);
                                         if (kynang != null)
                                         {
-                                            task.YeuCauCongViecs.Add(new YeuCauCongViec
-                                            {
-                                                KyNangId = kynang.Id,
-                                                MucDoYeuCau = 3 
-                                            });
+                                            task.YeuCauCongViecs.Add(new YeuCauCongViec { KyNangId = kynang.Id, MucDoYeuCau = 3 });
                                         }
                                     }
                                 }
+                                tasksInTable.Add((task, dependencyStr));
+                            }
 
-                                await _congViecRepo.AddAsync(task);
+                            foreach (var item in tasksInTable) await _congViecRepo.AddAsync(item.Task);
+
+                            for (int idx = 0; idx < tasksInTable.Count; idx++)
+                            {
+                                var depStr = tasksInTable[idx].DepStr;
+                                if (string.IsNullOrEmpty(depStr)) continue;
+
+                                CongViec predecessor = null;
+                                if (depStr.ToLower().Contains("task"))
+                                {
+                                    var sttStr = new string(depStr.Where(char.IsDigit).ToArray());
+                                    if (int.TryParse(sttStr, out int stt) && stt > 0 && stt <= tasksInTable.Count)
+                                        predecessor = tasksInTable[stt - 1].Task;
+                                }
+                                else predecessor = tasksInTable.FirstOrDefault(t => t.Task.TieuDe.Equals(depStr, StringComparison.OrdinalIgnoreCase)).Task;
+
+                                if (predecessor != null && predecessor != tasksInTable[idx].Task)
+                                {
+                                    tasksInTable[idx].Task.Dependencies.Add(new PhuThuocCongViec { TaskId = tasksInTable[idx].Task.Id, DependsOnTaskId = predecessor.Id });
+                                    await _congViecRepo.UpdateAsync(tasksInTable[idx].Task);
+                                }
                             }
                         }
                     }
                 }
 
-                // Sau khi tạo Task xong, kích hoạt AI tự động giao việc cho dự án này
                 await _giaoViecAiService.TuDongGiaoViecDuAnAsync(taiLieu.DuAnId);
-
                 taiLieu.IsProcessed = true;
                 return await _repository.UpdateAsync(taiLieu);
             }
@@ -226,7 +248,7 @@ namespace Apllication.Service
             text = text.ToLower();
             if (text.Contains("urgent") || text.Contains("khẩn")) return DoUuTien.Urgent;
             if (text.Contains("high") || text.Contains("cao")) return DoUuTien.High;
-            if (text.Contains("low") || text.Contains("thấp")) return DoUuTien.Low;
+            if (text.Contains("small") || text.Contains("thấp") || text.Contains("nhỏ")) return DoUuTien.Low;
             return DoUuTien.Medium;
         }
 
@@ -235,21 +257,18 @@ namespace Apllication.Service
             title = title.ToLower();
             typeStr = typeStr.ToLower();
 
-            // 1. Dựa trên từ khóa phức tạp
             if (title.Contains("kiến trúc") || title.Contains("architecture") || title.Contains("tích hợp") || title.Contains("payment") || title.Contains("thanh toán"))
                 return 8;
 
-            // 2. Dựa trên từ khóa trung bình
             if (title.Contains("api") || title.Contains("database") || title.Contains("logic") || title.Contains("xử lý"))
                 return 5;
 
-            // 3. Dựa trên loại công việc
             if (typeStr.Contains("back")) return 5;
             if (typeStr.Contains("front")) return 3;
             if (typeStr.Contains("ux") || typeStr.Contains("ui")) return 3;
             if (typeStr.Contains("test")) return 2;
 
-            return 3; // Mặc định
+            return 3;
         }
 
         public async Task<IEnumerable<TaiLieuDuAnDto>> GetByProjectIdAsync(int projectId)

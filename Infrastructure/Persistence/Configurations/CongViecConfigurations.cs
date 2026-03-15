@@ -19,8 +19,10 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.ThoiGianUocTinh).IsRequired();
             builder.Property(x => x.ThoiGianThucTe).IsRequired(false);
-            builder.Property(x => x.NgayBatDau).IsRequired(false);
-            builder.Property(x => x.NgayKetThuc).IsRequired(false);
+            builder.Property(x => x.NgayBatDauDuKien).IsRequired(false);
+            builder.Property(x => x.NgayKetThucDuKien).IsRequired(false);
+            builder.Property(x => x.NgayBatDauThucTe).IsRequired(false);
+            builder.Property(x => x.NgayKetThucThucTe).IsRequired(false);
 
             // Quan hệ với người được giao
             builder.HasOne(x => x.Assignee)

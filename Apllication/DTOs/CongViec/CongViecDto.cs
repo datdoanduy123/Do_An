@@ -19,8 +19,10 @@ namespace Apllication.DTOs.CongViec
         public PhuongThucGiaoViec PhuongThucGiaoViec { get; set; }
         public double ThoiGianUocTinh { get; set; }
         public double? ThoiGianThucTe { get; set; }
-        public DateTime? NgayBatDau { get; set; }
-        public DateTime? NgayKetThuc { get; set; }
+        public DateTime? NgayBatDauDuKien { get; set; }
+        public DateTime? NgayKetThucDuKien { get; set; }
+        public DateTime? NgayBatDauThucTe { get; set; }
+        public DateTime? NgayKetThucThucTe { get; set; }
     }
 
     public class TaoCongViecDto
@@ -33,8 +35,8 @@ namespace Apllication.DTOs.CongViec
         public DoUuTien DoUuTien { get; set; } = DoUuTien.Medium;
         public int StoryPoints { get; set; }
         public double ThoiGianUocTinh { get; set; }
-        public DateTime? NgayBatDau { get; set; }
-        public DateTime? NgayKetThuc { get; set; }
+        public DateTime? NgayBatDauDuKien { get; set; }
+        public DateTime? NgayKetThucDuKien { get; set; }
     }
 
     public class GiaoViecThuCongDto
