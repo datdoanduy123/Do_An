@@ -34,6 +34,9 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.VaiTro)
                 .HasMaxLength(50);
 
+            builder.Property(x => x.KhoiLuongCongViec)
+                .HasDefaultValue(0);
+
             // Chỉ mục cho Username để đảm bảo tính duy nhất và tăng tốc độ tìm kiếm
             builder.HasIndex(x => x.Username).IsUnique();
         }

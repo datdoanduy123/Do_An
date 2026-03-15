@@ -17,5 +17,6 @@ namespace Apllication.IRepositories
         Task<bool> XoaMemAsync(int id);
         Task<bool> GanKyNangAsync(GanKyNangDto dto);
         Task<bool> GoKyNangAsync(GanKyNangDto dto);
+        Task<bool> UpdateAsync(User user);
     }
 }

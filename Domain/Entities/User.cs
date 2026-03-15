@@ -19,6 +19,11 @@ namespace Domain.Entities
         public bool IsActive { get; set; } = true;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        /// <summary>
+        /// Tổng khối lượng công việc hiện tại (tính bằng giờ) để AI cân bằng tải.
+        /// </summary>
+        public double KhoiLuongCongViec { get; set; } = 0;
 
         // Navigation property cho phan quyen
         public ICollection<NguoiDungVaiTro> NguoiDungVaiTros { get; set; } = new List<NguoiDungVaiTro>();

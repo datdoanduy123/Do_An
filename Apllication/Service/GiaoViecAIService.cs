@@ -59,7 +59,7 @@ namespace Apllication.Service
                 var user = await _nguoiDungRepo.LayTheoIdAsync(userDto.Id);
                 if (user == null) continue;
 
-                var matchResult = CalculateMatchScore(task, user, skillWeight, experienceWeight, workloadPenalty);
+                var matchResult = CalculateMatchScore(task, user, skillWeight, experienceWeight, workloadPenalty, user.KhoiLuongCongViec);
                 
                 if (matchResult.Score >= minScore)
                 {
@@ -94,13 +94,17 @@ namespace Apllication.Service
 
             var currentSprint = await GetOrCreateActiveSprintAsync(duAnId, sprintCapacity);
 
+            // Dictionary để theo dõi workload gán tạm thời trong phiên chạy này
+            var tempWorkload = new Dictionary<int, double>();
+
             foreach (var tDto in tasks)
             {
-                var suggestions = await GoiYAssigneeAsync(tDto.Id);
-                var bestMatch = suggestions.FirstOrDefault();
-
                 var task = await _congViecRepo.GetByIdAsync(tDto.Id);
                 if (task == null) continue;
+
+                // Giao việc cho User (Match Score)
+                var suggestions = await GoiYAssigneeWithTempWorkloadAsync(task, tempWorkload);
+                var bestMatch = suggestions.FirstOrDefault();
 
                 if (bestMatch != null)
                 {
@@ -108,6 +112,17 @@ namespace Apllication.Service
                     task.PhuongThucGiaoViec = PhuongThucGiaoViec.AI;
                     task.AiMatchScore = bestMatch.DiemPhuHop;
                     task.AiReasoning = bestMatch.LyDo;
+
+                    // Cập nhật workload trong DB cho User
+                    var assignee = await _nguoiDungRepo.LayTheoIdAsync(bestMatch.UserId);
+                    if (assignee != null)
+                    {
+                        assignee.KhoiLuongCongViec += task.ThoiGianUocTinh;
+                        await _nguoiDungRepo.UpdateAsync(assignee);
+                    }
+
+                    // Cập nhật workload tạm thời để task sau tính toán chính xác
+                    tempWorkload[bestMatch.UserId] = tempWorkload.GetValueOrDefault(bestMatch.UserId) + task.ThoiGianUocTinh;
                 }
 
                 if (task.SprintId == null)
@@ -262,8 +277,56 @@ namespace Apllication.Service
             });
         }
 
+        private async Task<IEnumerable<GoiYGiaoViecDto>> GoiYAssigneeWithTempWorkloadAsync(CongViec task, Dictionary<int, double> tempWorkload)
+        {
+            var rules = await _ruleRepo.GetAllActiveRulesAsync();
+            double skillWeight = GetRuleValue(rules, "SKILL_MATCH_WEIGHT", 0.6);
+            double experienceWeight = GetRuleValue(rules, "EXPERIENCE_WEIGHT", 0.4);
+            double workloadPenalty = GetRuleValue(rules, "WORKLOAD_PENALTY", 0.1);
+            double minScore = GetRuleValue(rules, "MIN_MATCH_SCORE", 0.3);
+
+            var query = new NguoiDungQueryDto { PageSize = 100 };
+            var pagedUsers = await _nguoiDungRepo.LayDanhSachNguoiDungAsync(query);
+            var candidates = pagedUsers.Items;
+
+            var recommendations = new List<GoiYGiaoViecDto>();
+
+            foreach (var userDto in candidates)
+            {
+                var user = await _nguoiDungRepo.LayTheoIdAsync(userDto.Id);
+                if (user == null) continue;
+
+                double currentWorkload = user.KhoiLuongCongViec + tempWorkload.GetValueOrDefault(user.Id);
+
+                var matchResult = CalculateMatchScore(task, user, skillWeight, experienceWeight, workloadPenalty, currentWorkload);
+                
+                if (matchResult.Score >= minScore)
+                {
+                    recommendations.Add(new GoiYGiaoViecDto
+                    {
+                        UserId = user.Id,
+                        HoTen = user.FullName,
+                        DiemPhuHop = Math.Round(matchResult.Score, 2),
+                        LyDo = matchResult.Reason,
+                        KyNangPhuHop = matchResult.MatchedSkills
+                    });
+                }
+            }
+            return recommendations.OrderByDescending(x => x.DiemPhuHop).Take(5);
+        }
+
+        private async Task<double> GetUserWorkloadHoursAsync(int userId)
+        {
+            var query = new CongViecQueryDto { AssigneeId = userId, PageSize = 1000 };
+            var tasks = await _congViecRepo.LayDanhSachCongViecAsync(query);
+            // Chỉ tính các task chưa hoàn thành
+            return tasks.Items
+                .Where(t => t.TrangThai != TrangThaiCongViec.Done)
+                .Sum(t => t.ThoiGianUocTinh);
+        }
+
         private (double Score, string Reason, List<string> MatchedSkills) CalculateMatchScore(
-            CongViec task, User user, double sWeight, double eWeight, double wPenalty)
+            CongViec task, User user, double sWeight, double eWeight, double wPenalty, double currentWorkloadHours)
         {
             double skillScore = 0;
             double expScore = 0;
@@ -319,9 +382,15 @@ namespace Apllication.Service
             double totalScore = (skillScore * sWeight) + (expScore * eWeight);
 
             // Phạt quá tải (Workload Penalty)
-            // Lấy số lượng task đang làm (InProgress) của user
-            // Giả lập: User datdd (ID 1) đang bận, các user khác rảnh hơn
-            if (user.Id == 1) totalScore -= wPenalty;
+            // Cứ mỗi 8h làm việc đã có, sẽ trừ một khoảng điểm phạt (wPenalty)
+            // Ví dụ: wPenalty = 0.1, User có 40h việc -> trừ 0.5 điểm
+            double workloadScorePenalty = (currentWorkloadHours / 8.0) * wPenalty;
+            totalScore -= workloadScorePenalty;
+
+            if (currentWorkloadHours >= 40) 
+            {
+                reason.Append($"Nhân viên đang khá bận ({currentWorkloadHours}h việc). ");
+            }
 
             // Xây dựng lý do
             if (matchedSkills.Any())

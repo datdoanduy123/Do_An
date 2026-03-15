@@ -207,5 +207,11 @@ namespace Infrastructure.Repositories
             _boiCanh.KyNangNguoiDungs.Remove(existing);
             return await _boiCanh.SaveChangesAsync() > 0;
         }
+
+        public async Task<bool> UpdateAsync(User user)
+        {
+            _boiCanh.Users.Update(user);
+            return await _boiCanh.SaveChangesAsync() > 0;
+        }
     }
 }

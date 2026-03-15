@@ -83,24 +83,38 @@ namespace Apllication.Service
                     var tables = doc.Tables;
                     var moduleMapping = new Dictionary<string, string>();
 
+                    // LƯỢT 1: Tìm và nạp Quy định Module (Bảng 1)
                     foreach (var table in tables)
                     {
                         var firstRow = table.GetRow(0);
-                        if (firstRow == null || firstRow.GetTableCells().Count < 3) continue;
+                        if (firstRow == null || firstRow.GetTableCells().Count < 2) continue;
+                        var headers = firstRow.GetTableCells().Select(c => NormalizeText(c.GetText())).ToList();
 
-                        var headers = firstRow.GetTableCells().Select(c => c.GetText().Trim().ToLower()).ToList();
+                        int mCodeIdx = headers.FindIndex(h => h == "module" || h.Contains("mã module"));
+                        int mNameIdx = headers.FindIndex(h => h.Contains("tên module") || h.Contains("ý nghĩa"));
 
-                        if (headers.Contains("mã module") && (headers.Contains("tên module") || headers.Contains("tên đầy đủ")))
+                        if (mCodeIdx >= 0 && mNameIdx >= 0 && mCodeIdx != mNameIdx)
                         {
                             for (int i = 1; i < table.Rows.Count; i++)
                             {
                                 var row = table.GetRow(i);
                                 var cells = row.GetTableCells();
-                                if (cells.Count < 2) continue;
-                                moduleMapping[cells[0].GetText().Trim()] = cells[1].GetText().Trim();
+                                if (cells.Count <= Math.Max(mCodeIdx, mNameIdx)) continue;
+                                string code = cells[mCodeIdx].GetText();
+                                string name = cells[mNameIdx].GetText().Trim();
+                                if (!string.IsNullOrEmpty(code))
+                                    moduleMapping[NormalizeModuleCode(code)] = name;
                             }
-                            continue;
                         }
+                    }
+
+                    // LƯỢT 2: Bóc tách danh sách công việc (Bảng 2)
+                    foreach (var table in tables)
+                    {
+                        var firstRow = table.GetRow(0);
+                        if (firstRow == null || firstRow.GetTableCells().Count < 3) continue;
+
+                        var headers = firstRow.GetTableCells().Select(c => NormalizeText(c.GetText())).ToList();
 
                         bool isTaskTable = (headers.Any(h => h.Contains("stt") || h.Contains("module"))) && 
                                            (headers.Any(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ")));
@@ -111,22 +125,34 @@ namespace Apllication.Service
                             var sprintCache = new Dictionary<string, int>();
                             var tasksInTable = new List<(CongViec Task, string DepStr)>(); 
 
+                            // Xác định chỉ mục cột dựa trên tiêu đề (Headers)
+                            int sttIdx = headers.FindIndex(h => h.Contains("stt") || h.Contains("id") || h == "no.");
+                            int moduleIdx = headers.FindIndex(h => h == "module" || h.Contains("mã module") || h.Contains("sprint"));
+                            int titleIdx = headers.FindIndex(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ") || h.Contains("công việc"));
+                            int descIdx = headers.FindIndex(h => h.Contains("mô tả") || h.Contains("description"));
+                            int typeIdx = headers.FindIndex(h => h.Contains("loại") || h.Contains("type"));
+                            int skillIdx = headers.FindIndex(h => h.Contains("kỹ năng") || h.Contains("skill") || h.Contains("công nghệ"));
+                            int priorityIdx = headers.FindIndex(h => h.Contains("ưu tiên") || h.Contains("priority"));
+                            int depIdx = headers.FindIndex(h => h.Contains("phụ thuộc") || h.Contains("dependency") || h.Contains("tiền đề"));
+
                             for (int i = 1; i < table.Rows.Count; i++)
                             {
                                 var row = table.GetRow(i);
                                 var cells = row.GetTableCells();
-                                if (cells.Count < 3) continue;
+                                if (cells.Count < 2) continue;
 
-                                var moduleName = cells[0].GetText().Trim();
+                                // Lấy Module Name
+                                string moduleName = (moduleIdx >= 0 && moduleIdx < cells.Count) ? cells[moduleIdx].GetText().Trim() : "";
                                 if (!string.IsNullOrEmpty(moduleName)) currentModuleName = moduleName;
 
-                                var title = cells[1].GetText().Trim();
-                                var desc = cells[2].GetText().Trim();
-                                var typeStr = cells.Count > 3 ? cells[3].GetText().Trim() : "";
-                                var skillStr = cells.Count > 4 ? cells[4].GetText().Trim() : "";
-                                var priorityStr = cells.Count > 5 ? cells[5].GetText().Trim() : "";
-                                var dependencyStr = cells.Count > 6 ? cells[6].GetText().Trim() : "";
-                                var positionStr = cells.Count > 0 ? cells[0].GetText().Trim() : "0";
+                                // Lấy thông tin khác dựa trên index đã tìm thấy
+                                var title = (titleIdx >= 0 && titleIdx < cells.Count) ? cells[titleIdx].GetText().Trim() : "";
+                                var desc = (descIdx >= 0 && descIdx < cells.Count) ? cells[descIdx].GetText().Trim() : "";
+                                var typeStr = (typeIdx >= 0 && typeIdx < cells.Count) ? cells[typeIdx].GetText().Trim() : "";
+                                var skillStr = (skillIdx >= 0 && skillIdx < cells.Count) ? cells[skillIdx].GetText().Trim() : "";
+                                var priorityStr = (priorityIdx >= 0 && priorityIdx < cells.Count) ? cells[priorityIdx].GetText().Trim() : "";
+                                var dependencyStr = (depIdx >= 0 && depIdx < cells.Count) ? cells[depIdx].GetText().Trim() : "";
+                                var positionStr = (sttIdx >= 0 && sttIdx < cells.Count) ? cells[sttIdx].GetText().Trim() : "0";
 
                                 if (string.IsNullOrEmpty(title)) continue;
 
@@ -150,8 +176,9 @@ namespace Apllication.Service
                                 int? sprintId = null;
                                 if (!string.IsNullOrEmpty(currentModuleName))
                                 {
-                                    string fullSprintName = moduleMapping.ContainsKey(currentModuleName) 
-                                        ? moduleMapping[currentModuleName] : currentModuleName;
+                                    string normalizedCurrent = NormalizeModuleCode(currentModuleName);
+                                    string fullSprintName = moduleMapping.ContainsKey(normalizedCurrent) 
+                                        ? moduleMapping[normalizedCurrent] : currentModuleName;
 
                                     if (!sprintCache.TryGetValue(fullSprintName, out int sId))
                                     {
@@ -230,6 +257,22 @@ namespace Apllication.Service
             {
                 return false;
             }
+        }
+
+        private string NormalizeText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            // Xử lý ký tự khoảng trắng đặc biệt trong Word (Non-breaking space, v.v.)
+            return text.Replace("\u00A0", " ").Replace("\u200B", "").Trim().ToLower();
+        }
+
+        private string NormalizeModuleCode(string code)
+        {
+            if (string.IsNullOrEmpty(code)) return "";
+            string normalized = NormalizeText(code);
+            // Bỏ phần trong ngoặc (Gộp), (Merge)... 
+            normalized = normalized.Split('(')[0].Trim();
+            return normalized;
         }
 
         private LoaiCongViec MapLoaiCongViec(string text)

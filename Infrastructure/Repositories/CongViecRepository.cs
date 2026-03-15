@@ -58,6 +58,11 @@ namespace Infrastructure.Repositories
                 dbQuery = dbQuery.Where(c => c.DuAnId == query.DuAnId.Value);
             }
 
+            if (query.AssigneeId.HasValue)
+            {
+                dbQuery = dbQuery.Where(c => c.AssigneeId == query.AssigneeId.Value);
+            }
+
             if (!string.IsNullOrEmpty(query.SearchTerm))
             {
                 dbQuery = dbQuery.Where(c => c.TieuDe.Contains(query.SearchTerm) || c.MoTa!.Contains(query.SearchTerm));
