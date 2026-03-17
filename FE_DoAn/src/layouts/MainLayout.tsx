@@ -63,13 +63,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     setOpenSubMenus(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const menuItems: MenuItem[] = [
-    { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Tổng quan' },
-    { path: '/projects', icon: <Briefcase size={20} />, label: 'Dự án' },
-    { path: '/my-tasks', icon: <CheckCircle2 size={20} />, label: 'Công việc của tôi' },
-    { path: '/members', icon: <Users size={20} />, label: 'Thành viên' },
-  ];
-
+  const menuItems: MenuItem[] = [];
+  
   // Chỉ hiển thị menu Quản lý nếu là Quản lý hoặc Admin
   const checkIsAdmin = (roles: string[]) => {
     return roles.some(r => {
@@ -79,6 +74,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   const isAdmin = user ? checkIsAdmin(user.vaiTros) : false;
+
+  // Quyền truy cập Tổng quan chỉ dành cho Quản lý
+  if (isAdmin) {
+    menuItems.push({ path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Tổng quan' });
+  }
+
+  // Menu chung cho mọi người (nhưng Dashboard đã bị tách ra trên)
+  menuItems.push(
+    { path: '/projects', icon: <Briefcase size={20} />, label: 'Dự án' },
+    { path: '/my-tasks', icon: <CheckCircle2 size={20} />, label: 'Công việc của tôi' },
+    { path: '/members', icon: <Users size={20} />, label: 'Thành viên' }
+  );
   
   if (isAdmin) {
     menuItems.push({ 

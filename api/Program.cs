@@ -53,6 +53,7 @@ builder.Services.AddScoped<ITaiLieuDuAnService, TaiLieuDuAnService>();
 builder.Services.AddScoped<INhatKyCongViecService, NhatKyCongViecService>();
 builder.Services.AddScoped<IGiaoViecAIService, GiaoViecAIService>();
 builder.Services.AddScoped<IKyNangService, KyNangService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // Dang ky Phan quyen Attribute
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, QuyenHanPolicyProvider>();

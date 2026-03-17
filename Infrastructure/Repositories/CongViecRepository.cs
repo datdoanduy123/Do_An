@@ -42,6 +42,13 @@ namespace Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<CongViec>> GetAllAsync()
+        {
+            return await _context.CongViecs
+                .Include(c => c.Assignee)
+                .ToListAsync();
+        }
+
         public async Task<CongViec> AddAsync(CongViec congViec)
         {
             _context.CongViecs.Add(congViec);
@@ -75,6 +82,11 @@ namespace Infrastructure.Repositories
             {
                 dbQuery = dbQuery.Where(c => c.TieuDe.Contains(query.SearchTerm) || c.MoTa!.Contains(query.SearchTerm));
             }
+
+            //if (query.TrangThai.HasValue)
+            //{
+            //    dbQuery = dbQuery.Where(c => c.TrangThai == query.TrangThai.Value);
+            //}
 
             var totalCount = await dbQuery.CountAsync();
             var items = await dbQuery

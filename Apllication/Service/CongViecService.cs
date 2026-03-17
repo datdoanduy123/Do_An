@@ -158,7 +158,7 @@ namespace Apllication.Service
         {
             var query = new Apllication.DTOs.CongViecQueryDto
             {
-                TrangThai = TrangThaiCongViec.Review,
+                TrangThai = (int)TrangThaiCongViec.Review,
                 PageSize = 100 // Lấy tối đa 100 task chờ duyệt
             };
             

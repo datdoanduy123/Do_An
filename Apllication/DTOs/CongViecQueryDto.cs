@@ -7,6 +7,7 @@ namespace Apllication.DTOs
         public int PageSize { get; set; } = 10;
         public string? SearchTerm { get; set; }
         public int? AssigneeId { get; set; }
+        public int? TrangThai { get; set; }
     }
 
     public class PagedResultDto<T>

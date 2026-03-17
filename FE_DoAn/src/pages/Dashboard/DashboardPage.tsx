@@ -1,150 +1,242 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   CheckCircle2, 
   Clock, 
   AlertCircle, 
-  TrendingUp,
   Calendar,
-  MoreVertical,
-  Plus,
-  Briefcase
+  Briefcase,
+  Star,
+  ChevronRight,
+  TrendingUp,
+  Users,
+  Target
 } from 'lucide-react';
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area
+} from 'recharts';
+import DashboardService from '../../services/DashboardService';
+import type { DashboardStats } from '../../services/DashboardService';
+import UserService from '../../services/UserService';
 import './Dashboard.css';
 
 /**
- * Trang Dashboard chính hiển thị tổng quan dự án.
+ * Trang Dashboard quản lý v2 với biểu đồ phân tích sâu.
  */
 const DashboardPage: React.FC = () => {
-  const stats = [
-    { label: 'Dự án đang chạy', value: '12', icon: <Briefcase size={24} />, color: '#6366f1' },
-    { label: 'Công việc hoàn thành', value: '128', icon: <CheckCircle2 size={24} />, color: '#10b981' },
-    { label: 'Việc cần làm', value: '24', icon: <Clock size={24} />, color: '#f59e0b' },
-    { label: 'Vấn đề tồn đọng', value: '3', icon: <AlertCircle size={24} />, color: '#ef4444' },
-  ];
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const recentProjects = [
-    { name: 'Hệ thống Quản lý Đồ án', deadline: '2024-05-15', progress: 75, status: 'On Track' },
-    { name: 'Ứng dụng AI Chatbot', deadline: '2024-06-20', progress: 40, status: 'In Review' },
-    { name: 'Website E-commerce', deadline: '2024-04-30', progress: 100, status: 'Completed' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [dashboardStats, profile] = await Promise.all([
+          DashboardService.getDashboardData(),
+          UserService.getProfile()
+        ]);
+        setStats(dashboardStats);
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="loading-container-full">
+        <div className="modern-loader"></div>
+        <p>Đang tải dữ liệu tổng quan...</p>
+      </div>
+    );
+  }
+
+  const COLORS = ['#94a3b8', '#6366f1', '#f59e0b', '#10b981', '#ef4444'];
 
   return (
-    <div className="dashboard-content">
-      {/* Welcome Section */}
-      <div className="welcome-section">
-        <div className="welcome-text">
-          <h2>Chào buổi tối, Admin! 👋</h2>
-          <p>Dưới đây là tóm tắt các hoạt động quan trọng trong ngày hôm nay.</p>
+    <div className="dashboard-container-v2">
+      {/* Header Welcome */}
+      <header className="dashboard-header-v2">
+        <div className="welcome-section">
+          <h1>Chào mừng, {userProfile?.hoTen || 'Quản lý'}! 👋</h1>
+          <p>Hôm nay có <strong>{stats?.pendingReviews}</strong> công việc đang chờ bạn phê duyệt.</p>
         </div>
-        <button className="add-project-btn">
-          <Plus size={18} />
-          <span>Tạo dự án mới</span>
-        </button>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="stats-grid">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: `${stat.color}15`, color: stat.color }}>
-              {stat.icon}
-            </div>
-            <div className="stat-info">
-              <span className="stat-label">{stat.label}</span>
-              <span className="stat-value">{stat.value}</span>
-            </div>
-            <div className="stat-trend positive">
-              <TrendingUp size={14} />
-              <span>12%</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="dashboard-grid">
-        {/* Projects Table */}
-        <div className="dashboard-card projects-card">
-          <div className="card-header">
-            <h3>Dự án gần đây</h3>
-            <button className="text-btn">Xem tất cả</button>
-          </div>
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Tên dự án</th>
-                  <th>Hạn chót</th>
-                  <th>Tiến độ</th>
-                  <th>Trạng thái</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentProjects.map((project, idx) => (
-                  <tr key={idx}>
-                    <td>
-                      <div className="project-name-cell">
-                        <div className="project-avatar">{project.name.charAt(0)}</div>
-                        <span>{project.name}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="deadline-cell">
-                        <Calendar size={14} />
-                        <span>{project.deadline}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="progress-container">
-                        <div className="progress-bar-bg">
-                          <div className="progress-bar-fill" style={{ width: `${project.progress}%` }} />
-                        </div>
-                        <span className="progress-text">{project.progress}%</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${project.status.toLowerCase().replace(' ', '-')}`}>
-                        {project.status}
-                      </span>
-                    </td>
-                    <td>
-                      <button className="icon-btn-sm">
-                        <MoreVertical size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="header-actions">
+          <div className="date-badge">
+            <Calendar size={18} />
+            <span>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
           </div>
         </div>
+      </header>
 
-        {/* Calendar/Upcoming Section */}
-        <div className="dashboard-card upcoming-card">
-          <div className="card-header">
-            <h3>Sắp tới</h3>
-            <button className="icon-btn-sm"><Plus size={16} /></button>
+      {/* Main Stats Grid */}
+      <div className="stats-grid-v2">
+        <div className="stat-card-glass total-projects">
+          <div className="stat-icon"><Briefcase /></div>
+          <div className="stat-info">
+            <span className="label">Tổng dự án</span>
+            <span className="value">{stats?.totalProjects}</span>
           </div>
-          <div className="upcoming-list">
-            <div className="upcoming-item">
-              <div className="event-date">
-                <span className="day">18</span>
-                <span className="month">Th4</span>
-              </div>
-              <div className="event-info">
-                <h4>Họp Team Sprint 1</h4>
-                <p>9:00 AM - 10:30 AM</p>
+          <div className="stat-trend positive">+2 tháng này</div>
+        </div>
+        <div className="stat-card-glass in-progress">
+          <div className="stat-icon"><Clock /></div>
+          <div className="stat-info">
+            <span className="label">Đang triển khai</span>
+            <span className="value">{stats?.inProgressTasks}</span>
+          </div>
+        </div>
+        <div className="stat-card-glass pending">
+          <div className="stat-icon"><AlertCircle /></div>
+          <div className="stat-info">
+            <span className="label">Chờ phê duyệt</span>
+            <span className="value">{stats?.pendingReviews}</span>
+          </div>
+        </div>
+        <div className="stat-card-glass completed">
+          <div className="stat-icon"><CheckCircle2 /></div>
+          <div className="stat-info">
+            <span className="label">Đã hoàn thành</span>
+            <span className="value">{stats?.completedTasks}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard-content-layout">
+        {/* Left Column: Charts */}
+        <div className="charts-column">
+          <div className="chart-row">
+            <div className="chart-card glass">
+              <h3><Target size={18} /> Trạng thái công việc</h3>
+              <div className="chart-wrapper">
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={stats?.taskStatusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="count"
+                      nameKey="status"
+                    >
+                      {stats?.taskStatusDistribution.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                      contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f1f5f9' }}
+                    />
+                    <Legend verticalAlign="bottom" height={36}/>
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
-            <div className="upcoming-item">
-              <div className="event-date blue">
-                <span className="day">20</span>
-                <span className="month">Th4</span>
+
+            <div className="chart-card glass">
+              <h3><Users size={18} /> Phân bổ nguồn lực</h3>
+              <div className="chart-wrapper">
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={stats?.teamWorkload}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+                    <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} />
+                    <Bar dataKey="taskCount" fill="#818cf8" radius={[4, 4, 0, 0]} barSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-              <div className="event-info">
-                <h4>Nộp báo cáo giữa kỳ</h4>
-                <p>Hạn cuối: 11:59 PM</p>
-              </div>
+            </div>
+          </div>
+
+          <div className="chart-card glass full-width">
+            <h3><TrendingUp size={18} /> Tiến độ các dự án tiêu biểu</h3>
+            <div className="chart-wrapper">
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={stats?.projectProgress}>
+                  <defs>
+                    <linearGradient id="colorProgress" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+                  <XAxis dataKey="projectName" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+                  <RechartsTooltip />
+                  <Area 
+                    type="monotone" 
+                    dataKey="progress" 
+                    stroke="#6366f1" 
+                    fillOpacity={1} 
+                    fill="url(#colorProgress)" 
+                    strokeWidth={3}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Secondary Info */}
+        <div className="side-column">
+          <div className="info-card glass">
+            <div className="card-header">
+              <h3>Công việc khẩn cấp</h3>
+              <Star className="star-glow" size={18} />
+            </div>
+            <div className="priority-tasks-list-v2">
+              {(!stats?.myPriorityTasks || stats.myPriorityTasks.length === 0) ? (
+                <div className="empty-tasks">
+                   <div className="empty-icon">✨</div>
+                   <p>Mọi thứ đã được xử lý xong!</p>
+                </div>
+              ) : (
+                stats?.myPriorityTasks.map((task: any) => (
+                  <div key={task.id} className="priority-task-item-v2">
+                    <div className="task-indicator" style={{ backgroundColor: task.doUuTien >= 2 ? '#ef4444' : '#f59e0b' }}></div>
+                    <div className="task-content">
+                      <span className="task-title">{task.tieuDe}</span>
+                      <span className="task-meta">TASK-{task.id} • {task.thoiGianUocTinh || 0}h dự kiến</span>
+                    </div>
+                    <ChevronRight size={16} className="arrow" />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="info-card glass">
+            <div className="card-header">
+              <h3>Dự án mới cập nhật</h3>
+              <Briefcase size={18} color="#94a3b8" />
+            </div>
+            <div className="recent-projects-list-v2">
+              {stats?.recentProjects.map((p: any) => (
+                <div key={p.id} className="mini-project-card-v2">
+                  <div className="project-info">
+                    <h4>{p.tenDuAn}</h4>
+                    <span className="date-meta">Cập nhật: {new Date().toLocaleDateString('vi-VN')}</span>
+                  </div>
+                  <div className="project-progress-mini">
+                     <div className="progress-info">
+                        <span>Tiến độ</span>
+                        <span>65%</span>
+                     </div>
+                    <div className="progress-bar-bg">
+                      <div className="progress-bar-fill" style={{ width: '65%' }}></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -29,7 +29,7 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="quanly">
               <MainLayout>
                 <DashboardPage />
               </MainLayout>
