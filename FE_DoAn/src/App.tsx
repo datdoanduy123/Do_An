@@ -10,7 +10,9 @@ import ProjectDetailPage from './pages/Projects/ProjectDetailPage';
 import SprintDetailPage from './pages/Projects/SprintDetailPage';
 import ProfilePage from './pages/Management/ProfilePage';
 import MyTasksPage from './pages/Tasks/MyTasksPage';
+import TaskApprovalPage from './pages/Tasks/TaskApprovalPage';
 import MainLayout from './layouts/MainLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 /**
@@ -27,9 +29,11 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <MainLayout>
-              <DashboardPage />
-            </MainLayout>
+            <ProtectedRoute>
+              <MainLayout>
+                <DashboardPage />
+              </MainLayout>
+            </ProtectedRoute>
           }
         />
 
@@ -37,18 +41,21 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* Có thể thêm các route khác tại đây */}
-        <Route path="/projects" element={<MainLayout><ProjectsPage /></MainLayout>} />
-        <Route path="/projects/:id" element={<MainLayout><ProjectDetailPage /></MainLayout>} />
-        <Route path="/sprints/:id" element={<MainLayout><SprintDetailPage /></MainLayout>} />
-        <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
-        <Route path="/my-tasks" element={<MainLayout><MyTasksPage /></MainLayout>} />
-        <Route path="/members" element={<MainLayout><div>Trang Thành viên</div></MainLayout>} />
-        <Route path="/management/users" element={<MainLayout><UsersPage /></MainLayout>} />
-        <Route path="/management/roles" element={<MainLayout><RolesPage /></MainLayout>} />
-        <Route path="/management/permissions" element={<MainLayout><PermissionsPage /></MainLayout>} />
-        <Route path="/management/skills" element={<MainLayout><SkillsPage /></MainLayout>} />
-        <Route path="/management/permission-groups" element={<MainLayout><div>Trang Quản lý Nhóm quyền</div></MainLayout>} />
-        <Route path="/settings" element={<MainLayout><div>Trang Cấu hình</div></MainLayout>} />
+        <Route path="/projects" element={<ProtectedRoute><MainLayout><ProjectsPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/projects/:id" element={<ProtectedRoute><MainLayout><ProjectDetailPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/sprints/:id" element={<ProtectedRoute><MainLayout><SprintDetailPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><MainLayout><ProfilePage /></MainLayout></ProtectedRoute>} />
+        <Route path="/my-tasks" element={<ProtectedRoute><MainLayout><MyTasksPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/members" element={<ProtectedRoute><MainLayout><div>Trang Thành viên</div></MainLayout></ProtectedRoute>} />
+        
+        {/* Các trang quản trị yêu cầu quyền Quản lý */}
+        <Route path="/management/task-approval" element={<ProtectedRoute requiredRole="quanly"><MainLayout><TaskApprovalPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/management/users" element={<ProtectedRoute requiredRole="quanly"><MainLayout><UsersPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/management/roles" element={<ProtectedRoute requiredRole="quanly"><MainLayout><RolesPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/management/permissions" element={<ProtectedRoute requiredRole="quanly"><MainLayout><PermissionsPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/management/skills" element={<ProtectedRoute requiredRole="quanly"><MainLayout><SkillsPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/management/permission-groups" element={<ProtectedRoute requiredRole="quanly"><MainLayout><div>Trang Quản lý Nhóm quyền</div></MainLayout></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><MainLayout><div>Trang Cấu hình</div></MainLayout></ProtectedRoute>} />
       </Routes>
     </Router>
   );

@@ -10,11 +10,14 @@ import {
   User,
   AlertCircle,
   CheckCircle2,
-  Calendar
+  Calendar,
+  XCircle,
+  CheckCircle
 } from 'lucide-react';
 import SprintService from '../../services/SprintService';
 import type { SprintDto } from '../../services/SprintService';
 import TaskService from '../../services/TaskService';
+import UserService from '../../services/UserService';
 import type { CongViecDto } from '../../services/TaskService';
 import { TrangThaiCongViec as StatusEnum } from '../../services/TaskService';
 import './SprintDetail.css';
@@ -28,6 +31,19 @@ const SprintDetailPage: React.FC = () => {
   const [sprint, setSprint] = useState<SprintDto | null>(null);
   const [tasks, setTasks] = useState<CongViecDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await UserService.getProfile();
+        setCurrentUser(profile);
+      } catch (e) {
+        console.error('Failed to fetch profile', e);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,6 +84,24 @@ const SprintDetailPage: React.FC = () => {
       default: return { text: 'Vừa', class: 'p-medium' };
     }
   };
+  
+  const handleTaskAction = async (taskId: number, approve: boolean) => {
+    try {
+      // 3 là Done, 1 là InProgress
+      const targetStatus = approve ? 3 : 1;
+      const success = await TaskService.updateStatus(taskId, targetStatus);
+      if (success) {
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, trangThai: targetStatus as any } : t));
+      }
+    } catch (error) {
+      console.error('Action failed:', error);
+    }
+  };
+
+  const isAdmin = currentUser?.vaiTros?.some((r: string) => {
+    const normalized = r.toLowerCase().replace(/\s+/g, '');
+    return normalized === 'quanly' || normalized === 'admin' || normalized === 'quảnlý';
+  });
 
   if (loading) return <div className="loading-state">Đang tải chi tiết Sprint...</div>;
   if (!sprint) return <div className="error-state">Không tìm thấy Sprint.</div>;
@@ -130,6 +164,28 @@ const SprintDetailPage: React.FC = () => {
                   </div>
                   
                   <h4 className="task-title">{task.tieuDe}</h4>
+
+                  {/* Quick Approval Actions for Managers */}
+                  {col.id === StatusEnum.Review && isAdmin && (
+                    <div className="task-approval-actions">
+                      <button 
+                        className="btn-reject-small" 
+                        onClick={() => handleTaskAction(task.id, false)}
+                        title="Bác bỏ"
+                      >
+                        <XCircle size={14} />
+                        Bác bỏ
+                      </button>
+                      <button 
+                        className="btn-approve-small" 
+                        onClick={() => handleTaskAction(task.id, true)}
+                        title="Duyệt"
+                      >
+                        <CheckCircle size={14} />
+                        Duyệt
+                      </button>
+                    </div>
+                  )}
                   
                   <div className="task-card-footer">
                     <div className="assignee">

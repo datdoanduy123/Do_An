@@ -46,6 +46,20 @@ namespace api.Controllers
             }
         }
 
+        [HttpGet("pending-reviews")]
+        public async Task<IActionResult> LayCongViecChoDuyet()
+        {
+            try
+            {
+                var result = await _congViecService.GetTasksPendingReviewAsync();
+                return SuccessResponse(result, "Lay danh sach cong viec cho duyet thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {

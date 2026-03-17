@@ -154,6 +154,18 @@ namespace Apllication.Service
             return await _repository.UpdateAsync(cv);
         }
 
+        public async Task<IEnumerable<CongViecDto>> GetTasksPendingReviewAsync()
+        {
+            var query = new Apllication.DTOs.CongViecQueryDto
+            {
+                TrangThai = TrangThaiCongViec.Review,
+                PageSize = 100 // Lấy tối đa 100 task chờ duyệt
+            };
+            
+            var result = await _repository.LayDanhSachCongViecAsync(query);
+            return result.Items.Select(MapToDto);
+        }
+
         private CongViecDto MapToDto(CongViec cv)
         {
             return new CongViecDto

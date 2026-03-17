@@ -44,6 +44,22 @@ class TaskService {
     const response = await api.patch(`/CongViec/${id}/cap-nhat-trang-thai?status=${status}`);
     return response.data.statusCode === 200;
   }
+
+  /**
+   * Cập nhật tiến độ công việc (thời gian làm việc và trạng thái).
+   */
+  async updateProgress(id: number, data: { trangThai: number, thoiGianLamViecThem: number, ghiChu?: string }): Promise<boolean> {
+    const response = await api.put(`/CongViec/${id}/cap-nhat-tien-do`, data);
+    return response.data.statusCode === 200;
+  }
+
+  /**
+   * Lấy danh sách công việc đang chờ duyệt (Review).
+   */
+  async getPendingReviews(): Promise<CongViecDto[]> {
+    const response = await api.get('/CongViec/pending-reviews');
+    return response.data.data;
+  }
 }
 
 export default new TaskService();

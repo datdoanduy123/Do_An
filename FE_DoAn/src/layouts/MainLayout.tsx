@@ -17,6 +17,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import AuthService from '../services/AuthService';
+import UserService from '../services/UserService';
+import type { NguoiDungDto } from '../services/UserService';
 import './MainLayout.css';
 
 interface MainLayoutProps {
@@ -38,6 +40,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const [isSidebarOpen, setSidebarOpen] = React.useState(true);
   const [openSubMenus, setOpenSubMenus] = React.useState<Record<string, boolean>>({ management: true });
+  const [user, setUser] = React.useState<NguoiDungDto | null>(null);
+
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const profile = await UserService.getProfile();
+        setUser(profile);
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handleLogout = () => {
     AuthService.logout();
@@ -53,7 +68,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { path: '/projects', icon: <Briefcase size={20} />, label: 'Dự án' },
     { path: '/my-tasks', icon: <CheckCircle2 size={20} />, label: 'Công việc của tôi' },
     { path: '/members', icon: <Users size={20} />, label: 'Thành viên' },
-    { 
+  ];
+
+  // Chỉ hiển thị menu Quản lý nếu là Quản lý hoặc Admin
+  const checkIsAdmin = (roles: string[]) => {
+    return roles.some(r => {
+      const normalized = r.toLowerCase().replace(/\s+/g, '');
+      return normalized === 'quanly' || normalized === 'admin' || normalized === 'quảnlý';
+    });
+  };
+
+  const isAdmin = user ? checkIsAdmin(user.vaiTros) : false;
+  
+  if (isAdmin) {
+    menuItems.push({ 
       label: 'Quản lý', 
       icon: <ShieldCheck size={20} />,
       subItems: [
@@ -62,10 +90,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         { path: '/management/permissions', label: 'Quyền', icon: <Key size={18} /> },
         { path: '/management/permission-groups', label: 'Nhóm quyền', icon: <Layers size={18} /> },
         { path: '/management/skills', label: 'Kỹ năng', icon: <Search size={18} /> },
+        { path: '/management/task-approval', label: 'Duyệt công việc', icon: <CheckCircle2 size={18} /> },
       ]
-    },
-    { path: '/settings', icon: <Settings size={20} />, label: 'Cấu hình' },
-  ];
+    });
+  }
+
+  menuItems.push({ path: '/settings', icon: <Settings size={20} />, label: 'Cấu hình' });
 
   return (
     <div className="layout-container">
@@ -160,11 +190,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               title="Xem thông tin cá nhân"
             >
               <div className="user-info">
-                <span className="user-name">Admin User</span>
-                <span className="user-role">Quản trị viên</span>
+                <span className="user-name">{user?.hoTen || 'Đang tải...'}</span>
+                <span className="user-role">{isAdmin ? 'Quản trị viên' : 'Nhân viên'}</span>
               </div>
               <div className="user-avatar">
-                <img src="https://ui-avatars.com/api/?name=Admin+User&background=6366f1&color=fff" alt="Avatar" />
+                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.hoTen || 'U')}&background=6366f1&color=fff`} alt="Avatar" />
               </div>
             </div>
           </div>

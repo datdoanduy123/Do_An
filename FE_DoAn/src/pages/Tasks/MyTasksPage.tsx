@@ -5,11 +5,12 @@ import {
   AlertCircle, 
   Calendar,
   Search,
-  ChevronRight,
   MoreVertical,
-  Flag
+  Flag,
+  X
 } from 'lucide-react';
 import TaskService from '../../services/TaskService';
+import UserService from '../../services/UserService';
 import type { CongViecDto } from '../../services/TaskService';
 import './MyTasks.css';
 
@@ -21,6 +22,28 @@ const MyTasksPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await UserService.getProfile();
+        setCurrentUser(profile);
+      } catch (e) {
+        console.error('Failed to fetch profile in MyTasks', e);
+      }
+    };
+    fetchProfile();
+  }, []);
+  
+  // State cho Modal cập nhật tiến độ
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<CongViecDto | null>(null);
+  const [progressData, setProgressData] = useState({
+    thoiGianThem: 0,
+    ghiChu: '',
+    trangThai: 0
+  });
 
   useEffect(() => {
     const fetchMyTasks = async () => {
@@ -36,6 +59,50 @@ const MyTasksPage: React.FC = () => {
     };
     fetchMyTasks();
   }, []);
+
+  const handleOpenProgressModal = (task: CongViecDto, targetStatus?: number) => {
+    setSelectedTask(task);
+    setProgressData({
+      thoiGianThem: 0,
+      ghiChu: '',
+      trangThai: targetStatus !== undefined ? targetStatus : task.trangThai
+    });
+    setShowProgressModal(true);
+  };
+
+  const handleUpdateProgressSubmit = async () => {
+    if (!selectedTask) return;
+    
+    try {
+      const success = await TaskService.updateProgress(selectedTask.id, {
+        trangThai: progressData.trangThai,
+        thoiGianLamViecThem: progressData.thoiGianThem,
+        ghiChu: progressData.ghiChu
+      });
+
+      if (success) {
+        setTasks(prev => prev.map(t => 
+          t.id === selectedTask.id 
+            ? { 
+                ...t, 
+                trangThai: progressData.trangThai as any,
+                thoiGianThucTe: (t.thoiGianThucTe || 0) + progressData.thoiGianThem 
+              } 
+            : t
+        ));
+        setShowProgressModal(false);
+      }
+    } catch (error) {
+      console.error('Failed to update progress:', error);
+      alert('Có lỗi xảy ra khi cập nhật tiến độ.');
+    }
+  };
+
+  const calculateProgress = (spent: number = 0, estimate: number = 0) => {
+    if (estimate <= 0) return 0;
+    const percent = (spent / estimate) * 100;
+    return percent > 100 ? 100 : Math.round(percent);
+  };
 
   const getPriorityColor = (priority: number) => {
     switch (priority) {
@@ -129,8 +196,22 @@ const MyTasksPage: React.FC = () => {
                     </div>
                     <div className="task-text">
                       <h4>{task.tieuDe}</h4>
+                      <div className="task-progress-box">
+                        <div className="progress-bar-wrapper">
+                          <div 
+                            className="progress-fill" 
+                            style={{ 
+                              width: `${calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh)}%`,
+                              backgroundColor: calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh) >= 100 ? '#10b981' : '#6366f1'
+                            }}
+                          ></div>
+                        </div>
+                        <span className="progress-text">{calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh)}%</span>
+                      </div>
                       <div className="task-meta">
-                        <span className="project-tag">ID Dự án: {task.duAnId}</span>
+                        <span className="time-tracking">
+                          <strong>{task.thoiGianThucTe || 0}h</strong> / {task.thoiGianUocTinh}h
+                        </span>
                         <span className="dot">•</span>
                         <span className="deadline-text">
                           <Calendar size={12} />
@@ -149,11 +230,48 @@ const MyTasksPage: React.FC = () => {
                   </div>
 
                   <div className="task-actions">
+                    <div className="status-quick-actions">
+                      {task.trangThai !== 1 && task.trangThai !== 3 && (
+                        <button 
+                          className="action-btn start" 
+                          onClick={() => handleOpenProgressModal(task, 1)}
+                          title="Bắt đầu làm"
+                        >
+                          Làm việc
+                        </button>
+                      )}
+                      {task.trangThai === 1 && (
+                        <button 
+                          className="action-btn log" 
+                          onClick={() => handleOpenProgressModal(task)}
+                          title="Cập nhật tiến độ"
+                        >
+                          Cập nhật
+                        </button>
+                      )}
+                      {task.trangThai === 1 && (
+                        <button 
+                          className="action-btn review" 
+                          onClick={() => handleOpenProgressModal(task, 2)}
+                          title="Gửi duyệt"
+                        >
+                          Gửi duyệt
+                        </button>
+                      )}
+                      {task.trangThai === 2 && (
+                        <span className="awaiting-review">Chờ phê duyệt</span>
+                      )}
+                      {task.trangThai === 2 && currentUser?.vaiTros?.some((r: string) => r.toLowerCase().replace(/\s+/g, '') === 'quanly' || r.toLowerCase() === 'admin') && (
+                        <button 
+                          className="action-btn done" 
+                          onClick={() => handleOpenProgressModal(task, 3)}
+                          title="Hoàn thành"
+                        >
+                          Xong
+                        </button>
+                      )}
+                    </div>
                     <button className="icon-btn-ghost"><MoreVertical size={18} /></button>
-                    <button className="btn-detail">
-                      Chi tiết
-                      <ChevronRight size={16} />
-                    </button>
                   </div>
                 </div>
               );
@@ -166,6 +284,110 @@ const MyTasksPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Progress Update Modal */}
+      {showProgressModal && selectedTask && (
+        <div className="modal-overlay">
+          <div className="modal-content progress-modal-v2">
+            <div className="modal-header">
+              <div className="header-title">
+                <span className="task-id">TASK-{selectedTask.id}</span>
+                <h3>Cập nhật tiến độ</h3>
+              </div>
+              <button className="close-btn" onClick={() => setShowProgressModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="modal-body split-view">
+              <div className="task-summary-side">
+                <div className="summary-card">
+                  <h4>{selectedTask.tieuDe}</h4>
+                  <div className="time-stats">
+                    <div className="stat-circle">
+                      <svg width="100" height="100" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                        <circle 
+                          cx="50" cy="50" r="45" fill="none" stroke="#6366f1" strokeWidth="8" 
+                          strokeDasharray={`${calculateProgress(selectedTask.thoiGianThucTe, selectedTask.thoiGianUocTinh) * 2.827} 282.7`}
+                          transform="rotate(-90 50 50)"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="stat-value">
+                        {calculateProgress(selectedTask.thoiGianThucTe, selectedTask.thoiGianUocTinh)}%
+                      </div>
+                    </div>
+                    <div className="time-details">
+                      <div className="detail-row">
+                        <span>Đã làm:</span>
+                        <strong>{selectedTask.thoiGianThucTe || 0}h</strong>
+                      </div>
+                      <div className="detail-row">
+                        <span>Dự kiến:</span>
+                        <strong>{selectedTask.thoiGianUocTinh}h</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="current-status-info">
+                  <label>Trạng thái hiện tại</label>
+                  <span className={`status-pill ${getStatusInfo(selectedTask.trangThai).class}`}>
+                    {getStatusInfo(selectedTask.trangThai).label}
+                  </span>
+                </div>
+              </div>
+
+              <div className="task-form-side">
+                <div className="form-group">
+                  <label>Chuyển sang trạng thái</label>
+                  <div className="status-selector">
+                    {[0, 1, 2, 3].map(s => (
+                      <button 
+                        key={s}
+                        className={`status-opt ${progressData.trangThai === s ? 'active' : ''}`}
+                        onClick={() => setProgressData({...progressData, trangThai: s})}
+                      >
+                        {getStatusInfo(s).label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Số giờ làm việc thêm hôm nay</label>
+                  <div className="input-with-label">
+                    <input 
+                      type="number" 
+                      step="0.5"
+                      min="0"
+                      value={progressData.thoiGianThem}
+                      onChange={(e) => setProgressData({...progressData, thoiGianThem: Number(e.target.value)})}
+                    />
+                    <span>giờ</span>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Công việc đã thực hiện</label>
+                  <textarea 
+                    placeholder="Mô tả ngắn gọn nội dung công việc bạn đã hoàn thành..."
+                    value={progressData.ghiChu}
+                    onChange={(e) => setProgressData({...progressData, ghiChu: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-cancel-v2" onClick={() => setShowProgressModal(false)}>Để sau</button>
+              <button className="btn-save-v2" onClick={handleUpdateProgressSubmit}>
+                Xác nhận cập nhật
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
