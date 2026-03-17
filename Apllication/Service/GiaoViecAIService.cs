@@ -223,7 +223,13 @@ namespace Apllication.Service
             if (existing != null) return existing;
 
             var duAn = await _duAnRepo.GetByIdAsync(duAnId);
+            
+            // Tìm ngày bắt đầu cho Sprint mới (Nối tiếp sau Sprint cuối cùng)
             DateTime startDate = duAn?.NgayBatDau ?? DateTime.UtcNow;
+            if (sprints.Any())
+            {
+                startDate = sprints.Max(s => s.NgayKetThuc);
+            }
 
             return await _sprintRepo.AddAsync(new Sprint
             {

@@ -9,6 +9,7 @@ namespace Apllication.IService
     {
         Task<CongViecDto> GetByIdAsync(int id);
         Task<IEnumerable<CongViecDto>> GetByProjectIdAsync(int projectId);
+        Task<IEnumerable<CongViecDto>> GetMyTasksAsync(int userId);
         Task<CongViecDto> CreateAsync(TaoCongViecDto dto, int creatorId);
         Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status);
         Task<bool> CapNhatTienDoAsync(int id, CapNhatTienDoDto dto, int updaterId);

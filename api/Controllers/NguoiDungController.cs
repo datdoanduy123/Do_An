@@ -46,8 +46,23 @@ namespace api.Controllers
             }
         }
 
+        [HttpGet("profile")]
+        public async Task<IActionResult> Profile()
+        {
+            try
+            {
+                var result = await _nguoiDungService.LayTheoIdAsync(CurrentUserId);
+                if (result == null) return ErrorResponse(404, "Khong tim thay thong tin ca nhan.");
+                return SuccessResponse(result, "Lay thong tin ca nhan thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
         [QuyenHan("XEM_USER")]
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
             try
@@ -63,7 +78,7 @@ namespace api.Controllers
         }
 
         // [QuyenHan("USER_UPDATE")]
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatNguoiDungDto dto)
         {
             try
@@ -79,7 +94,7 @@ namespace api.Controllers
         }
 
         // [QuyenHan("USER_DELETE")]
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Xoa(int id)
         {
             try

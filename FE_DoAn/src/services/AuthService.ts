@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5095/api/TaiKhoan'; // Cần điều chỉnh URL phù hợp với môi trường chạy Backend
+import api from './api';
 
 export interface DangNhapDto {
   tenDangNhap: string;
@@ -24,7 +22,7 @@ class AuthService {
    */
   async login(data: DangNhapDto): Promise<LoginResponse> {
     try {
-      const response = await axios.post(`${API_URL}/dang-nhap`, data);
+      const response = await api.post('/TaiKhoan/dang-nhap', data);
       // Backend trả về { StatusCode, Message, Data }
       const resData = response.data;
       

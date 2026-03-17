@@ -32,6 +32,20 @@ namespace api.Controllers
             }
         }
 
+        [HttpGet("my-tasks")]
+        public async Task<IActionResult> LayCongViecCuaToi()
+        {
+            try
+            {
+                var result = await _congViecService.GetMyTasksAsync(CurrentUserId);
+                return SuccessResponse(result, "Lay danh sach cong viec cua toi thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {

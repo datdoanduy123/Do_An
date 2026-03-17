@@ -13,7 +13,8 @@ import {
   ChevronDown,
   UserCheck,
   Key,
-  Layers
+  Layers,
+  CheckCircle2
 } from 'lucide-react';
 import AuthService from '../services/AuthService';
 import './MainLayout.css';
@@ -50,6 +51,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const menuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Tổng quan' },
     { path: '/projects', icon: <Briefcase size={20} />, label: 'Dự án' },
+    { path: '/my-tasks', icon: <CheckCircle2 size={20} />, label: 'Công việc của tôi' },
     { path: '/members', icon: <Users size={20} />, label: 'Thành viên' },
     { 
       label: 'Quản lý', 
@@ -152,7 +154,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <Bell size={20} />
               <div className="notification-badge" />
             </button>
-            <div className="user-profile">
+            <div 
+              className="user-profile clickable" 
+              onClick={() => navigate('/profile')}
+              title="Xem thông tin cá nhân"
+            >
               <div className="user-info">
                 <span className="user-name">Admin User</span>
                 <span className="user-role">Quản trị viên</span>

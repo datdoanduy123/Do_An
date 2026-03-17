@@ -34,6 +34,14 @@ namespace Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<CongViec>> GetByAssigneeIdAsync(int assigneeId)
+        {
+            return await _context.CongViecs
+                .Where(c => c.AssigneeId == assigneeId)
+                .Include(c => c.Assignee)
+                .ToListAsync();
+        }
+
         public async Task<CongViec> AddAsync(CongViec congViec)
         {
             _context.CongViecs.Add(congViec);

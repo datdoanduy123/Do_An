@@ -40,6 +40,12 @@ namespace Apllication.Service
             return dsCv.Select(MapToDto);
         }
 
+        public async Task<IEnumerable<CongViecDto>> GetMyTasksAsync(int userId)
+        {
+            var dsCv = await _repository.GetByAssigneeIdAsync(userId);
+            return dsCv.Select(MapToDto);
+        }
+
         public async Task<CongViecDto> CreateAsync(TaoCongViecDto dto, int creatorId)
         {
             var cv = new CongViec

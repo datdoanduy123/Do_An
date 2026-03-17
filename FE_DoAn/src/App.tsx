@@ -5,6 +5,11 @@ import PermissionsPage from './pages/Management/PermissionsPage';
 import RolesPage from './pages/Management/RolesPage';
 import UsersPage from './pages/Management/UsersPage';
 import SkillsPage from './pages/Management/SkillsPage';
+import ProjectsPage from './pages/Projects/ProjectsPage';
+import ProjectDetailPage from './pages/Projects/ProjectDetailPage';
+import SprintDetailPage from './pages/Projects/SprintDetailPage';
+import ProfilePage from './pages/Management/ProfilePage';
+import MyTasksPage from './pages/Tasks/MyTasksPage';
 import MainLayout from './layouts/MainLayout';
 import './App.css';
 
@@ -17,22 +22,26 @@ function App() {
       <Routes>
         {/* Đường dẫn trang Đăng nhập không dùng Layout chung */}
         <Route path="/login" element={<LoginPage />} />
-        
+
         {/* Các đường dẫn yêu cầu Layout chung */}
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <MainLayout>
               <DashboardPage />
             </MainLayout>
-          } 
+          }
         />
-        
-        {/* Đường dẫn mặc định chuyển hướng sang Đăng nhập hoặc Dashboard tùy trạng thái auth */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        
+
+        {/* Đường dẫn mặc định chuyển hướng sang Đăng nhập */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+
         {/* Có thể thêm các route khác tại đây */}
-        <Route path="/projects" element={<MainLayout><div>Trang Dự án</div></MainLayout>} />
+        <Route path="/projects" element={<MainLayout><ProjectsPage /></MainLayout>} />
+        <Route path="/projects/:id" element={<MainLayout><ProjectDetailPage /></MainLayout>} />
+        <Route path="/sprints/:id" element={<MainLayout><SprintDetailPage /></MainLayout>} />
+        <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
+        <Route path="/my-tasks" element={<MainLayout><MyTasksPage /></MainLayout>} />
         <Route path="/members" element={<MainLayout><div>Trang Thành viên</div></MainLayout>} />
         <Route path="/management/users" element={<MainLayout><UsersPage /></MainLayout>} />
         <Route path="/management/roles" element={<MainLayout><RolesPage /></MainLayout>} />
