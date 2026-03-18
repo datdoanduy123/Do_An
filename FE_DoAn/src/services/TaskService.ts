@@ -60,6 +60,14 @@ class TaskService {
     const response = await api.get('/CongViec/pending-reviews');
     return response.data.data;
   }
+
+  /**
+   * Giao việc cho nhân viên.
+   */
+  async assignTask(data: { congViecId: number, nguoiDuocGiaoId: number }): Promise<boolean> {
+    const response = await api.post('/CongViec/giao-viec-thu-cong', data);
+    return response.data.statusCode === 200;
+  }
 }
 
 export default new TaskService();

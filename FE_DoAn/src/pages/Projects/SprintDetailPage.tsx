@@ -7,7 +7,7 @@ import {
   Filter,
   MoreHorizontal,
   Clock,
-  User,
+  Sparkles,
   AlertCircle,
   CheckCircle2,
   Calendar,
@@ -20,6 +20,9 @@ import TaskService from '../../services/TaskService';
 import UserService from '../../services/UserService';
 import type { CongViecDto } from '../../services/TaskService';
 import { TrangThaiCongViec as StatusEnum } from '../../services/TaskService';
+import GiaoViecAIService from '../../services/GiaoViecAIService';
+import type { AIRecommendation } from '../../services/GiaoViecAIService';
+import AIRecommendationModal from '../../components/AI/AIRecommendationModal';
 import './SprintDetail.css';
 
 /**
@@ -32,6 +35,12 @@ const SprintDetailPage: React.FC = () => {
   const [tasks, setTasks] = useState<CongViecDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // AI State
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiSelectedTask, setAiSelectedTask] = useState<CongViecDto | null>(null);
+  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -102,6 +111,38 @@ const SprintDetailPage: React.FC = () => {
     const normalized = r.toLowerCase().replace(/\s+/g, '');
     return normalized === 'quanly' || normalized === 'admin' || normalized === 'quảnlý';
   });
+
+  const handleAIRecommend = async (task: CongViecDto) => {
+    setAiSelectedTask(task);
+    setShowAIModal(true);
+    setAiLoading(true);
+    try {
+      const recs = await GiaoViecAIService.getRecommendations(task.id);
+      setAiRecommendations(recs);
+    } catch (error) {
+      console.error('AI Recommend failed:', error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleApplyAI = async (userId: number) => {
+    if (!aiSelectedTask) return;
+    try {
+      const success = await TaskService.assignTask({
+        congViecId: aiSelectedTask.id,
+        nguoiDuocGiaoId: userId
+      });
+      if (success) {
+        setTasks(prev => prev.map(t =>
+          t.id === aiSelectedTask.id ? { ...t, assigneeId: userId, assigneeName: aiRecommendations.find(r => r.userId === userId)?.hoTen || t.assigneeName } : t
+        ));
+        setShowAIModal(false);
+      }
+    } catch (error) {
+      console.error('Apply AI failed:', error);
+    }
+  };
 
   if (loading) return <div className="loading-state">Đang tải chi tiết Sprint...</div>;
   if (!sprint) return <div className="error-state">Không tìm thấy Sprint.</div>;
@@ -194,11 +235,16 @@ const SprintDetailPage: React.FC = () => {
                           {task.assigneeName.charAt(0)}
                         </div>
                       ) : (
-                        <div className="avatar empty"><User size={14} /></div>
+                        <div className="avatar empty" onClick={() => isAdmin && handleAIRecommend(task)} title="Gợi ý bằng AI">
+                           <Sparkles size={14} color="#fbbf24" strokeWidth={3} />
+                        </div>
                       )}
                       <span>{task.assigneeName || 'Chưa giao'}</span>
+                      {!task.assigneeName && isAdmin && (
+                        <button className="ai-mini-btn" onClick={() => handleAIRecommend(task)}>✨</button>
+                      )}
                     </div>
-                    
+
                     <div className="story-points">
                       <span>{task.storyPoints} SP</span>
                     </div>
@@ -209,6 +255,17 @@ const SprintDetailPage: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {showAIModal && aiSelectedTask && (
+        <AIRecommendationModal
+          taskId={aiSelectedTask.id}
+          taskTitle={aiSelectedTask.tieuDe}
+          recommendations={aiRecommendations}
+          loading={aiLoading}
+          onClose={() => setShowAIModal(false)}
+          onApply={handleApplyAI}
+        />
+      )}
     </div>
   );
 };

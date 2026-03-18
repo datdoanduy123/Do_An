@@ -12,10 +12,12 @@ namespace api.Controllers
     public class CongViecController : BaseController
     {
         private readonly ICongViecService _congViecService;
+        private readonly IGiaoViecAIService _aiService;
 
-        public CongViecController(ICongViecService congViecService)
+        public CongViecController(ICongViecService congViecService, IGiaoViecAIService aiService)
         {
             _congViecService = congViecService;
+            _aiService = aiService;
         }
 
         [HttpGet("du-an/{projectId}")]
@@ -130,6 +132,20 @@ namespace api.Controllers
                 var result = await _congViecService.GiaoViecThuCongAsync(dto, CurrentUserId);
                 if (result) return SuccessResponse(null!, "Giao viec thu cong thanh cong.");
                 return ErrorResponse(400, "Khong the giao viec cho nhan vien nay.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpGet("{id}/goi-y-ai")]
+        public async Task<IActionResult> GetGoiYAI(int id)
+        {
+            try
+            {
+                var result = await _aiService.GoiYAssigneeAsync(id);
+                return SuccessResponse(result, "Lay goi y AI thanh cong.");
             }
             catch (Exception ex)
             {

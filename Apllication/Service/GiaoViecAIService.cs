@@ -59,6 +59,9 @@ namespace Apllication.Service
                 var user = await _nguoiDungRepo.LayTheoIdAsync(userDto.Id);
                 if (user == null) continue;
 
+                // KHÔNG giao việc cho người có vai trò quản lý
+                if (user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN")) continue;
+
                 var matchResult = CalculateMatchScore(task, user, skillWeight, experienceWeight, workloadPenalty, user.KhoiLuongCongViec);
                 
                 if (matchResult.Score >= minScore)
@@ -301,6 +304,9 @@ namespace Apllication.Service
             {
                 var user = await _nguoiDungRepo.LayTheoIdAsync(userDto.Id);
                 if (user == null) continue;
+
+                // KHÔNG giao việc cho người có vai trò quản lý
+                if (user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN")) continue;
 
                 double currentWorkload = user.KhoiLuongCongViec + tempWorkload.GetValueOrDefault(user.Id);
 
