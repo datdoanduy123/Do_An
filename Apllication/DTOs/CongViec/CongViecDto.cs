@@ -37,6 +37,7 @@ namespace Apllication.DTOs.CongViec
         public LoaiCongViec LoaiCongViec { get; set; }
         public DoUuTien DoUuTien { get; set; } = DoUuTien.Medium;
         public int StoryPoints { get; set; }
+        public int? AssigneeId { get; set; }
         public double ThoiGianUocTinh { get; set; }
         public DateTime? NgayBatDauDuKien { get; set; }
         public DateTime? NgayKetThucDuKien { get; set; }

@@ -4,6 +4,8 @@ using Infrastructure.Repositories;
 using Apllication.IService;
 using Apllication.Service;
 using Apllication.IRepositories;
+using api.Hubs;
+using api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -19,9 +21,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll",
         policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.SetIsOriginAllowed(_ => true) // Cho phép tất cả origin với SignalR credentials
                   .AllowAnyMethod()
-                  .AllowAnyHeader();
+                  .AllowAnyHeader()
+                  .AllowCredentials();
         });
 });
 
@@ -37,6 +40,7 @@ builder.Services.AddScoped<ITaiLieuDuAnRepository, TaiLieuDuAnRepository>();
 builder.Services.AddScoped<INhatKyCongViecRepository, NhatKyCongViecRepository>();
 builder.Services.AddScoped<IQuyTacGiaoViecAIRepository, QuyTacGiaoViecAIRepository>();
 builder.Services.AddScoped<IKyNangRepository, KyNangRepository>();
+builder.Services.AddScoped<IThongBaoRepository, ThongBaoRepository>();
 
 // Dang ky Service
 builder.Services.AddScoped<IDichVuToken, DichVuToken>();
@@ -54,6 +58,9 @@ builder.Services.AddScoped<INhatKyCongViecService, NhatKyCongViecService>();
 builder.Services.AddScoped<IGiaoViecAIService, GiaoViecAIService>();
 builder.Services.AddScoped<IKyNangService, KyNangService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IKanbanNotificationService, KanbanNotificationService>();
+builder.Services.AddScoped<IThongBaoService, ThongBaoService>();
+builder.Services.AddSignalR();
 
 // Dang ky Phan quyen Attribute
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, QuyenHanPolicyProvider>();
@@ -161,5 +168,6 @@ app.UseAuthentication(); // Thêm dòng này để kích hoạt xác thực
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<KanbanHub>("/hubs/kanban");
 
 app.Run();

@@ -19,19 +19,22 @@ namespace Apllication.Service
         private readonly IQuyTacGiaoViecAIRepository _ruleRepo;
         private readonly IDuAnRepository _duAnRepo;
         private readonly ISprintRepository _sprintRepo;
+        private readonly IKanbanNotificationService _notificationService;
 
         public GiaoViecAIService(
             ICongViecRepository congViecRepo,
             INguoiDungRepository nguoiDungRepo,
             IQuyTacGiaoViecAIRepository ruleRepo,
             IDuAnRepository duAnRepo,
-            ISprintRepository sprintRepo)
+            ISprintRepository sprintRepo,
+            IKanbanNotificationService notificationService)
         {
             _congViecRepo = congViecRepo;
             _nguoiDungRepo = nguoiDungRepo;
             _ruleRepo = ruleRepo;
             _duAnRepo = duAnRepo;
             _sprintRepo = sprintRepo;
+            _notificationService = notificationService;
         }
 
         public async Task<IEnumerable<GoiYGiaoViecDto>> GoiYAssigneeAsync(int congViecId)
@@ -145,10 +148,20 @@ namespace Apllication.Service
                 {
                     task.SprintId = currentSprint.Id;
                 }
-                await _congViecRepo.UpdateAsync(task);
+                var res = await _congViecRepo.UpdateAsync(task);
+                
+                // Thông báo cho từng người được AI gán việc
+                if (res && task.AssigneeId.HasValue)
+                {
+                    await _notificationService.NotifyPersonal(task.AssigneeId.Value, "AI Giao việc", $"AI vừa tự động giao cho bạn công việc: {task.TieuDe}");
+                }
             }
 
             await LapKeHoachTimelineDuAnAsync(duAnId);
+
+            // Thông báo Realtime: AI đã giao việc/cập nhật timeline
+            await _notificationService.NotifyTaskUpdated(duAnId);
+            
             return true;
         }
 
@@ -162,7 +175,7 @@ namespace Apllication.Service
 
             foreach (var sprintGroup in tasksBySprint)
             {
-                var sprint = await _sprintRepo.GetByIdAsync(sprintGroup.Key.Value);
+                var sprint = await _sprintRepo.GetByIdAsync(sprintGroup.Key!.Value);
                 if (sprint == null) continue;
 
                 var tasksByAssignee = sprintGroup.Where(t => t.AssigneeId != null).GroupBy(t => t.AssigneeId);

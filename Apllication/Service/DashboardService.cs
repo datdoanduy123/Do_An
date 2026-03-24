@@ -40,8 +40,8 @@ namespace Apllication.Service
 
             // 2. Khối lượng công việc của nhân viên (Bar Chart) - Lấy Top 5 nhân viên bận nhất
             var teamWorkload = allTasks
-                .Where(t => t.AssigneeId.HasValue && t.TrangThai != TrangThaiCongViec.Done)
-                .GroupBy(t => t.Assignee.FullName) // Giả định Assignee có FullName
+                .Where(t => t.AssigneeId.HasValue && t.Assignee != null && t.TrangThai != TrangThaiCongViec.Done)
+                .GroupBy(t => t.Assignee!.FullName) // Đã check lọc null phía trên
                 .OrderByDescending(g => g.Count())
                 .Take(5)
                 .Select(g => new {

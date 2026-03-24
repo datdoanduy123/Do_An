@@ -66,5 +66,6 @@ export interface TaoCongViecDto {
   doUuTien: DoUuTien;
   storyPoints: number;
   thoiGianUocTinh: number;
+  assigneeId?: number;
   thoiGianThucTe?: number;
 }

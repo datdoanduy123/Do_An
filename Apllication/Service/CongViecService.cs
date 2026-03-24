@@ -15,15 +15,18 @@ namespace Apllication.Service
         private readonly ICongViecRepository _repository;
         private readonly INguoiDungRepository _userRepository;
         private readonly INhatKyCongViecRepository _taskLogRepository;
+        private readonly IKanbanNotificationService _notificationService;
 
         public CongViecService(
             ICongViecRepository repository, 
             INguoiDungRepository userRepository,
-            INhatKyCongViecRepository taskLogRepository)
+            INhatKyCongViecRepository taskLogRepository,
+            IKanbanNotificationService notificationService)
         {
             _repository = repository;
             _userRepository = userRepository;
             _taskLogRepository = taskLogRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<CongViecDto> GetByIdAsync(int id)
@@ -58,6 +61,7 @@ namespace Apllication.Service
                 DoUuTien = dto.DoUuTien,
                 TrangThai = TrangThaiCongViec.Todo,
                 StoryPoints = dto.StoryPoints,
+                AssigneeId = dto.AssigneeId,
                 ThoiGianUocTinh = dto.ThoiGianUocTinh,
                 NgayBatDauDuKien = dto.NgayBatDauDuKien,
                 NgayKetThucDuKien = dto.NgayKetThucDuKien,
@@ -67,7 +71,21 @@ namespace Apllication.Service
             };
 
             var ketQua = await _repository.AddAsync(cv);
-            return MapToDto(ketQua);
+            
+            // Thông báo realtime cho dự án (Bảng Kanban)
+            await _notificationService.NotifyTaskUpdated(cv.DuAnId);
+
+            // Nếu gán việc ngay khi tạo, gửi thông báo cá nhân cho người thực hiện
+            if (cv.AssigneeId.HasValue && cv.AssigneeId != creatorId)
+            {
+                await _notificationService.NotifyPersonal(
+                    cv.AssigneeId.Value, 
+                    "Công việc mới", 
+                    $"Bạn vừa được gán công việc mới: '{cv.TieuDe}' trong dự án."
+                );
+            }
+
+            return MapToDto(cv);
         }
 
         public async Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status)
@@ -111,7 +129,24 @@ namespace Apllication.Service
                 }
             }
 
-            return await _repository.UpdateAsync(cv);
+            var result = await _repository.UpdateAsync(cv);
+            if (result)
+            {
+                await _notificationService.NotifyTaskUpdated(cv.DuAnId);
+                
+                // Thông báo cho người tạo/quản lý
+                if (cv.CreatedBy.HasValue)
+                {
+                    await _notificationService.NotifyPersonal(cv.CreatedBy.Value, "Cập nhật công việc", $"Công việc '{cv.TieuDe}' vừa được đổi trạng thái sang {status}");
+                }
+                
+                // Thông báo cho người thực hiện (nếu có và không phải là người đổi/người tạo đã nhận thông báo trên)
+                if (cv.AssigneeId.HasValue && cv.AssigneeId != cv.CreatedBy)
+                {
+                    await _notificationService.NotifyPersonal(cv.AssigneeId.Value, "Trạng thái công việc", $"Công việc '{cv.TieuDe}' của bạn đã đổi sang {status}");
+                }
+            }
+            return result;
         }
 
         public async Task<bool> CapNhatTienDoAsync(int id, CapNhatTienDoDto dto, int updaterId)
@@ -170,7 +205,18 @@ namespace Apllication.Service
             await _taskLogRepository.AddAsync(log);
 
             // 3. Lưu Task
-            return await _repository.UpdateAsync(cv);
+            var result = await _repository.UpdateAsync(cv);
+            if (result)
+            {
+                await _notificationService.NotifyTaskUpdated(cv.DuAnId);
+                
+                // Thông báo cho người quản lý
+                if (cv.CreatedBy.HasValue)
+                {
+                    await _notificationService.NotifyPersonal(cv.CreatedBy.Value, "Cập nhật tiến độ", $"Công việc '{cv.TieuDe}' vừa được cập nhật tiến độ.");
+                }
+            }
+            return result;
         }
 
         public async Task<bool> GiaoViecThuCongAsync(GiaoViecThuCongDto dto, int assignerId)
@@ -192,7 +238,9 @@ namespace Apllication.Service
                 }
                 cv.AssigneeId = null;
                 cv.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual;
-                return await _repository.UpdateAsync(cv);
+                var res = await _repository.UpdateAsync(cv);
+                if (res) await _notificationService.NotifyTaskUpdated(cv.DuAnId);
+                return res;
             }
 
             var user = await _userRepository.LayTheoIdAsync(dto.AssigneeId);
@@ -227,7 +275,15 @@ namespace Apllication.Service
             cv.AssigneeId = dto.AssigneeId;
             cv.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; 
 
-            return await _repository.UpdateAsync(cv);
+            var result = await _repository.UpdateAsync(cv);
+            if (result)
+            {
+                await _notificationService.NotifyTaskUpdated(cv.DuAnId);
+                
+                // Thông báo cho người được gán mới
+                await _notificationService.NotifyPersonal(dto.AssigneeId, "Giao việc mới", $"Bạn vừa được giao công việc: {cv.TieuDe}");
+            }
+            return result;
         }
 
         public async Task<IEnumerable<CongViecDto>> GetTasksPendingReviewAsync()

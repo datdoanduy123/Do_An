@@ -14,26 +14,15 @@ import {
   Sparkles,
   UserPlus,
   Trash2,
-  BarChart3,
   Users as UsersIcon,
+  Layers,
   CheckCircle,
   Loader2,
-  Zap,
   Shield,
-  Award,
   Activity,
   Play
 } from 'lucide-react';
-import { 
-  Radar, 
-  RadarChart, 
-  PolarGrid, 
-  PolarAngleAxis, 
-  PolarRadiusAxis, 
-  ResponsiveContainer,
-  Legend,
-  Tooltip
-} from 'recharts';
+
 import ProjectService from '../../services/ProjectService';
 import type { DuAnDto } from '../../services/ProjectService';
 import UserService from '../../services/UserService';
@@ -57,7 +46,7 @@ const ProjectDetailPage: React.FC = () => {
   const [docLoading, setDocLoading] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
   const [allAvailableUsers, setAllAvailableUsers] = useState<any[]>([]);
-  const [skillCoverage, setSkillCoverage] = useState<any[]>([]);
+
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [dashboardLoading, setDashboardLoading] = useState(false);
@@ -81,20 +70,18 @@ const ProjectDetailPage: React.FC = () => {
       try {
         setLoading(true);
         setDashboardLoading(true);
-        const [projData, sprintsData, docsData, membersData, usersData, coverageData] = await Promise.all([
+        const [projData, sprintsData, docsData, membersData, usersData] = await Promise.all([
           ProjectService.getProjectById(Number(id)),
           SprintService.getByProjectId(Number(id)),
           DocumentService.getByProject(Number(id)),
           ProjectService.getMembers(Number(id)),
-          UserService.getUsers({ pageSize: 100 }),
-          ProjectService.getSkillCoverage(Number(id))
+          UserService.getUsers({ pageSize: 100 })
         ]);
         setProject(projData);
         setSprints(sprintsData || []);
         setDocuments(docsData || []);
         setMembers(membersData || []);
         setAllAvailableUsers(usersData.items || []);
-        setSkillCoverage(coverageData || []);
       } catch (error) {
         console.error('Error fetching project details:', error);
       } finally {
@@ -160,12 +147,8 @@ const ProjectDetailPage: React.FC = () => {
     try {
       setDocLoading(true);
       await ProjectService.addMember(Number(id), Number(selectedUserId));
-      const [updatedMembers, updatedCoverage] = await Promise.all([
-        ProjectService.getMembers(Number(id)),
-        ProjectService.getSkillCoverage(Number(id))
-      ]);
+      const updatedMembers = await ProjectService.getMembers(Number(id));
       setMembers(updatedMembers);
-      setSkillCoverage(updatedCoverage);
       setShowAddMember(false);
       setSelectedUserId('');
     } catch (error) {
@@ -181,12 +164,8 @@ const ProjectDetailPage: React.FC = () => {
     try {
       setDocLoading(true);
       await ProjectService.removeMember(Number(id), userId);
-      const [updatedMembers, updatedCoverage] = await Promise.all([
-        ProjectService.getMembers(Number(id)),
-        ProjectService.getSkillCoverage(Number(id))
-      ]);
+      const updatedMembers = await ProjectService.getMembers(Number(id));
       setMembers(updatedMembers);
-      setSkillCoverage(updatedCoverage);
     } catch (error) {
       console.error('Remove member failed:', error);
       alert('Xóa thành viên thất bại.');
@@ -195,26 +174,7 @@ const ProjectDetailPage: React.FC = () => {
     }
   };
 
-  const handleAutoAssign = async () => {
-    if (!id || !window.confirm('AI sẽ tự động phân bổ toàn bộ công việc chưa có người nhận cho các thành viên trong team. Bạn có chắc chắn?')) return;
-    try {
-      setDocLoading(true);
-      await ProjectService.autoAssignProject(Number(id));
-      // Tải lại dữ liệu dự án và sprint
-      const [updatedProj, updatedSprints] = await Promise.all([
-        ProjectService.getProjectById(Number(id)),
-        SprintService.getByProjectId(Number(id))
-      ]);
-      setProject(updatedProj);
-      setSprints(updatedSprints);
-      alert('AI đã hoàn thành việc giao việc tự động!');
-    } catch (error) {
-      console.error('Auto assign failed:', error);
-      alert('Giao việc tự động thất bại.');
-    } finally {
-      setDocLoading(false);
-    }
-  };
+
 
   const handleCreateSprint = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,6 +203,30 @@ const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  const handleEditSprint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSprintData || !id) return;
+    try {
+      setIsEditingSprint(true);
+      await SprintService.update(editSprintData.id, {
+        tenSprint: editSprintData.tenSprint,
+        mucTieuStoryPoints: editSprintData.mucTieuStoryPoints || 0,
+        ngayBatDau: editSprintData.ngayBatDau || new Date().toISOString(),
+        ngayKetThuc: editSprintData.ngayKetThuc || new Date().toISOString(),
+        trangThai: editSprintData.trangThai
+      });
+      const updatedSprints = await SprintService.getByProjectId(Number(id));
+      setSprints(updatedSprints);
+      setShowEditSprintModal(false);
+    } catch (error) {
+      console.error('Update sprint failed:', error);
+      alert('Cập nhật Sprint thất bại.');
+    } finally {
+      setIsEditingSprint(false);
+    }
+  };
+
+
   const handleDeleteSprint = async (sprintId: number) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa Sprint này không? Các công việc (nếu có) có thể bị ảnh hưởng.')) return;
     try {
@@ -257,19 +241,7 @@ const ProjectDetailPage: React.FC = () => {
   if (loading || dashboardLoading) return <div className="loading-state">Đang tải thông tin dự án...</div>;
   if (!project) return <div className="error-state">Không tìm thấy dự án.</div>;
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="custom-chart-tooltip">
-          <p className="label">{payload[0].payload.Skill}</p>
-          <p className="val required">Yêu cầu: {payload[0].payload.Required}</p>
-          <p className="val available">Hiện có: {payload[0].payload.Available}</p>
-          <p className="val percent">Đáp ứng: {Math.round(payload[0].payload.CoveragePercent)}%</p>
-        </div>
-      );
-    }
-    return null;
-  };
+
 
   return (
     <div className="project-detail-container">
@@ -289,22 +261,25 @@ const ProjectDetailPage: React.FC = () => {
         </div>
 
         <div className="header-stats">
-          <div className="stat-box">
-            <span className="stat-label">Tổng Sprint</span>
-            <span className="stat-value">{sprints.length}</span>
+          <div className="stat-card">
+            <div className="stat-icon-wrapper indigo">
+              <Layers size={22} />
+            </div>
+            <div className="stat-details">
+              <span className="stat-label">Tổng Sprint</span>
+              <span className="stat-value">{sprints.length}</span>
+            </div>
           </div>
-          <div className="stat-box">
-            <span className="stat-label">Tiến độ</span>
-            <span className="stat-value">{Math.round(project.tienDo || 0)}%</span>
+          
+          <div className="stat-card">
+            <div className="stat-icon-wrapper emerald">
+              <Activity size={22} />
+            </div>
+            <div className="stat-details">
+              <span className="stat-label">Tiến độ dự án</span>
+              <span className="stat-value">{Math.round(project.tienDo || 0)}%</span>
+            </div>
           </div>
-          <button 
-            className="auto-assign-btn-premium" 
-            onClick={handleAutoAssign}
-            disabled={docLoading}
-          >
-            <Zap size={18} fill={docLoading ? "#cbd5e1" : "#fbbf24"} color="#fbbf24" strokeWidth={0} />
-            <span>AI Auto-Assign Team</span>
-          </button>
         </div>
       </div>
 
@@ -397,166 +372,8 @@ const ProjectDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* Team Skill Insights Dashboard */}
-      <div className="dashboard-section">
-        <div className="section-header">
-          <div className="section-title">
-            <BarChart3 size={22} className="title-icon chart-icon" />
-            <h2>Phân tích Năng lực Team</h2>
-          </div>
-          <div className="dashboard-badges">
-            <span className="badge-ai">Phân tích bởi AI</span>
-          </div>
-        </div>
 
-        <div className="dashboard-content">
-          <div className="chart-container-radar">
-            {skillCoverage.length >= 3 ? (
-              <ResponsiveContainer width="100%" height={350}>
-                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={skillCoverage}>
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis dataKey="Skill" tick={{ fill: '#64748b', fontSize: 12 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                  <Radar
-                    name="Hiện có"
-                    dataKey="Available"
-                    stroke="#6366f1"
-                    fill="#6366f1"
-                    fillOpacity={0.6}
-                  />
-                  <Radar
-                    name="Yêu cầu"
-                    dataKey="Required"
-                    stroke="#fbbf24"
-                    fill="#fbbf24"
-                    fillOpacity={0.3}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="chart-placeholder">
-                <p>Cần ít nhất 3 kỹ năng để hiển thị biểu đồ Radar.</p>
-                <div className="mini-bars">
-                  {skillCoverage.map(s => (
-                    <div key={s.Skill} className="mini-bar-item">
-                      <span className="s-name">{s.Skill}</span>
-                      <div className="s-track">
-                        <div className="s-fill" style={{ width: `${s.CoveragePercent}%`, background: s.CoveragePercent >= 100 ? '#10b981' : '#6366f1' }} />
-                      </div>
-                      <span className="s-val">{Math.round(s.CoveragePercent)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
 
-          <div className="dashboard-summary">
-            <h3>Chi tiết Đáp ứng Kỹ năng</h3>
-            <div className="skill-stats-list">
-              {skillCoverage.map((s) => (
-                <div key={s.Skill} className="skill-stat-card">
-                  <div className="skill-head">
-                    <span className="skill-name">{s.Skill}</span>
-                    <span className={`skill-percent ${s.CoveragePercent >= 100 ? 'good' : 'warning'}`}>
-                      {Math.round(s.CoveragePercent)}%
-                    </span>
-                  </div>
-                  <div className="skill-bar-bg">
-                    <div 
-                      className="skill-bar-fill" 
-                      style={{ 
-                        width: `${s.CoveragePercent}%`,
-                        background: s.CoveragePercent >= 100 ? '#10b981' : 'linear-gradient(90deg, #6366f1, #fbbf24)'
-                      }} 
-                    />
-                  </div>
-                  <div className="skill-counts">
-                    <span>Yêu cầu: <strong>{s.Required}</strong></span>
-                    <span>Team hiện có: <strong>{s.Available}</strong></span>
-                  </div>
-                </div>
-              ))}
-              {skillCoverage.length === 0 && (
-                <div className="empty-dashboard-text">
-                  Chưa có dữ liệu phân tích kỹ năng. Vui lòng gán Task có yêu cầu kỹ năng và thêm thành viên.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* AI Project Analyst Section */}
-      <div className="ai-analyst-section">
-        <div className="section-header">
-          <div className="section-title">
-            <Sparkles size={22} className="title-icon ai-icon" />
-            <h2>Trợ lý AI bóc tách tài liệu</h2>
-          </div>
-          <div className="upload-controls">
-            <input 
-              type="file" 
-              id="doc-upload" 
-              hidden 
-              accept=".docx,.pdf"
-              onChange={handleFileUpload}
-            />
-            <label htmlFor="doc-upload" className="upload-label-btn">
-              {docLoading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-              <span>Tải tài liệu Word (.docx)</span>
-            </label>
-          </div>
-        </div>
-
-        <div className="ai-content-card">
-          {documents.length > 0 ? (
-            <div className="document-list">
-              {documents.map((doc) => (
-                <div key={doc.id} className="document-item">
-                  <div className="doc-info">
-                    <FileText size={20} className="doc-icon" />
-                    <div className="doc-details">
-                      <span className="doc-name">{doc.fileName}</span>
-                      <span className="doc-meta">
-                        {new Date(doc.uploadAt).toLocaleString('vi-VN')} • {doc.fileType}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="doc-actions">
-                    {doc.isProcessed ? (
-                      <span className="processed-tag">
-                        <CheckCircle size={14} />
-                        Đã xử lý
-                      </span>
-                    ) : (
-                      <button 
-                        className="process-ai-btn"
-                        onClick={() => handleProcessAI(doc.id)}
-                        disabled={docLoading}
-                      >
-                        <Zap size={16} />
-                        <span>AI Bóc tách Task</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="ai-empty-state">
-              <div className="ai-illustration">
-                <Sparkles size={40} />
-              </div>
-              <p>Chưa có tài liệu dự án nào được tải lên.</p>
-              <span className="ai-hint">Tải lên file Word (.docx) chứa bảng mô tả công việc để AI tự động bóc tách.</span>
-            </div>
-          )}
-        </div>
-      </div>
- Broadway
       {/* Project Members Section */}
       <div className="members-section">
         <div className="section-header">
@@ -773,6 +590,76 @@ const ProjectDetailPage: React.FC = () => {
                 </button>
                 <button type="submit" className="btn-submit" disabled={isCreatingSprint || !newSprintData.tenSprint}>
                   {isCreatingSprint ? <Loader2 className="animate-spin" size={16} /> : 'Tạo Sprint'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Sprint Modal */}
+      {showEditSprintModal && editSprintData && (
+        <div className="sprint-modal-overlay" onClick={() => setShowEditSprintModal(false)}>
+          <div className="sprint-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="sprint-modal-header">
+              <h2>Chỉnh sửa Sprint</h2>
+              <button className="close-btn" onClick={() => setShowEditSprintModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleEditSprint} className="sprint-modal-body">
+              <div className="form-group">
+                <label>Tên Sprint <span className="required">*</span></label>
+                <input 
+                  type="text" 
+                  value={editSprintData.tenSprint}
+                  onChange={e => setEditSprintData({...editSprintData, tenSprint: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Mục tiêu Story Points</label>
+                <input 
+                  type="number" 
+                  min={0}
+                  value={editSprintData.mucTieuStoryPoints}
+                  onChange={e => setEditSprintData({...editSprintData, mucTieuStoryPoints: parseInt(e.target.value) || 0})}
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Ngày bắt đầu</label>
+                  <input 
+                    type="date" 
+                    value={editSprintData.ngayBatDau ? editSprintData.ngayBatDau.split('T')[0] : ''}
+                    onChange={e => setEditSprintData({...editSprintData, ngayBatDau: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Ngày kết thúc</label>
+                  <input 
+                    type="date" 
+                    value={editSprintData.ngayKetThuc ? editSprintData.ngayKetThuc.split('T')[0] : ''}
+                    onChange={e => setEditSprintData({...editSprintData, ngayKetThuc: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Trạng thái</label>
+                <select 
+                  value={editSprintData.trangThai}
+                  onChange={e => setEditSprintData({...editSprintData, trangThai: parseInt(e.target.value) as any})}
+                  style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+                >
+                  <option value={0}>Mới</option>
+                  <option value={1}>Đang thực hiện</option>
+                  <option value={2}>Đã kết thúc</option>
+                </select>
+              </div>
+              <div className="sprint-modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowEditSprintModal(false)}>
+                  Hủy
+                </button>
+                <button type="submit" className="btn-submit" disabled={isEditingSprint || !editSprintData.tenSprint}>
+                  {isEditingSprint ? <Loader2 className="animate-spin" size={16} /> : 'Lưu Thay Đổi'}
                 </button>
               </div>
             </form>

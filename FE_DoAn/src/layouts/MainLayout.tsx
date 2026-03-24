@@ -19,6 +19,8 @@ import {
 import AuthService from '../services/AuthService';
 import UserService from '../services/UserService';
 import type { NguoiDungDto } from '../services/UserService';
+import SignalRService from '../services/SignalRService';
+import NotificationService, { type Notification } from '../services/NotificationService';
 import './MainLayout.css';
 
 interface MainLayoutProps {
@@ -42,17 +44,102 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [openSubMenus, setOpenSubMenus] = React.useState<Record<string, boolean>>({ management: true });
   const [user, setUser] = React.useState<NguoiDungDto | null>(null);
 
+  // Notifications State
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = React.useState(false);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  const fetchNotifications = async (userId: number) => {
+    try {
+      const data = await NotificationService.getByUser(userId);
+      setNotifications(data);
+      const count = await NotificationService.getUnreadCount(userId);
+      setUnreadCount(count);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
+
   React.useEffect(() => {
+    // Khởi tạo SignalR
+    const initSignalR = async (userId: number) => {
+      await SignalRService.startConnection();
+      await SignalRService.joinUser(userId);
+      
+      // Lắng nghe sự kiện cập nhật bảng Kanban (toàn dự án)
+      SignalRService.on('TaskUpdated', () => {
+         // Cập nhật ngầm (silent) nếu đang ở trang dự án
+      });
+
+      // Lắng nghe sự kiện thông báo cá nhân (đẩy vào Bell Icon)
+      SignalRService.off('ReceiveNotification');
+      SignalRService.on('ReceiveNotification', (data: { id: number, title: string, message: string }) => {
+        const newNotif: Notification = {
+          id: data.id,
+          userId: userId,
+          title: data.title,
+          message: data.message,
+          createdAt: new Date().toISOString(),
+          isRead: false
+        };
+        setNotifications((prev: Notification[]) => [newNotif, ...prev].slice(0, 20));
+        setUnreadCount((prev: number) => prev + 1);
+      });
+    };
+
     const fetchUser = async () => {
       try {
         const profile = await UserService.getProfile();
         setUser(profile);
+        if (profile) {
+          initSignalR(profile.id);
+          fetchNotifications(profile.id);
+        }
       } catch (error) {
         console.error('Failed to fetch user profile:', error);
       }
     };
     fetchUser();
+
+    return () => {
+      SignalRService.off('TaskUpdated');
+      SignalRService.off('ReceiveNotification');
+    };
   }, []);
+
+  const clearAllNotifications = async () => {
+    if (!user) return;
+    try {
+      await NotificationService.deleteAll(user.id);
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to clear notifications:', err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!user) return;
+    try {
+      await NotificationService.markAllRead(user.id);
+      setNotifications((prev: Notification[]) => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  const markAsRead = async (notifId: number) => {
+    try {
+      await NotificationService.markRead(notifId);
+      setNotifications((prev: Notification[]) => prev.map(n => 
+        n.id === notifId ? { ...n, isRead: true } : n
+      ));
+      setUnreadCount((prev: number) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Failed to mark as read:', err);
+    }
+  };
 
   const handleLogout = () => {
     AuthService.logout();
@@ -187,10 +274,51 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
 
           <div className="header-right">
-            <button className="icon-btn notification-btn">
-              <Bell size={20} />
-              <div className="notification-badge" />
-            </button>
+            <div className="notification-wrapper">
+              <button 
+                className="icon-btn notification-btn"
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  if (!showNotifications) setUnreadCount(0);
+                }}
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && <div className="notification-badge-count">{unreadCount}</div>}
+              </button>
+
+                {showNotifications && (
+                  <div className="notification-dropdown">
+                    <div className="dropdown-header">
+                      <h3>Thông báo</h3>
+                      <div className="header-actions">
+                        <button className="text-btn" onClick={markAllAsRead}>Đã đọc hết</button>
+                        <button className="text-btn" onClick={clearAllNotifications}>Xóa tất cả</button>
+                      </div>
+                    </div>
+                    <div className="dropdown-content">
+                      {notifications.length > 0 ? (
+                        notifications.map((notif) => (
+                          <div 
+                            key={notif.id} 
+                            className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}
+                            onClick={() => !notif.isRead && markAsRead(notif.id)}
+                          >
+                            <div className="notif-icon"><Bell size={16} /></div>
+                            <div className="notif-info">
+                              <p className="notif-message">{notif.message}</p>
+                              <span className="notif-time">
+                                {new Date(notif.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="empty-notif">Không có thông báo mới</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+            </div>
             <div 
               className="user-profile clickable" 
               onClick={() => navigate('/profile')}

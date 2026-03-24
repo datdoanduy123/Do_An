@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Search, 
-  Plus, 
+import {
+  ArrowLeft,
+  Search,
+  Plus,
   MoreHorizontal,
   Clock,
   Sparkles,
@@ -23,6 +23,7 @@ import type { CongViecDto } from '../../services/TaskService';
 import { TrangThaiCongViec as StatusEnum } from '../../services/TaskService';
 import ProjectService from '../../services/ProjectService';
 import type { ThanhVienDuAnDto } from '../../services/ProjectTypes';
+import SignalRService from '../../services/SignalRService';
 import './SprintDetail.css';
 
 /**
@@ -40,6 +41,18 @@ const SprintDetailPage: React.FC = () => {
   const [projectMembers, setProjectMembers] = useState<ThanhVienDuAnDto[]>([]);
   const [activeDropdownTaskId, setActiveDropdownTaskId] = useState<number | null>(null);
 
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [newTaskData, setNewTaskData] = useState({
+    tieuDe: '',
+    moTa: '',
+    loaiCongViec: 0,
+    doUuTien: 1,
+    storyPoints: 0,
+    thoiGianUocTinh: 0,
+    assigneeId: null as number | null
+  });
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -52,13 +65,13 @@ const SprintDetailPage: React.FC = () => {
     fetchProfile();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (background: boolean = false) => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const sprintData = await SprintService.getById(Number(id));
       setSprint(sprintData);
-      
+
       if (sprintData) {
         const allTasks = await TaskService.getByProjectId(sprintData.duAnId);
         const sprintTasks = allTasks.filter(t => t.sprintId === Number(id));
@@ -70,13 +83,40 @@ const SprintDetailPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching sprint details:', error);
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+
+    // Thay thế Polling bằng SignalR Realtime
+    const setupSignalR = async () => {
+      await SignalRService.startConnection();
+      if (sprint) {
+        await SignalRService.joinProject(sprint.duAnId);
+      }
+      
+      // Lắng nghe sự kiện cập nhật công việc
+      SignalRService.on('TaskUpdated', (projectId: number) => {
+        if (sprint && projectId === sprint.duAnId) {
+          console.log('Realtime update received for project:', projectId);
+          fetchData(true); // Refresh data ngầm
+        }
+      });
+    };
+
+    if (sprint) {
+      setupSignalR();
+    }
+
+    return () => {
+      if (sprint) {
+        SignalRService.leaveProject(sprint.duAnId);
+      }
+      SignalRService.off('TaskUpdated');
+    };
+  }, [id, sprint?.duAnId]);
 
   const columns = [
     { id: StatusEnum.Todo, title: 'Cần làm', icon: <AlertCircle size={18} />, color: '#64748b' },
@@ -94,11 +134,11 @@ const SprintDetailPage: React.FC = () => {
       default: return { text: 'Vừa', class: 'p-medium' };
     }
   };
-  
+
   const handleTaskAction = async (taskId: number, approve: boolean) => {
     if (!isSprintActive) {
-       alert('Chỉ có thể phê duyệt công việc khi Sprint đang hoạt động.');
-       return;
+      alert('Chỉ có thể phê duyệt công việc khi Sprint đang hoạt động.');
+      return;
     }
     try {
       const targetStatus = approve ? 3 : 1;
@@ -117,27 +157,56 @@ const SprintDetailPage: React.FC = () => {
   });
 
   const isSprintActive = !!sprint && (
-    sprint.trangThai === 1 || 
+    sprint.trangThai === 1 ||
     (sprint.trangThai === 0 && new Date() >= new Date(sprint.ngayBatDau) && new Date() <= new Date(sprint.ngayKetThuc))
   );
 
   const handleUpdateSprintStatus = async (status: number) => {
     if (!sprint) return;
     try {
-       const success = await SprintService.update(sprint.id, {
-          tenSprint: sprint.tenSprint,
-          ngayBatDau: sprint.ngayBatDau,
-          ngayKetThuc: sprint.ngayKetThuc,
-          mucTieuStoryPoints: sprint.mucTieuStoryPoints,
-          trangThai: status as any
-       });
-       if (success) {
-          fetchData(); // Reload
-       }
+      const success = await SprintService.update(sprint.id, {
+        tenSprint: sprint.tenSprint,
+        ngayBatDau: sprint.ngayBatDau,
+        ngayKetThuc: sprint.ngayKetThuc,
+        mucTieuStoryPoints: sprint.mucTieuStoryPoints,
+        trangThai: status as any
+      });
+      if (success) {
+        fetchData(); // Reload
+      }
     } catch (e) {
-       console.error('Update status failed', e);
+      console.error('Update status failed', e);
     }
   }
+
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sprint || !newTaskData.tieuDe) return;
+    
+    try {
+      setIsCreatingTask(true);
+      const payload = {
+        ...newTaskData,
+        duAnId: sprint.duAnId,
+        sprintId: sprint.id
+      };
+      await TaskService.create(payload as any);
+      
+      const allTasks = await TaskService.getByProjectId(sprint.duAnId);
+      const sprintTasks = allTasks.filter(t => t.sprintId === Number(id));
+      setTasks(sprintTasks);
+      
+      setShowCreateTaskModal(false);
+      setNewTaskData({
+        tieuDe: '', moTa: '', loaiCongViec: 0, doUuTien: 1, storyPoints: 0, thoiGianUocTinh: 0, assigneeId: null
+      });
+    } catch (error) {
+      console.error('Create task failed:', error);
+      alert('Tạo công việc thất bại.');
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
 
   const handleManualAssign = async (taskId: number, userId: number | null) => {
     try {
@@ -155,10 +224,10 @@ const SprintDetailPage: React.FC = () => {
 
       if (success) {
         setTasks(prev => prev.map(t =>
-          t.id === taskId ? { 
-            ...t, 
-            assigneeId: userId !== null ? userId : undefined, 
-            assigneeName: assigneeName 
+          t.id === taskId ? {
+            ...t,
+            assigneeId: userId !== null ? userId : undefined,
+            assigneeName: assigneeName
           } : t
         ));
         setActiveDropdownTaskId(null);
@@ -187,22 +256,22 @@ const SprintDetailPage: React.FC = () => {
     <div className="sprint-detail-container">
       {/* Sprint Status Warning Banner */}
       {!isSprintActive && (
-         <div className={`sprint-status-banner ${sprint.trangThai === 2 ? 'finished' : 'new'}`}>
-            <AlertCircle size={18} />
-            <span>
-               {sprint.trangThai === 0 ? 'Sprint này chưa được bắt đầu (hoặc ngoài khung thời gian). Quản lý cần nhấn "Bắt đầu Sprint".' : 'Sprint này đã kết thúc. Bạn không thể thay đổi tiến độ công việc.'}
-            </span>
-            {isAdmin && sprint.trangThai === 0 && (
-               <button className="btn-start-sprint" onClick={() => handleUpdateSprintStatus(1)}>
-                  <Play size={14} fill="currentColor"/> Kích hoạt ngay
-               </button>
-            )}
-            {isAdmin && sprint.trangThai === 1 && (
-               <button className="btn-finish-sprint" onClick={() => handleUpdateSprintStatus(2)}>
-                  <CheckSquare size={14} /> Hoàn thành Sprint
-               </button>
-            )}
-         </div>
+        <div className={`sprint-status-banner ${sprint.trangThai === 2 ? 'finished' : 'new'}`}>
+          <AlertCircle size={18} />
+          <span>
+            {sprint.trangThai === 0 ? 'Sprint này chưa được bắt đầu (hoặc ngoài khung thời gian). Quản lý cần nhấn "Bắt đầu Sprint".' : 'Sprint này đã kết thúc. Bạn không thể thay đổi tiến độ công việc.'}
+          </span>
+          {isAdmin && sprint.trangThai === 0 && (
+            <button className="btn-start-sprint" onClick={() => handleUpdateSprintStatus(1)}>
+              <Play size={14} fill="currentColor" /> Kích hoạt ngay
+            </button>
+          )}
+          {isAdmin && sprint.trangThai === 1 && (
+            <button className="btn-finish-sprint" onClick={() => handleUpdateSprintStatus(2)}>
+              <CheckSquare size={14} /> Hoàn thành Sprint
+            </button>
+          )}
+        </div>
       )}
 
       {/* Header Section */}
@@ -223,16 +292,16 @@ const SprintDetailPage: React.FC = () => {
 
         <div className="header-right">
           {isAdmin && sprint.trangThai === 1 && (
-              <button className="btn-finish-sprint-inline" onClick={() => handleUpdateSprintStatus(2)}>
-                <CheckSquare size={18} />
-                <span>Hoàn thành Sprint</span>
-              </button>
+            <button className="btn-finish-sprint-inline" onClick={() => handleUpdateSprintStatus(2)}>
+              <CheckSquare size={18} />
+              <span>Hoàn thành Sprint</span>
+            </button>
           )}
           <div className="search-tasks">
             <Search size={18} />
             <input type="text" placeholder="Tìm công việc..." />
           </div>
-          <button className="create-task-btn">
+          <button className="create-task-btn" onClick={() => setShowCreateTaskModal(true)}>
             <Plus size={18} />
             <span>Tạo công việc</span>
           </button>
@@ -261,22 +330,22 @@ const SprintDetailPage: React.FC = () => {
                     </span>
                     <span className="task-id">#{task.id}</span>
                   </div>
-                  
+
                   <h4 className="task-title">{task.tieuDe}</h4>
 
                   {/* Quick Approval Actions for Managers */}
                   {col.id === StatusEnum.Review && isAdmin && isSprintActive && (
                     <div className="task-approval-actions">
-                      <button 
-                        className="btn-reject-small" 
+                      <button
+                        className="btn-reject-small"
                         onClick={() => handleTaskAction(task.id, false)}
-                        title="Bác bỏ"
+                        title="Từ chối"
                       >
                         <XCircle size={14} />
-                        Bác bỏ
+                        Từ chối
                       </button>
-                      <button 
-                        className="btn-approve-small" 
+                      <button
+                        className="btn-approve-small"
                         onClick={() => handleTaskAction(task.id, true)}
                         title="Duyệt"
                       >
@@ -285,60 +354,60 @@ const SprintDetailPage: React.FC = () => {
                       </button>
                     </div>
                   )}
-                  
-                    <div className="task-card-footer">
-                      <div className="assignee-wrapper">
-                        <div 
-                           className={`assignee ${isAdmin && isSprintActive ? 'editable' : ''}`}
-                           onClick={() => {
-                             if (isAdmin && isSprintActive) {
-                               setActiveDropdownTaskId(activeDropdownTaskId === task.id ? null : task.id);
-                             }
-                           }}
-                        >
-                          {task.assigneeName ? (
-                            <div className="avatar">
-                              {task.assigneeName.charAt(0)}
-                            </div>
-                          ) : (
-                            <div className="avatar empty" title="Chưa giao">
-                               <Sparkles size={14} color="#94a3b8" />
-                            </div>
-                          )}
-                          <span>{task.assigneeName || 'Chưa giao'}</span>
-                        </div>
 
-                        {/* Assignee Selection Dropdown */}
-                        {activeDropdownTaskId === task.id && (
-                          <div className="assignee-dropdown fade-in">
-                            <div className="dropdown-search">
-                               <Search size={14} color="#94a3b8" />
-                               <input type="text" placeholder="Tìm thành viên..." onClick={e => e.stopPropagation()} />
-                            </div>
-                            <div className="dropdown-list">
-                               <div className="dropdown-item clear-assign" onClick={(e) => { e.stopPropagation(); handleManualAssign(task.id, null); }}>
-                                  <div className="avatar empty"><XCircle size={14} /></div>
-                                  <span>Gỡ phân công</span>
-                               </div>
-                               <div className="dropdown-divider"></div>
-                               {projectMembers.map(member => (
-                                 <div 
-                                    key={member.id} 
-                                    className={`dropdown-item ${task.assigneeId === member.id ? 'selected' : ''}`}
-                                    onClick={(e) => { e.stopPropagation(); handleManualAssign(task.id, member.id); }}
-                                 >
-                                    <div className="avatar">{member.hoTen.charAt(0)}</div>
-                                    <div className="member-info">
-                                      <span className="name">{member.hoTen}</span>
-                                      <span className="email">{member.email}</span>
-                                    </div>
-                                    {task.assigneeId === member.id && <CheckCircle2 size={16} color="#10b981" className="ml-auto" />}
-                                 </div>
-                               ))}
-                            </div>
+                  <div className="task-card-footer">
+                    <div className="assignee-wrapper">
+                      <div
+                        className={`assignee ${isAdmin && isSprintActive ? 'editable' : ''}`}
+                        onClick={() => {
+                          if (isAdmin && isSprintActive) {
+                            setActiveDropdownTaskId(activeDropdownTaskId === task.id ? null : task.id);
+                          }
+                        }}
+                      >
+                        {task.assigneeName ? (
+                          <div className="avatar">
+                            {task.assigneeName.charAt(0)}
+                          </div>
+                        ) : (
+                          <div className="avatar empty" title="Chưa giao">
+                            <Sparkles size={14} color="#94a3b8" />
                           </div>
                         )}
+                        <span>{task.assigneeName || 'Chưa giao'}</span>
                       </div>
+
+                      {/* Assignee Selection Dropdown */}
+                      {activeDropdownTaskId === task.id && (
+                        <div className="assignee-dropdown fade-in">
+                          <div className="dropdown-search">
+                            <Search size={14} color="#94a3b8" />
+                            <input type="text" placeholder="Tìm thành viên..." onClick={e => e.stopPropagation()} />
+                          </div>
+                          <div className="dropdown-list">
+                            <div className="dropdown-item clear-assign" onClick={(e) => { e.stopPropagation(); handleManualAssign(task.id, null); }}>
+                              <div className="avatar empty"><XCircle size={14} /></div>
+                              <span>Gỡ phân công</span>
+                            </div>
+                            <div className="dropdown-divider"></div>
+                            {projectMembers.map(member => (
+                              <div
+                                key={member.id}
+                                className={`dropdown-item ${task.assigneeId === member.id ? 'selected' : ''}`}
+                                onClick={(e) => { e.stopPropagation(); handleManualAssign(task.id, member.id); }}
+                              >
+                                <div className="avatar">{member.hoTen.charAt(0)}</div>
+                                <div className="member-info">
+                                  <span className="name">{member.hoTen}</span>
+                                  <span className="email">{member.email}</span>
+                                </div>
+                                {task.assigneeId === member.id && <CheckCircle2 size={16} color="#10b981" className="ml-auto" />}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="task-metrics">
                       <div className="task-hours" title="Thời gian ước tính">
@@ -356,6 +425,114 @@ const SprintDetailPage: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {showCreateTaskModal && (
+        <div className="sprint-modal-overlay" onClick={() => setShowCreateTaskModal(false)}>
+          <div className="sprint-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="sprint-modal-header">
+              <h2>Tạo Công việc Mới</h2>
+              <button className="close-btn" onClick={() => setShowCreateTaskModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleCreateTask} className="sprint-modal-body">
+              <div className="form-group">
+                <label>Tiêu đề <span className="required">*</span></label>
+                <input 
+                  type="text" 
+                  value={newTaskData.tieuDe}
+                  onChange={e => setNewTaskData({...newTaskData, tieuDe: e.target.value})}
+                  placeholder="Nhập tiêu đề công việc"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Mô tả</label>
+                <textarea 
+                  value={newTaskData.moTa}
+                  onChange={e => setNewTaskData({...newTaskData, moTa: e.target.value})}
+                  placeholder="Mô tả chi tiết công việc..."
+                  rows={3}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Loại công việc</label>
+                  <select 
+                    value={newTaskData.loaiCongViec}
+                    onChange={e => setNewTaskData({...newTaskData, loaiCongViec: parseInt(e.target.value)})}
+                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%' }}
+                  >
+                    <option value={0}>Backend</option>
+                    <option value={1}>Frontend</option>
+                    <option value={2}>Fullstack</option>
+                    <option value={3}>Mobile</option>
+                    <option value={4}>DevOps</option>
+                    <option value={5}>Tester</option>
+                    <option value={6}>UI/UX</option>
+                    <option value={7}>BA</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Độ ưu tiên</label>
+                  <select 
+                    value={newTaskData.doUuTien}
+                    onChange={e => setNewTaskData({...newTaskData, doUuTien: parseInt(e.target.value)})}
+                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%' }}
+                  >
+                    <option value={0}>Thấp</option>
+                    <option value={1}>Vừa</option>
+                    <option value={2}>Cao</option>
+                    <option value={3}>Khẩn cấp</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Người thực hiện</label>
+                <select 
+                  value={newTaskData.assigneeId || ''}
+                  onChange={e => setNewTaskData({...newTaskData, assigneeId: e.target.value ? parseInt(e.target.value) : null})}
+                  style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%' }}
+                >
+                  <option value="">-- Để trống (Chưa giao) --</option>
+                  {projectMembers.map(member => (
+                    <option key={member.id} value={member.id}>
+                      {member.hoTen} ({member.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Story Points</label>
+                  <input 
+                    type="number" 
+                    min={0}
+                    value={newTaskData.storyPoints}
+                    onChange={e => setNewTaskData({...newTaskData, storyPoints: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Thời gian ước tính (Giờ)</label>
+                  <input 
+                    type="number" 
+                    min={0}
+                    value={newTaskData.thoiGianUocTinh}
+                    onChange={e => setNewTaskData({...newTaskData, thoiGianUocTinh: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+              <div className="sprint-modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowCreateTaskModal(false)}>
+                  Hủy
+                </button>
+                <button type="submit" className="btn-submit" disabled={isCreatingTask || !newTaskData.tieuDe}>
+                  {isCreatingTask ? '...' : 'Lưu Công việc'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
