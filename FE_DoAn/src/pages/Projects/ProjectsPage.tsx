@@ -54,11 +54,10 @@ const ProjectsPage: React.FC = () => {
 
   const getStatusLabel = (status: TrangThaiDuAn) => {
     switch (status) {
-      case TrangThaiEnum.Moi: return { text: 'Mới', class: 'status-new' };
-      case TrangThaiEnum.DangThucHien: return { text: 'Đang thực hiện', class: 'status-inprogress' };
-      case TrangThaiEnum.TamDung: return { text: 'Tạm dừng', class: 'status-paused' };
-      case TrangThaiEnum.HoanThanh: return { text: 'Hoàn thành', class: 'status-completed' };
-      case TrangThaiEnum.Huy: return { text: 'Đã hủy', class: 'status-cancelled' };
+      case TrangThaiEnum.Planning: return { text: 'Mới', class: 'status-new' };
+      case TrangThaiEnum.Active: return { text: 'Đang thực hiện', class: 'status-inprogress' };
+      case TrangThaiEnum.Completed: return { text: 'Hoàn thành', class: 'status-completed' };
+      case TrangThaiEnum.Cancelled: return { text: 'Đã hủy', class: 'status-cancelled' };
       default: return { text: 'Không xác định', class: '' };
     }
   };
@@ -192,15 +191,15 @@ const ProjectsPage: React.FC = () => {
                 <div className="progress-section">
                   <div className="progress-info">
                     <span>Tiến độ</span>
-                    <span>{project.trangThai === TrangThaiEnum.HoanThanh ? '100%' : '25%'}</span>
+                    <span>{Math.round(project.tienDo || 0)}%</span>
                   </div>
                   <div className="progress-bar-bg">
                     <div
                       className="progress-bar-fill"
-                      style={{ width: project.trangThai === TrangThaiEnum.HoanThanh ? '100%' : '25%' }}
+                      style={{ width: `${Math.round(project.tienDo || 0)}%` }}
                     />
                   </div>
-                </div>
+ Broadway                </div>
               </div>
             </div>
           ))}

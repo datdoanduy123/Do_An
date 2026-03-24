@@ -78,8 +78,11 @@ namespace Apllication.Service
                 NgayBatDau = s.NgayBatDau,
                 NgayKetThuc = s.NgayKetThuc,
                 MucTieuStoryPoints = s.MucTieuStoryPoints,
-                TrangThai = s.TrangThai
+                TrangThai = s.TrangThai,
+                TienDo = (s.CongViecs != null && s.CongViecs.Count > 0)
+                    ? (double)s.CongViecs.Count(c => c.TrangThai == TrangThaiCongViec.Done) / s.CongViecs.Count * 100
+                    : 0
             };
         }
-    }
+     }
 }

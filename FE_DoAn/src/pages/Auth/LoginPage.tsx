@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthService from '../../services/AuthService';
+import UserService from '../../services/UserService';
 import './Login.css';
 
 /**
@@ -25,14 +26,30 @@ const LoginPage: React.FC = () => {
     try {
       const response = await AuthService.login({ tenDangNhap, matKhau });
       
-      if (response.success) {
-        // Giả sử API trả về token trong data
-        if (response.data && response.data.token) {
-          AuthService.setSession(response.data.token);
-        }
+      if (response.success && response.data?.token) {
+        AuthService.setSession(response.data.token);
         
-        // Chuyển hướng người dùng sang trang Dashboard
-        navigate('/dashboard');
+        try {
+          // Lấy thông tin người dùng ngay sau khi đăng nhập để điều hướng đúng vai trò
+          const profile = await UserService.getProfile();
+          
+          const isAdminOrManager = profile.vaiTros?.some((r: string) => {
+            const nr = r.toLowerCase().replace(/\s+/g, '');
+            return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
+          });
+
+          // Điều hướng dựa trên vai trò
+          if (isAdminOrManager) {
+            navigate('/dashboard');
+          } else {
+            // Nếu là nhân viên, điều hướng về trang công việc của tôi
+            navigate('/my-tasks');
+          }
+        } catch (profileError) {
+          console.error('Lỗi khi lấy thông tin vai trò:', profileError);
+          // Fallback mặc định nếu có lỗi lấy profile
+          navigate('/my-tasks');
+        }
       } else {
         setError(response.message || 'Tên đăng nhập hoặc mật khẩu không đúng.');
       }

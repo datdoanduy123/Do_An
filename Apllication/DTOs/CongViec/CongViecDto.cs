@@ -8,6 +8,7 @@ namespace Apllication.DTOs.CongViec
         public int Id { get; set; }
         public int DuAnId { get; set; }
         public int? SprintId { get; set; }
+        public TrangThaiSprint? SprintStatus { get; set; }
         public string TieuDe { get; set; } = string.Empty;
         public string? MoTa { get; set; }
         public LoaiCongViec LoaiCongViec { get; set; }
@@ -23,6 +24,8 @@ namespace Apllication.DTOs.CongViec
         public DateTime? NgayKetThucDuKien { get; set; }
         public DateTime? NgayBatDauThucTe { get; set; }
         public DateTime? NgayKetThucThucTe { get; set; }
+        public DateTime? NgayBatDauSprint { get; set; }
+        public DateTime? NgayKetThucSprint { get; set; }
     }
 
     public class TaoCongViecDto

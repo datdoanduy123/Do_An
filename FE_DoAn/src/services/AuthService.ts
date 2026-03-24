@@ -52,14 +52,14 @@ class AuthService {
    * Lưu token hoặc thông tin người dùng vào local storage.
    */
   setSession(token: string) {
-    localStorage.setItem('accessToken', token);
+    sessionStorage.setItem('accessToken', token);
   }
 
   /**
    * Đăng xuất người dùng.
    */
   logout() {
-    localStorage.removeItem('accessToken');
+    sessionStorage.removeItem('accessToken');
   }
 }
 

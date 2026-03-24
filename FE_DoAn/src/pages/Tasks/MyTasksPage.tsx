@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
+import {
+  CheckCircle2,
+  Clock,
+  AlertCircle,
   Calendar,
   Search,
   MoreVertical,
   Flag,
-  X
+  X,
+  Lock
 } from 'lucide-react';
 import TaskService from '../../services/TaskService';
 import UserService from '../../services/UserService';
@@ -35,7 +36,7 @@ const MyTasksPage: React.FC = () => {
     };
     fetchProfile();
   }, []);
-  
+
   // State cho Modal cập nhật tiến độ
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<CongViecDto | null>(null);
@@ -60,7 +61,25 @@ const MyTasksPage: React.FC = () => {
     fetchMyTasks();
   }, []);
 
+  const isTaskWorkable = (task: CongViecDto) => {
+    if (!task.sprintId) return true; // Task không thuộc Sprint nào luôn workable
+    if (task.sprintStatus === 1) return true; // Sprint đang chạy
+    if (task.sprintStatus === 0) {
+      const now = new Date();
+      const sprintStart = task.ngayBatDauSprint ? new Date(task.ngayBatDauSprint) : null;
+      const sprintEnd = task.ngayKetThucSprint ? new Date(task.ngayKetThucSprint) : null;
+      return !!(sprintStart && sprintEnd && now >= sprintStart && now <= sprintEnd);
+    }
+    return false;
+  };
+
   const handleOpenProgressModal = (task: CongViecDto, targetStatus?: number) => {
+    // Kiểm tra nếu Sprint chưa bắt đầu hoặc đã kết thúc
+    if (!isTaskWorkable(task)) {
+      alert('Công việc này thuộc Sprint chưa bắt đầu hoặc đã kết thúc. Bạn không thể cập nhật tiến độ.');
+      return;
+    }
+
     setSelectedTask(task);
     setProgressData({
       thoiGianThem: 0,
@@ -72,7 +91,7 @@ const MyTasksPage: React.FC = () => {
 
   const handleUpdateProgressSubmit = async () => {
     if (!selectedTask) return;
-    
+
     try {
       const success = await TaskService.updateProgress(selectedTask.id, {
         trangThai: progressData.trangThai,
@@ -81,20 +100,20 @@ const MyTasksPage: React.FC = () => {
       });
 
       if (success) {
-        setTasks(prev => prev.map(t => 
-          t.id === selectedTask.id 
-            ? { 
-                ...t, 
-                trangThai: progressData.trangThai as any,
-                thoiGianThucTe: (t.thoiGianThucTe || 0) + progressData.thoiGianThem 
-              } 
+        setTasks(prev => prev.map(t =>
+          t.id === selectedTask.id
+            ? {
+              ...t,
+              trangThai: progressData.trangThai as any,
+              thoiGianThucTe: (t.thoiGianThucTe || 0) + progressData.thoiGianThem
+            }
             : t
         ));
         setShowProgressModal(false);
       }
     } catch (error) {
       console.error('Failed to update progress:', error);
-      alert('Có lỗi xảy ra khi cập nhật tiến độ.');
+      alert('Có lỗi xảy ra hoặc Sprint không hợp lệ để cập nhật.');
     }
   };
 
@@ -106,9 +125,11 @@ const MyTasksPage: React.FC = () => {
 
   const getPriorityColor = (priority: number) => {
     switch (priority) {
-      case 1: return { color: '#ef4444', label: 'Cao', bg: '#fee2e2' };
-      case 2: return { color: '#f59e0b', label: 'Trung bình', bg: '#fef3c7' };
-      default: return { color: '#10b981', label: 'Thấp', bg: '#d1fae5' };
+      case 0: return { color: '#10b981', label: 'Thấp', bg: '#d1fae5' };
+      case 1: return { color: '#3b82f6', label: 'Vừa', bg: '#dbeafe' };
+      case 2: return { color: '#f59e0b', label: 'Cao', bg: '#fef3c7' };
+      case 3: return { color: '#ef4444', label: 'Khẩn cấp', bg: '#fee2e2' };
+      default: return { color: '#64748b', label: 'Vừa', bg: '#f1f5f9' };
     }
   };
 
@@ -118,19 +139,20 @@ const MyTasksPage: React.FC = () => {
       case 1: return { label: 'In Progress', class: 'inprogress' };
       case 2: return { label: 'Review', class: 'review' };
       case 3: return { label: 'Done', class: 'done' };
+      case 4: return { label: 'Cancelled', class: 'cancelled' };
       default: return { label: 'Khác', class: 'other' };
     }
   };
 
   const filteredTasks = tasks.filter(task => {
-    const matchesFilter = filter === 'all' || 
+    const matchesFilter = filter === 'all' ||
       (filter === 'todo' && task.trangThai === 0) ||
       (filter === 'inprogress' && task.trangThai === 1) ||
       (filter === 'review' && task.trangThai === 2) ||
       (filter === 'done' && task.trangThai === 3);
-    
+
     const matchesSearch = task.tieuDe.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesFilter && matchesSearch;
   });
 
@@ -146,9 +168,9 @@ const MyTasksPage: React.FC = () => {
         <div className="header-actions">
           <div className="search-box">
             <Search size={18} />
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm công việc..." 
+            <input
+              type="text"
+              placeholder="Tìm kiếm công việc..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -188,19 +210,26 @@ const MyTasksPage: React.FC = () => {
             filteredTasks.map(task => {
               const priority = getPriorityColor(task.doUuTien);
               const status = getStatusInfo(task.trangThai);
+              const isWorkable = isTaskWorkable(task);
+              const isLocked = task.sprintId && !isWorkable;
+
               return (
-                <div key={task.id} className="task-row-item">
+                <div key={task.id} className={`task-row-item ${isLocked ? 'locked' : ''}`}>
                   <div className="task-main-info">
                     <div className="task-status-icon">
-                      {task.trangThai === 3 ? <CheckCircle2 size={20} color="#10b981" /> : <Clock size={20} color="#64748b" />}
+                      {isLocked ? <Lock size={20} color="#94a3b8" /> : (task.trangThai === 3 ? <CheckCircle2 size={20} color="#10b981" /> : <Clock size={20} color="#64748b" />)}
                     </div>
                     <div className="task-text">
-                      <h4>{task.tieuDe}</h4>
+                      <div className="title-row">
+                        <h4>{task.tieuDe}</h4>
+                        {task.sprintId && task.sprintStatus === 0 && !isWorkable && <span className="locked-badge"><Lock size={12} /> Sprint chưa bắt đầu</span>}
+                        {task.sprintId && task.sprintStatus === 2 && <span className="locked-badge"><Lock size={12} /> Sprint đã kết thúc</span>}
+                      </div>
                       <div className="task-progress-box">
                         <div className="progress-bar-wrapper">
-                          <div 
-                            className="progress-fill" 
-                            style={{ 
+                          <div
+                            className="progress-fill"
+                            style={{
                               width: `${calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh)}%`,
                               backgroundColor: calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh) >= 100 ? '#10b981' : '#6366f1'
                             }}
@@ -220,7 +249,7 @@ const MyTasksPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="task-tags">
                     <span className="priority-tag" style={{ backgroundColor: priority.bg, color: priority.color }}>
                       <Flag size={12} fill={priority.color} />
@@ -231,27 +260,27 @@ const MyTasksPage: React.FC = () => {
 
                   <div className="task-actions">
                     <div className="status-quick-actions">
-                      {task.trangThai !== 1 && task.trangThai !== 3 && (
-                        <button 
-                          className="action-btn start" 
+                      {!isLocked && task.trangThai !== 1 && task.trangThai !== 3 && (
+                        <button
+                          className="action-btn start"
                           onClick={() => handleOpenProgressModal(task, 1)}
                           title="Bắt đầu làm"
                         >
                           Làm việc
                         </button>
                       )}
-                      {task.trangThai === 1 && (
-                        <button 
-                          className="action-btn log" 
+                      {!isLocked && task.trangThai === 1 && (
+                        <button
+                          className="action-btn log"
                           onClick={() => handleOpenProgressModal(task)}
                           title="Cập nhật tiến độ"
                         >
                           Cập nhật
                         </button>
                       )}
-                      {task.trangThai === 1 && (
-                        <button 
-                          className="action-btn review" 
+                      {!isLocked && task.trangThai === 1 && (
+                        <button
+                          className="action-btn review"
                           onClick={() => handleOpenProgressModal(task, 2)}
                           title="Gửi duyệt"
                         >
@@ -261,14 +290,24 @@ const MyTasksPage: React.FC = () => {
                       {task.trangThai === 2 && (
                         <span className="awaiting-review">Chờ phê duyệt</span>
                       )}
-                      {task.trangThai === 2 && currentUser?.vaiTros?.some((r: string) => r.toLowerCase().replace(/\s+/g, '') === 'quanly' || r.toLowerCase() === 'admin') && (
-                        <button 
-                          className="action-btn done" 
-                          onClick={() => handleOpenProgressModal(task, 3)}
-                          title="Hoàn thành"
-                        >
-                          Xong
-                        </button>
+                      {!isLocked && task.trangThai === 2 && currentUser?.vaiTros?.some((r: string) => {
+                        const nr = r.toLowerCase().replace(/\s+/g, '');
+                        return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
+                      }) && (
+                          <button
+                            className="action-btn done"
+                            onClick={() => handleOpenProgressModal(task, 3)}
+                            title="Hoàn thành"
+                          >
+                            Xong
+                          </button>
+                        )}
+
+                      {task.sprintId && task.sprintStatus === 0 && !isWorkable && (
+                        <span className="locked-info" title="Sprint này chưa được quản lý bắt đầu.">Đang đợi bắt đầu</span>
+                      )}
+                      {task.sprintId && task.sprintStatus === 2 && (
+                        <span className="locked-info" title="Sprint đã kết thúc, bạn không thể cập nhật thêm.">Đã đóng</span>
                       )}
                     </div>
                     <button className="icon-btn-ghost"><MoreVertical size={18} /></button>
@@ -298,7 +337,7 @@ const MyTasksPage: React.FC = () => {
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="modal-body split-view">
               <div className="task-summary-side">
                 <div className="summary-card">
@@ -307,8 +346,8 @@ const MyTasksPage: React.FC = () => {
                     <div className="stat-circle">
                       <svg width="100" height="100" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="45" fill="none" stroke="#f1f5f9" strokeWidth="8" />
-                        <circle 
-                          cx="50" cy="50" r="45" fill="none" stroke="#6366f1" strokeWidth="8" 
+                        <circle
+                          cx="50" cy="50" r="45" fill="none" stroke="#6366f1" strokeWidth="8"
                           strokeDasharray={`${calculateProgress(selectedTask.thoiGianThucTe, selectedTask.thoiGianUocTinh) * 2.827} 282.7`}
                           transform="rotate(-90 50 50)"
                           strokeLinecap="round"
@@ -343,10 +382,10 @@ const MyTasksPage: React.FC = () => {
                   <label>Chuyển sang trạng thái</label>
                   <div className="status-selector">
                     {[0, 1, 2, 3].map(s => (
-                      <button 
+                      <button
                         key={s}
                         className={`status-opt ${progressData.trangThai === s ? 'active' : ''}`}
-                        onClick={() => setProgressData({...progressData, trangThai: s})}
+                        onClick={() => setProgressData({ ...progressData, trangThai: s })}
                       >
                         {getStatusInfo(s).label}
                       </button>
@@ -357,12 +396,12 @@ const MyTasksPage: React.FC = () => {
                 <div className="form-group">
                   <label>Số giờ làm việc thêm hôm nay</label>
                   <div className="input-with-label">
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="0.5"
                       min="0"
                       value={progressData.thoiGianThem}
-                      onChange={(e) => setProgressData({...progressData, thoiGianThem: Number(e.target.value)})}
+                      onChange={(e) => setProgressData({ ...progressData, thoiGianThem: Number(e.target.value) })}
                     />
                     <span>giờ</span>
                   </div>
@@ -370,10 +409,10 @@ const MyTasksPage: React.FC = () => {
 
                 <div className="form-group">
                   <label>Công việc đã thực hiện</label>
-                  <textarea 
+                  <textarea
                     placeholder="Mô tả ngắn gọn nội dung công việc bạn đã hoàn thành..."
                     value={progressData.ghiChu}
-                    onChange={(e) => setProgressData({...progressData, ghiChu: e.target.value})}
+                    onChange={(e) => setProgressData({ ...progressData, ghiChu: e.target.value })}
                   />
                 </div>
               </div>

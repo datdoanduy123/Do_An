@@ -12,6 +12,7 @@ namespace Apllication.IRepositories
         Task<IEnumerable<CongViec>> GetAllAsync();
         Task<CongViec> AddAsync(CongViec congViec);
         Task<bool> UpdateAsync(CongViec congViec);
+        Task<IEnumerable<CongViec>> GetTasksWithRequirementsByProjectAsync(int projectId);
         Task<Apllication.DTOs.PagedResultDto<CongViec>> LayDanhSachCongViecAsync(Apllication.DTOs.CongViecQueryDto query);
     }
 }

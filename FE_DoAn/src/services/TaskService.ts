@@ -64,7 +64,7 @@ class TaskService {
   /**
    * Giao việc cho nhân viên.
    */
-  async assignTask(data: { congViecId: number, nguoiDuocGiaoId: number }): Promise<boolean> {
+  async assignTask(data: { congViecId: number, assigneeId: number }): Promise<boolean> {
     const response = await api.post('/CongViec/giao-viec-thu-cong', data);
     return response.data.statusCode === 200;
   }

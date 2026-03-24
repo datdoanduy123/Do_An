@@ -26,7 +26,7 @@ namespace Infrastructure.Persistence.Configurations
 
             // Quan hệ với người được giao
             builder.HasOne(x => x.Assignee)
-                   .WithMany()
+                   .WithMany(x => x.CongViecs)
                    .HasForeignKey(x => x.AssigneeId)
                    .OnDelete(DeleteBehavior.SetNull);
 

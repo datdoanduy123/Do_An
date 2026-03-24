@@ -75,6 +75,19 @@ namespace Apllication.Service
             var cv = await _repository.GetByIdAsync(id);
             if (cv == null) return false;
 
+            // Ràng buộc nghiệp vụ: Chỉ cho phép cập nhật trạng thái nếu Sprint đang InProgress (hoặc không thuộc Sprint nào)
+            if (cv.SprintId.HasValue && cv.Sprint != null)
+            {
+                var now = DateTime.UtcNow;
+                bool isWorkable = cv.Sprint.TrangThai == TrangThaiSprint.InProgress || 
+                                 (cv.Sprint.TrangThai == TrangThaiSprint.New && now >= cv.Sprint.NgayBatDau && now <= cv.Sprint.NgayKetThuc);
+                
+                if (!isWorkable && status != TrangThaiCongViec.Todo && status != TrangThaiCongViec.Cancelled)
+                {
+                    return false; 
+                }
+            }
+
             cv.TrangThai = status;
 
             // Tự động ghi nhận ngày bắt đầu thực tế
@@ -83,10 +96,19 @@ namespace Apllication.Service
                 cv.NgayBatDauThucTe = DateTime.UtcNow;
             }
 
-            // Tự động ghi nhận ngày kết thúc thực tế
+            // Tự động ghi nhận ngày kết thúc thực tế và giảm khối lượng công việc cho User
             if (status == TrangThaiCongViec.Done)
             {
                 cv.NgayKetThucThucTe = DateTime.UtcNow;
+                if (cv.AssigneeId.HasValue)
+                {
+                    var user = await _userRepository.LayTheoIdAsync(cv.AssigneeId.Value);
+                    if (user != null)
+                    {
+                        user.KhoiLuongCongViec = Math.Max(0, user.KhoiLuongCongViec - cv.ThoiGianUocTinh);
+                        await _userRepository.UpdateAsync(user);
+                    }
+                }
             }
 
             return await _repository.UpdateAsync(cv);
@@ -97,16 +119,38 @@ namespace Apllication.Service
             var cv = await _repository.GetByIdAsync(id);
             if (cv == null) return false;
 
+            // Ràng buộc nghiệp vụ: Tương tự UpdateStatus
+            if (cv.SprintId.HasValue && cv.Sprint != null)
+            {
+                var now = DateTime.UtcNow;
+                bool isWorkable = cv.Sprint.TrangThai == TrangThaiSprint.InProgress || 
+                                 (cv.Sprint.TrangThai == TrangThaiSprint.New && now >= cv.Sprint.NgayBatDau && now <= cv.Sprint.NgayKetThuc);
+
+                if (!isWorkable && dto.TrangThai != TrangThaiCongViec.Todo && dto.TrangThai != TrangThaiCongViec.Cancelled)
+                {
+                    return false;
+                }
+            }
+
             // 1. Cập nhật trạng thái và thời gian thực tế của Task
             cv.TrangThai = dto.TrangThai;
             cv.ThoiGianThucTe = (cv.ThoiGianThucTe ?? 0) + (dto.ThoiGianLamViecThem > 0 ? dto.ThoiGianLamViecThem : 0);
 
-            // Tự động gán ngày kết thúc nếu hoàn thành
+            // Tự động gán ngày kết thúc và giảm khối lượng công việc nếu hoàn thành
             if (dto.TrangThai == TrangThaiCongViec.Done)
             {
                 cv.NgayKetThucThucTe = DateTime.UtcNow;
+                if (cv.AssigneeId.HasValue)
+                {
+                    var user = await _userRepository.LayTheoIdAsync(cv.AssigneeId.Value);
+                    if (user != null)
+                    {
+                        user.KhoiLuongCongViec = Math.Max(0, user.KhoiLuongCongViec - cv.ThoiGianUocTinh);
+                        await _userRepository.UpdateAsync(user);
+                    }
+                }
             }
-            
+           
             // Tự động gán ngày bắt đầu nếu mới bắt đầu
             if (dto.TrangThai == TrangThaiCongViec.InProgress && cv.NgayBatDauThucTe == null)
             {
@@ -134,6 +178,23 @@ namespace Apllication.Service
             var cv = await _repository.GetByIdAsync(dto.CongViecId);
             if (cv == null) return false;
 
+            if (dto.AssigneeId == 0)
+            {
+                // Logic hủy gán việc (Gỡ phân công)
+                if (cv.AssigneeId.HasValue)
+                {
+                    var oldUser = await _userRepository.LayTheoIdAsync(cv.AssigneeId.Value);
+                    if (oldUser != null)
+                    {
+                        oldUser.KhoiLuongCongViec = Math.Max(0, oldUser.KhoiLuongCongViec - cv.ThoiGianUocTinh);
+                        await _userRepository.UpdateAsync(oldUser);
+                    }
+                }
+                cv.AssigneeId = null;
+                cv.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual;
+                return await _repository.UpdateAsync(cv);
+            }
+
             var user = await _userRepository.LayTheoIdAsync(dto.AssigneeId);
             if (user == null) return false;
 
@@ -147,6 +208,21 @@ namespace Apllication.Service
                 NgayCapNhat = DateTime.UtcNow
             };
             await _taskLogRepository.AddAsync(log);
+
+            // Giảm khối lượng công việc của Assignee cũ (nếu có)
+            if (cv.AssigneeId.HasValue)
+            {
+                var oldUser = await _userRepository.LayTheoIdAsync(cv.AssigneeId.Value);
+                if (oldUser != null)
+                {
+                    oldUser.KhoiLuongCongViec = Math.Max(0, oldUser.KhoiLuongCongViec - cv.ThoiGianUocTinh);
+                    await _userRepository.UpdateAsync(oldUser);
+                }
+            }
+
+            // Tăng khối lượng công việc của Assignee mới
+            user.KhoiLuongCongViec += cv.ThoiGianUocTinh;
+            await _userRepository.UpdateAsync(user);
 
             cv.AssigneeId = dto.AssigneeId;
             cv.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; 
@@ -163,7 +239,7 @@ namespace Apllication.Service
             };
             
             var result = await _repository.LayDanhSachCongViecAsync(query);
-            return result.Items.Select(MapToDto);
+            return (result?.Items ?? Enumerable.Empty<CongViec>()).Select(MapToDto);
         }
 
         private CongViecDto MapToDto(CongViec cv)
@@ -187,7 +263,10 @@ namespace Apllication.Service
                 NgayBatDauDuKien = cv.NgayBatDauDuKien,
                 NgayKetThucDuKien = cv.NgayKetThucDuKien,
                 NgayBatDauThucTe = cv.NgayBatDauThucTe,
-                NgayKetThucThucTe = cv.NgayKetThucThucTe
+                NgayKetThucThucTe = cv.NgayKetThucThucTe,
+                SprintStatus = cv.Sprint?.TrangThai,
+                NgayBatDauSprint = cv.Sprint?.NgayBatDau,
+                NgayKetThucSprint = cv.Sprint?.NgayKetThuc
             };
         }
     }

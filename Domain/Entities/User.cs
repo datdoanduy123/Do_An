@@ -14,8 +14,6 @@ namespace Domain.Entities
         public string Email { get; set; } = string.Empty;
         public string DienThoai { get; set; } = string.Empty;
 
-        public string? VaiTro { get; set; }
-
         public bool IsActive { get; set; } = true;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -25,10 +23,16 @@ namespace Domain.Entities
         /// </summary>
         public double KhoiLuongCongViec { get; set; } = 0;
 
-        // Navigation property cho phan quyen
+        // Navigation property cho phan quyen hệ thống (Global RBAC)
         public ICollection<NguoiDungVaiTro> NguoiDungVaiTros { get; set; } = new List<NguoiDungVaiTro>();
+
+        // Navigation property cho phân quyền / phân bổ theo dự án (Project Context)
+        public ICollection<DuAnNguoiDung> DuAnNguoiDungs { get; set; } = new List<DuAnNguoiDung>();
 
         // Navigation property cho ky nang (Skill matching)
         public ICollection<KyNangNguoiDung> KyNangNguoiDungs { get; set; } = new List<KyNangNguoiDung>();
+
+        // Navigation property cho danh sach cong viec duoc giao
+        public ICollection<CongViec> CongViecs { get; set; } = new List<CongViec>();
     }
 }

@@ -36,5 +36,8 @@ namespace Domain.Entities
 
         // Quan hệ: Một dự án có nhiều công việc (nằm trong Backlog hoặc Sprint)
         public ICollection<CongViec> CongViecs { get; set; } = new List<CongViec>();
+
+        // Quan hệ: Một dự án có nhiều thành viên tham gia
+        public ICollection<DuAnNguoiDung> DuAnNguoiDungs { get; set; } = new List<DuAnNguoiDung>();
     }
 }

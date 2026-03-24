@@ -28,9 +28,10 @@ namespace Infrastructure.Repositories
         {
             return await _context.Sprints
                 .Where(s => s.DuAnId == projectId)
+                .Include(s => s.CongViecs)
                 .ToListAsync();
         }
-
+ 
         public async Task<Sprint> AddAsync(Sprint sprint)
         {
             _context.Sprints.Add(sprint);

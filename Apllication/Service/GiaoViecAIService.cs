@@ -46,11 +46,9 @@ namespace Apllication.Service
             double workloadPenalty = GetRuleValue(rules, "WORKLOAD_PENALTY", 0.1);
             double minScore = GetRuleValue(rules, "MIN_MATCH_SCORE", 0.3);
 
-            // 2. Lấy danh sách ứng viên (Tất cả nhân viên đang hoạt động)
-            // Lưu ý: Trong thực tế nên filter theo team hoặc phòng ban của dự án
-            var query = new NguoiDungQueryDto { PageSize = 100 };
-            var pagedUsers = await _nguoiDungRepo.LayDanhSachNguoiDungAsync(query);
-            var candidates = pagedUsers.Items;
+            // 2. Lấy danh sách ứng viên (Chỉ những người tham gia dự án này)
+            var projectMembers = await _duAnRepo.GetMembersAsync(task.DuAnId);
+            var candidates = projectMembers.Select(m => m.NguoiDung).ToList();
 
             var recommendations = new List<GoiYGiaoViecDto>();
 
@@ -126,6 +124,21 @@ namespace Apllication.Service
 
                     // Cập nhật workload tạm thời để task sau tính toán chính xác
                     tempWorkload[bestMatch.UserId] = tempWorkload.GetValueOrDefault(bestMatch.UserId) + task.ThoiGianUocTinh;
+                }
+                else
+                {
+                    // Fallback: Tìm Quản lý dự án (hoặc Admin) để gán
+                    var projectMembers = await _duAnRepo.GetMembersAsync(task.DuAnId);
+                    var manager = projectMembers.Select(m => m.NguoiDung)
+                        .FirstOrDefault(u => u.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN"));
+
+                    if (manager != null)
+                    {
+                        task.AssigneeId = manager.Id;
+                        task.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; // Đánh dấu manual vì đây là fallback
+                        task.AiMatchScore = 0;
+                        task.AiReasoning = "AI không tìm thấy ứng viên phù hợp. Tạm gán cho Quản lý dự án phân bổ lại.";
+                    }
                 }
 
                 if (task.SprintId == null)
@@ -294,9 +307,9 @@ namespace Apllication.Service
             double workloadPenalty = GetRuleValue(rules, "WORKLOAD_PENALTY", 0.1);
             double minScore = GetRuleValue(rules, "MIN_MATCH_SCORE", 0.3);
 
-            var query = new NguoiDungQueryDto { PageSize = 100 };
-            var pagedUsers = await _nguoiDungRepo.LayDanhSachNguoiDungAsync(query);
-            var candidates = pagedUsers.Items;
+            // 2. Lấy danh sách ứng viên (Chỉ những người tham gia dự án này)
+            var projectMembers = await _duAnRepo.GetMembersAsync(task.DuAnId);
+            var candidates = projectMembers.Select(m => m.NguoiDung).ToList();
 
             var recommendations = new List<GoiYGiaoViecDto>();
 
@@ -372,11 +385,19 @@ namespace Apllication.Service
             }
             else
             {
-                // Neu task khong co yeu cau thi fallback ve keyword matching (Logic tam nhu truoc)
+                // Neu task khong co yeu cau thi fallback ve keyword matching
+                var taskWords = (task.TieuDe + " " + (task.MoTa ?? "")).Split(new[] { ' ', '-', '_', '.', '/' }, StringSplitOptions.RemoveEmptyEntries);
+                
                 foreach (var sk in userSkills)
                 {
-                    if (task.TieuDe.Contains(sk.KyNang.TenKyNang, StringComparison.OrdinalIgnoreCase) ||
-                        (task.MoTa != null && task.MoTa.Contains(sk.KyNang.TenKyNang, StringComparison.OrdinalIgnoreCase)))
+                    var skillName = sk.KyNang.TenKyNang;
+                    var skillWords = skillName.Split(new[] { ' ', '-', '_', '.', '/' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    // Neu ten ky nang la mot khoi (SQL, API, C#...) hoac co tu khoa chung voi task
+                    bool matches = taskWords.Any(tw => tw.Equals(skillName, StringComparison.OrdinalIgnoreCase)) ||
+                                   skillWords.Any(sw => taskWords.Any(tw => tw.Equals(sw, StringComparison.OrdinalIgnoreCase) && sw.Length > 2));
+
+                    if (matches)
                     {
                         skillScore += (sk.Level / 5.0);
                         matchedSkills.Add(sk.KyNang.TenKyNang);

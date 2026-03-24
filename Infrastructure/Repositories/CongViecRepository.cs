@@ -20,6 +20,7 @@ namespace Infrastructure.Repositories
         public async Task<CongViec?> GetByIdAsync(int id)
         {
             return await _context.CongViecs
+                .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
                 .Include(c => c.YeuCauCongViecs)
                 .ThenInclude(y => y.KyNang)
@@ -30,6 +31,7 @@ namespace Infrastructure.Repositories
         {
             return await _context.CongViecs
                 .Where(c => c.DuAnId == projectId)
+                .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
                 .ToListAsync();
         }
@@ -38,6 +40,7 @@ namespace Infrastructure.Repositories
         {
             return await _context.CongViecs
                 .Where(c => c.AssigneeId == assigneeId)
+                .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
                 .ToListAsync();
         }
@@ -45,6 +48,7 @@ namespace Infrastructure.Repositories
         public async Task<IEnumerable<CongViec>> GetAllAsync()
         {
             return await _context.CongViecs
+                .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
                 .ToListAsync();
         }
@@ -65,6 +69,7 @@ namespace Infrastructure.Repositories
         public async Task<Apllication.DTOs.PagedResultDto<CongViec>> LayDanhSachCongViecAsync(Apllication.DTOs.CongViecQueryDto query)
         {
             var dbQuery = _context.CongViecs
+                .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
                 .AsQueryable();
 
@@ -101,6 +106,15 @@ namespace Infrastructure.Repositories
                 PageNumber = query.PageNumber,
                 PageSize = query.PageSize
             };
+        }
+
+        public async Task<IEnumerable<CongViec>> GetTasksWithRequirementsByProjectAsync(int projectId)
+        {
+            return await _context.CongViecs
+                .Where(c => c.DuAnId == projectId)
+                .Include(c => c.YeuCauCongViecs)
+                .ThenInclude(y => y.KyNang)
+                .ToListAsync();
         }
     }
 }

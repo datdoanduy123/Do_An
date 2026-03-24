@@ -42,7 +42,6 @@ namespace Infrastructure.Repositories
                 FullName = taoNguoiDungDto.HoTen,
                 Email = taoNguoiDungDto.Email,
                 DienThoai = taoNguoiDungDto.DienThoai,
-                VaiTro = "User",
                 CreatedAt = DateTime.UtcNow
             };
 

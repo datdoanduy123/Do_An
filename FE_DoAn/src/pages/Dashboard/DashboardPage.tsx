@@ -9,7 +9,8 @@ import {
   ChevronRight,
   TrendingUp,
   Users,
-  Target
+  Target,
+  User as UserIcon
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend,
@@ -22,7 +23,7 @@ import UserService from '../../services/UserService';
 import './Dashboard.css';
 
 /**
- * Trang Dashboard quản lý v2 với biểu đồ phân tích sâu.
+ * Trang Dashboard quản lý v2 với giao diện được thiết kế lại theo phong cách Premium Crystal.
  */
 const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -53,20 +54,28 @@ const DashboardPage: React.FC = () => {
     return (
       <div className="loading-container-full">
         <div className="modern-loader"></div>
-        <p>Đang tải dữ liệu tổng quan...</p>
+        <p style={{ fontWeight: 600, color: '#6366f1' }}>Đang tải dữ liệu tổng quan...</p>
       </div>
     );
   }
 
+  // Bảng màu rực rỡ hơn cho biểu đồ
   const COLORS = ['#94a3b8', '#6366f1', '#f59e0b', '#10b981', '#ef4444'];
 
   return (
     <div className="dashboard-container-v2">
-      {/* Header Welcome */}
+      {/* Header Welcome - Redesigned with Avatar */}
       <header className="dashboard-header-v2">
         <div className="welcome-section">
-          <h1>Chào mừng, {userProfile?.hoTen || 'Quản lý'}! 👋</h1>
-          <p>Hôm nay có <strong>{stats?.pendingReviews}</strong> công việc đang chờ bạn phê duyệt.</p>
+          <div className="welcome-greet">
+             <div className="user-avatar-main">
+                {userProfile?.hoTen?.charAt(0) || <UserIcon size={24}/>}
+             </div>
+             <div className="greet-text">
+                <h1>Chào mừng, {userProfile?.hoTen || 'Quản lý'}! 👋</h1>
+                <p>Hôm nay có <strong>{stats?.pendingReviews}</strong> công việc đang chờ bạn phê duyệt.</p>
+             </div>
+          </div>
         </div>
         <div className="header-actions">
           <div className="date-badge">
@@ -114,7 +123,7 @@ const DashboardPage: React.FC = () => {
         <div className="charts-column">
           <div className="chart-row">
             <div className="chart-card glass">
-              <h3><Target size={18} /> Trạng thái công việc</h3>
+              <h3><Target size={20} /> Trạng thái công việc</h3>
               <div className="chart-wrapper">
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
@@ -122,8 +131,8 @@ const DashboardPage: React.FC = () => {
                       data={stats?.taskStatusDistribution}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={65}
+                      outerRadius={85}
                       paddingAngle={5}
                       dataKey="count"
                       nameKey="status"
@@ -133,24 +142,28 @@ const DashboardPage: React.FC = () => {
                       ))}
                     </Pie>
                     <RechartsTooltip 
-                      contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f1f5f9' }}
+                      contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                      itemStyle={{ color: '#1e293b', fontWeight: 600 }}
                     />
-                    <Legend verticalAlign="bottom" height={36}/>
+                    <Legend verticalAlign="bottom" height={36} iconType="circle"/>
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
             <div className="chart-card glass">
-              <h3><Users size={18} /> Phân bổ nguồn lực</h3>
+              <h3><Users size={20} /> Phân bổ nguồn lực</h3>
               <div className="chart-wrapper">
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={stats?.teamWorkload}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
-                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                    <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} />
-                    <Bar dataKey="taskCount" fill="#818cf8" radius={[4, 4, 0, 0]} barSize={24} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <RechartsTooltip 
+                       cursor={{fill: 'rgba(99, 102, 241, 0.05)'}}
+                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                    />
+                    <Bar dataKey="taskCount" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={28} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -158,19 +171,19 @@ const DashboardPage: React.FC = () => {
           </div>
 
           <div className="chart-card glass full-width">
-            <h3><TrendingUp size={18} /> Tiến độ các dự án tiêu biểu</h3>
+            <h3><TrendingUp size={20} /> Tiến độ các dự án tiêu biểu</h3>
             <div className="chart-wrapper">
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={stats?.projectProgress}>
                   <defs>
                     <linearGradient id="colorProgress" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
                       <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
-                  <XAxis dataKey="projectName" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="projectName" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
                   <RechartsTooltip />
                   <Area 
                     type="monotone" 
@@ -178,7 +191,7 @@ const DashboardPage: React.FC = () => {
                     stroke="#6366f1" 
                     fillOpacity={1} 
                     fill="url(#colorProgress)" 
-                    strokeWidth={3}
+                    strokeWidth={4}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -191,7 +204,7 @@ const DashboardPage: React.FC = () => {
           <div className="info-card glass">
             <div className="card-header">
               <h3>Công việc khẩn cấp</h3>
-              <Star className="star-glow" size={18} />
+              <Star className="star-glow" size={18} fill="#f59e0b" color="#f59e0b" />
             </div>
             <div className="priority-tasks-list-v2">
               {(!stats?.myPriorityTasks || stats.myPriorityTasks.length === 0) ? (
@@ -217,7 +230,7 @@ const DashboardPage: React.FC = () => {
           <div className="info-card glass">
             <div className="card-header">
               <h3>Dự án mới cập nhật</h3>
-              <Briefcase size={18} color="#94a3b8" />
+              <Briefcase size={18} color="#6366f1" />
             </div>
             <div className="recent-projects-list-v2">
               {stats?.recentProjects.map((p: any) => (
@@ -227,12 +240,18 @@ const DashboardPage: React.FC = () => {
                     <span className="date-meta">Cập nhật: {new Date().toLocaleDateString('vi-VN')}</span>
                   </div>
                   <div className="project-progress-mini">
-                     <div className="progress-info">
-                        <span>Tiến độ</span>
-                        <span>65%</span>
-                     </div>
+                    <div className="progress-info">
+                      <span>Tiến độ</span>
+                      <span>{p.progress || 0}%</span>
+                    </div>
                     <div className="progress-bar-bg">
-                      <div className="progress-bar-fill" style={{ width: '65%' }}></div>
+                      <div 
+                        className="progress-bar-fill" 
+                        style={{ 
+                          width: `${p.progress || 0}%`,
+                          backgroundColor: (p.progress || 0) >= 100 ? '#10b981' : '#6366f1'
+                        }}
+                      ></div>
                     </div>
                   </div>
                 </div>

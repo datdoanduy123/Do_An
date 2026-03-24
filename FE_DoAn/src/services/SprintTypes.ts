@@ -18,6 +18,7 @@ export interface SprintDto {
   ngayKetThuc: string;
   mucTieuStoryPoints: number;
   trangThai: TrangThaiSprint;
+  tienDo: number;
 }
 
 export interface TaoSprintDto {

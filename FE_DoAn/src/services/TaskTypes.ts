@@ -38,6 +38,7 @@ export interface CongViecDto {
   id: number;
   duAnId: number;
   sprintId?: number;
+  sprintStatus?: number;
   tieuDe: string;
   moTa?: string;
   loaiCongViec: LoaiCongViec;
@@ -50,6 +51,10 @@ export interface CongViecDto {
   thoiGianThucTe?: number;
   ngayBatDauDuKien?: string;
   ngayKetThucDuKien?: string;
+  ngayBatDauThucTe?: string;
+  ngayKetThucThucTe?: string;
+  ngayBatDauSprint?: string;
+  ngayKetThucSprint?: string;
 }
 
 export interface TaoCongViecDto {
@@ -61,4 +66,5 @@ export interface TaoCongViecDto {
   doUuTien: DoUuTien;
   storyPoints: number;
   thoiGianUocTinh: number;
+  thoiGianThucTe?: number;
 }

@@ -71,12 +71,20 @@ namespace Apllication.Service
                 TaskStatusDistribution = statusDistribution,
                 TeamWorkload = teamWorkload,
                 ProjectProgress = projectProgress,
-                RecentProjects = allProjects.OrderByDescending(p => p.Id).Take(3).Select(p => new {
-                    p.Id,
-                    p.TenDuAn,
-                    p.NgayBatDau,
-                    p.NgayKetThuc,
-                    p.TrangThai
+                RecentProjects = allProjects.OrderByDescending(p => p.Id).Take(3).Select(p => {
+                    var pTasks = allTasks.Where(t => t.DuAnId == p.Id).ToList();
+                    var total = pTasks.Count;
+                    var completed = pTasks.Count(t => t.TrangThai == TrangThaiCongViec.Done);
+                    var progress = total > 0 ? (int)((double)completed / total * 100) : 0;
+                    
+                    return new {
+                        p.Id,
+                        p.TenDuAn,
+                        p.NgayBatDau,
+                        p.NgayKetThuc,
+                        p.TrangThai,
+                        Progress = progress
+                    };
                 }),
                 MyPriorityTasks = myTasks.Where(t => t.TrangThai != TrangThaiCongViec.Done && t.DoUuTien >= DoUuTien.High).Take(5).Select(t => new {
                     t.Id,

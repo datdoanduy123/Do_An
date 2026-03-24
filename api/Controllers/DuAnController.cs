@@ -1,5 +1,6 @@
 using Apllication.DTOs.DuAn;
 using Apllication.IService;
+using Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
@@ -83,6 +84,64 @@ namespace api.Controllers
                 var result = await _duAnService.DeleteAsync(id);
                 if (result) return SuccessResponse(null!, "Xoa du an thanh cong.");
                 return ErrorResponse(400, "Khong the xoa du an.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpGet("{id}/members")]
+        public async Task<IActionResult> LayThanhVien(int id)
+        {
+            try
+            {
+                var result = await _duAnService.GetMembersAsync(id);
+                return SuccessResponse(result, "Lay danh sach thanh vien thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpPost("{id}/members/{userId}")]
+        public async Task<IActionResult> ThemThanhVien(int id, int userId)
+        {
+            try
+            {
+                var result = await _duAnService.AddMemberAsync(id, userId);
+                if (result) return SuccessResponse(null!, "Them thanh vien thanh cong.");
+                return ErrorResponse(400, "Khong the them thanh vien.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpDelete("{id}/members/{userId}")]
+        public async Task<IActionResult> XoaThanhVien(int id, int userId)
+        {
+            try
+            {
+                var result = await _duAnService.RemoveMemberAsync(id, userId);
+                if (result) return SuccessResponse(null!, "Xoa thanh vien thanh cong.");
+                return ErrorResponse(400, "Khong the xoa thanh vien.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpGet("{id}/skill-coverage")]
+        public async Task<IActionResult> LayDoPhuKyNang(int id)
+        {
+            try
+            {
+                var result = await _duAnService.GetSkillCoverageAsync(id);
+                return SuccessResponse(result, "Lay do phu ky nang thanh cong.");
             }
             catch (Exception ex)
             {

@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
   const [authorized, setAuthorized] = React.useState<boolean | null>(null);
   const location = useLocation();
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
 
   React.useEffect(() => {
     const checkAuth = async () => {

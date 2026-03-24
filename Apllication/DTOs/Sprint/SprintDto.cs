@@ -12,6 +12,7 @@ namespace Apllication.DTOs.Sprint
         public DateTime NgayKetThuc { get; set; }
         public int MucTieuStoryPoints { get; set; }
         public TrangThaiSprint TrangThai { get; set; }
+        public double TienDo { get; set; } 
     }
 
     public class TaoSprintDto

@@ -152,5 +152,19 @@ namespace api.Controllers
                 return ErrorResponse(500, ex.Message);
             }
         }
+
+        [HttpPost("auto-assign-project/{projectId}")]
+        public async Task<IActionResult> AutoAssignProject(int projectId)
+        {
+            try
+            {
+                var result = await _aiService.TuDongGiaoViecDuAnAsync(projectId);
+                return SuccessResponse(result, "Giao viec tu dong cho toan bo du an thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using Apllication.IRepositories;
 using Domain.Entities;
 using Infrastructure.Persistence;
@@ -21,6 +22,7 @@ namespace Infrastructure.Repositories
             return await _context.DuAns
                 .Include(d => d.TaiLieuDuAns)
                 .Include(d => d.Sprints)
+                .Include(d => d.CongViecs)
                 .FirstOrDefaultAsync(d => d.Id == id);
         }
 
@@ -47,6 +49,49 @@ namespace Infrastructure.Repositories
             var duAn = await _context.DuAns.FindAsync(id);
             if (duAn == null) return false;
             _context.DuAns.Remove(duAn);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<IEnumerable<DuAnNguoiDung>> GetMembersAsync(int duAnId)
+        {
+            return await _context.DuAnNguoiDungs
+                .Include(m => m.NguoiDung)
+                    .ThenInclude(u => u.KyNangNguoiDungs)
+                        .ThenInclude(k => k.KyNang)
+                .Include(m => m.NguoiDung)
+                    .ThenInclude(u => u.NguoiDungVaiTros)
+                        .ThenInclude(uv => uv.VaiTro)
+                .Include(m => m.NguoiDung)
+                    .ThenInclude(u => u.CongViecs)
+                .Where(m => m.DuAnId == duAnId)
+                .ToListAsync();
+        }
+
+        public async Task<bool> AddMemberAsync(int duAnId, int userId)
+        {
+            var exists = await _context.DuAnNguoiDungs.AnyAsync(m => m.DuAnId == duAnId && m.NguoiDungId == userId);
+            if (exists) return true;
+
+            var membership = new DuAnNguoiDung
+            {
+                DuAnId = duAnId,
+                NguoiDungId = userId,
+                ProjectRole = "Member",
+                JointAt = DateTime.UtcNow
+            };
+
+            _context.DuAnNguoiDungs.Add(membership);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> RemoveMemberAsync(int duAnId, int userId)
+        {
+            var membership = await _context.DuAnNguoiDungs
+                .FirstOrDefaultAsync(m => m.DuAnId == duAnId && m.NguoiDungId == userId);
+
+            if (membership == null) return false;
+
+            _context.DuAnNguoiDungs.Remove(membership);
             return await _context.SaveChangesAsync() > 0;
         }
     }

@@ -3,11 +3,10 @@
  */
 
 export const TrangThaiDuAn = {
-  Moi: 0,
-  DangThucHien: 1,
-  TamDung: 2,
-  HoanThanh: 3,
-  Huy: 4
+  Planning: 0,
+  Active: 1,
+  Completed: 2,
+  Cancelled: 3
 } as const;
 
 export type TrangThaiDuAn = typeof TrangThaiDuAn[keyof typeof TrangThaiDuAn];
@@ -19,7 +18,18 @@ export interface DuAnDto {
   ngayBatDau: string;
   ngayKetThuc?: string;
   trangThai: TrangThaiDuAn;
+  tienDo: number;
   createdAt: string;
+}
+
+export interface ThanhVienDuAnDto {
+  id: number;
+  hoTen: string;
+  email: string;
+  vaiTro?: string;
+  ngayThamGia: string;
+  soCongViec: number;
+  kyNang: string[];
 }
 
 export interface TaoDuAnDto {
