@@ -66,6 +66,14 @@ namespace Infrastructure.Repositories
             return await _context.SaveChangesAsync() > 0;
         }
 
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var cv = await _context.CongViecs.FindAsync(id);
+            if (cv == null) return false;
+            _context.CongViecs.Remove(cv);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
         public async Task<Apllication.DTOs.PagedResultDto<CongViec>> LayDanhSachCongViecAsync(Apllication.DTOs.CongViecQueryDto query)
         {
             var dbQuery = _context.CongViecs

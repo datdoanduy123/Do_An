@@ -68,6 +68,21 @@ class TaskService {
     const response = await api.post('/CongViec/giao-viec-thu-cong', data);
     return response.data.statusCode === 200;
   }
+  /**
+   * Cập nhật thông tin công việc.
+   */
+  async update(id: number, data: any): Promise<any> {
+    const response = await api.put(`/CongViec/${id}`, data);
+    return response.data;
+  }
+
+  /**
+   * Xóa công việc.
+   */
+  async delete(id: number): Promise<boolean> {
+    const response = await api.delete(`/CongViec/${id}`);
+    return response.data.statusCode === 200;
+  }
 }
 
 export default new TaskService();

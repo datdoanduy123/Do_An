@@ -133,8 +133,12 @@ const ProjectDetailPage: React.FC = () => {
     }
   };
 
-  const getSprintStatusLabel = (status: number) => {
-    switch (status) {
+  const getSprintStatusLabel = (sprint: SprintDto) => {
+    if (sprint.tienDo === 100 && sprint.trangThai !== TrangThaiEnum.Finished) {
+      return { text: 'Chờ đóng (Xong)', class: 'status-finished-pending' };
+    }
+
+    switch (sprint.trangThai) {
       case TrangThaiEnum.New: return { text: 'Mới', class: 'status-new' };
       case TrangThaiEnum.InProgress: return { text: 'Đang thực hiện', class: 'status-inprogress' };
       case TrangThaiEnum.Finished: return { text: 'Đã kết thúc', class: 'status-finished' };
@@ -307,8 +311,8 @@ const ProjectDetailPage: React.FC = () => {
                 <div className="sprint-info">
                   <div className="sprint-name-row">
                     <h3>{sprint.tenSprint}</h3>
-                    <span className={`sprint-status ${getSprintStatusLabel(sprint.trangThai).class}`}>
-                      {getSprintStatusLabel(sprint.trangThai).text}
+                    <span className={`sprint-status ${getSprintStatusLabel(sprint).class}`}>
+                      {getSprintStatusLabel(sprint).text}
                     </span>
                   </div>
                   <div className="sprint-meta">

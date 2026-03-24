@@ -55,4 +55,15 @@ namespace Apllication.DTOs.CongViec
         public double ThoiGianLamViecThem { get; set; } // Số giờ làm thêm trong lần cập nhật này
         public string? GhiChu { get; set; }
     }
+
+    public class CapNhatCongViecDto
+    {
+        public string TieuDe { get; set; } = string.Empty;
+        public string? MoTa { get; set; }
+        public LoaiCongViec LoaiCongViec { get; set; }
+        public DoUuTien DoUuTien { get; set; }
+        public int StoryPoints { get; set; }
+        public int? AssigneeId { get; set; }
+        public double ThoiGianUocTinh { get; set; }
+    }
 }

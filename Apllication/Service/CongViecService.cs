@@ -88,6 +88,53 @@ namespace Apllication.Service
             return MapToDto(cv);
         }
 
+        public async Task<CongViecDto> UpdateAsync(int id, CapNhatCongViecDto dto)
+        {
+            var cv = await _repository.GetByIdAsync(id);
+            if (cv == null) throw new Exception("Không tìm thấy công việc.");
+
+            int? oldAssigneeId = cv.AssigneeId;
+
+            cv.TieuDe = dto.TieuDe;
+            cv.MoTa = dto.MoTa;
+            cv.LoaiCongViec = dto.LoaiCongViec;
+            cv.DoUuTien = dto.DoUuTien;
+            cv.StoryPoints = dto.StoryPoints;
+            cv.AssigneeId = dto.AssigneeId;
+            cv.ThoiGianUocTinh = dto.ThoiGianUocTinh;
+
+            await _repository.UpdateAsync(cv);
+
+            // Thông báo realtime bảng Kanban
+            await _notificationService.NotifyTaskUpdated(cv.DuAnId);
+
+            // Nếu có thay đổi người thực hiện, thông báo cho người mới
+            if (cv.AssigneeId.HasValue && cv.AssigneeId != oldAssigneeId)
+            {
+                await _notificationService.NotifyPersonal(
+                    cv.AssigneeId.Value,
+                    "Giao việc",
+                    $"Bạn vừa được gán công việc: '{cv.TieuDe}' thông qua việc chỉnh sửa."
+                );
+            }
+
+            return MapToDto(cv);
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var cv = await _repository.GetByIdAsync(id);
+            if (cv == null) return false;
+
+            int duAnId = cv.DuAnId;
+            var result = await _repository.DeleteAsync(id);
+            if (result)
+            {
+                await _notificationService.NotifyTaskUpdated(duAnId);
+            }
+            return result;
+        }
+
         public async Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status)
         {
             var cv = await _repository.GetByIdAsync(id);

@@ -91,6 +91,35 @@ namespace api.Controllers
             }
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatCongViecDto dto)
+        {
+            try
+            {
+                var result = await _congViecService.UpdateAsync(id, dto);
+                return SuccessResponse(result, "Cập nhật công việc thành công.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Xoa(int id)
+        {
+            try
+            {
+                var result = await _congViecService.DeleteAsync(id);
+                if (result) return SuccessResponse(null!, "Xóa công việc thành công.");
+                return ErrorResponse(400, "Không thể xóa công việc.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
         [HttpPatch("{id}/cap-nhat-trang-thai")]
         public async Task<IActionResult> CapNhatTrangThai(int id, [FromQuery] TrangThaiCongViec status)
         {

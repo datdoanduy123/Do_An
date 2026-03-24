@@ -5,6 +5,7 @@ import {
   Search,
   Plus,
   MoreHorizontal,
+  MoreVertical,
   Clock,
   Sparkles,
   AlertCircle,
@@ -13,6 +14,8 @@ import {
   XCircle,
   CheckCircle,
   Play,
+  Edit,
+  Trash2,
   CheckSquare
 } from 'lucide-react';
 import SprintService from '../../services/SprintService';
@@ -52,6 +55,18 @@ const SprintDetailPage: React.FC = () => {
     thoiGianUocTinh: 0,
     assigneeId: null as number | null
   });
+
+  const [activeMenuTaskId, setActiveMenuTaskId] = useState<number | null>(null);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<CongViecDto | null>(null);
+
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -135,6 +150,58 @@ const SprintDetailPage: React.FC = () => {
     }
   };
 
+  const handleDeleteTask = async (taskId: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa công việc này không?')) return;
+    try {
+      const result = await TaskService.delete(taskId);
+      if (result) {
+        setTasks(tasks.filter(t => t.id !== taskId));
+        setActiveMenuTaskId(null);
+        showToast('Đã xóa công việc thành công!');
+      }
+    } catch (error) {
+      console.error('Delete task failed:', error);
+      showToast('Xóa công việc thất bại.', 'error');
+    }
+  };
+
+  const handleEditClick = (task: CongViecDto) => {
+    setEditingTask(task);
+    setNewTaskData({
+      tieuDe: task.tieuDe,
+      moTa: task.moTa || '',
+      loaiCongViec: task.loaiCongViec,
+      doUuTien: task.doUuTien,
+      storyPoints: task.storyPoints,
+      thoiGianUocTinh: task.thoiGianUocTinh,
+      assigneeId: task.assigneeId || null
+    });
+    setShowEditTaskModal(true);
+    setActiveMenuTaskId(null);
+  };
+
+  const handleUpdateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask) return;
+    try {
+      const result = await TaskService.update(editingTask.id, newTaskData);
+      if (result.statusCode === 200) {
+        setShowEditTaskModal(false);
+        setEditingTask(null);
+        setNewTaskData({
+          tieuDe: '', moTa: '', loaiCongViec: 0, doUuTien: 1, storyPoints: 0, thoiGianUocTinh: 0, assigneeId: null
+        });
+        // Reload tasks will happen via SignalR or manual fetch
+        const updated = await TaskService.getByProjectId(sprint!.duAnId);
+        setTasks(updated);
+        showToast('Cập nhật công việc thành công!');
+      }
+    } catch (error) {
+      console.error('Update task failed:', error);
+      showToast('Cập nhật thất bại.', 'error');
+    }
+  };
+
   const handleTaskAction = async (taskId: number, approve: boolean) => {
     if (!isSprintActive) {
       alert('Chỉ có thể phê duyệt công việc khi Sprint đang hoạt động.');
@@ -200,6 +267,7 @@ const SprintDetailPage: React.FC = () => {
       setNewTaskData({
         tieuDe: '', moTa: '', loaiCongViec: 0, doUuTien: 1, storyPoints: 0, thoiGianUocTinh: 0, assigneeId: null
       });
+      showToast('Đã tạo công việc mới thành công!');
     } catch (error) {
       console.error('Create task failed:', error);
       alert('Tạo công việc thất bại.');
@@ -231,6 +299,7 @@ const SprintDetailPage: React.FC = () => {
           } : t
         ));
         setActiveDropdownTaskId(null);
+        showToast(`Đã gán việc cho ${assigneeName || 'người mới'}`);
       }
     } catch (error) {
       console.error('Manual assign failed:', error);
@@ -243,6 +312,9 @@ const SprintDetailPage: React.FC = () => {
     const handleClickOutside = (e: MouseEvent) => {
       if (!(e.target as Element).closest('.assignee-wrapper')) {
         setActiveDropdownTaskId(null);
+      }
+      if (!(e.target as Element).closest('.more-menu-container')) {
+        setActiveMenuTaskId(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -291,10 +363,10 @@ const SprintDetailPage: React.FC = () => {
         </div>
 
         <div className="header-right">
-          {isAdmin && sprint.trangThai === 1 && (
+          {isAdmin && sprint && (sprint.trangThai === 1 || (sprint.trangThai === 0 && tasks.length > 0 && tasks.every(t => t.trangThai === StatusEnum.Done))) && (
             <button className="btn-finish-sprint-inline" onClick={() => handleUpdateSprintStatus(2)}>
               <CheckSquare size={18} />
-              <span>Hoàn thành Sprint</span>
+              <span>{sprint.trangThai === 0 ? "Chốt & Hoàn thành" : "Hoàn thành Sprint"}</span>
             </button>
           )}
           <div className="search-tasks">
@@ -328,7 +400,35 @@ const SprintDetailPage: React.FC = () => {
                     <span className={`priority-tag ${getPriorityLabel(task.doUuTien).class}`}>
                       {getPriorityLabel(task.doUuTien).text}
                     </span>
-                    <span className="task-id">#{task.id}</span>
+                    <div className="task-card-actions">
+                      <span className="task-id">#{task.id}</span>
+                      {isAdmin && (
+                        <div className="more-menu-container">
+                          <button 
+                            className="more-action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id);
+                            }}
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+                          {activeMenuTaskId === task.id && (
+                            <div className="task-dropdown-menu fade-in">
+                              <button onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}>
+                                <Edit size={12} /> Sửa
+                              </button>
+                              <button 
+                                className="delete-btn" 
+                                onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
+                              >
+                                <Trash2 size={12} /> Xóa
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <h4 className="task-title">{task.tieuDe}</h4>
@@ -426,6 +526,109 @@ const SprintDetailPage: React.FC = () => {
         ))}
       </div>
 
+      {showEditTaskModal && (
+        <div className="sprint-modal-overlay" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>
+          <div className="sprint-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="sprint-modal-header">
+              <h2>Chỉnh sửa Công việc</h2>
+              <button className="close-btn" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>✕</button>
+            </div>
+            <form onSubmit={handleUpdateTask} className="sprint-modal-body">
+              <div className="form-group">
+                <label>Tiêu đề <span className="required">*</span></label>
+                <input 
+                  type="text" 
+                  value={newTaskData.tieuDe}
+                  onChange={e => setNewTaskData({...newTaskData, tieuDe: e.target.value})}
+                  placeholder="Nhập tiêu đề công việc"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Mô tả</label>
+                <textarea 
+                  value={newTaskData.moTa}
+                  onChange={e => setNewTaskData({...newTaskData, moTa: e.target.value})}
+                  placeholder="Mô tả chi tiết công việc..."
+                  rows={3}
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group" style={{ flex: 2 }}>
+                  <label>Người thực hiện</label>
+                  <select 
+                    value={newTaskData.assigneeId || ''}
+                    onChange={e => setNewTaskData({...newTaskData, assigneeId: e.target.value ? parseInt(e.target.value) : null})}
+                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+                  >
+                    <option value="">-- Chưa giao --</option>
+                    {projectMembers.map(member => (
+                      <option key={member.id} value={member.id}>
+                        {member.hoTen}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Loại công việc</label>
+                  <select 
+                    value={newTaskData.loaiCongViec}
+                    onChange={e => setNewTaskData({...newTaskData, loaiCongViec: parseInt(e.target.value)})}
+                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+                  >
+                    <option value={0}>Backend</option>
+                    <option value={1}>Frontend</option>
+                    <option value={2}>Fullstack</option>
+                    <option value={3}>Mobile</option>
+                    <option value={4}>DevOps</option>
+                    <option value={5}>Tester</option>
+                    <option value={6}>UI/UX</option>
+                    <option value={7}>BA</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Độ ưu tiên</label>
+                  <select 
+                    value={newTaskData.doUuTien}
+                    onChange={e => setNewTaskData({...newTaskData, doUuTien: parseInt(e.target.value)})}
+                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+                  >
+                    <option value={0}>Thấp</option>
+                    <option value={1}>Vừa</option>
+                    <option value={2}>Cao</option>
+                    <option value={3}>Khẩn cấp</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Story Points</label>
+                  <input 
+                    type="number" 
+                    value={newTaskData.storyPoints}
+                    onChange={e => setNewTaskData({...newTaskData, storyPoints: parseInt(e.target.value)})}
+                    min="0"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Ước tính (giờ)</label>
+                  <input 
+                    type="number" 
+                    value={newTaskData.thoiGianUocTinh}
+                    onChange={e => setNewTaskData({...newTaskData, thoiGianUocTinh: parseInt(e.target.value)})}
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>Hủy</button>
+                <button type="submit" className="btn-save">Lưu Thay đổi</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showCreateTaskModal && (
         <div className="sprint-modal-overlay" onClick={() => setShowCreateTaskModal(false)}>
           <div className="sprint-modal-content" onClick={e => e.stopPropagation()}>
@@ -455,12 +658,27 @@ const SprintDetailPage: React.FC = () => {
                 />
               </div>
               <div className="form-row">
-                <div className="form-group">
+                <div className="form-group" style={{ flex: 2 }}>
+                  <label>Người thực hiện</label>
+                  <select 
+                    value={newTaskData.assigneeId || ''}
+                    onChange={e => setNewTaskData({...newTaskData, assigneeId: e.target.value ? parseInt(e.target.value) : null})}
+                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+                  >
+                    <option value="">-- Chưa giao --</option>
+                    {projectMembers.map(member => (
+                      <option key={member.id} value={member.id}>
+                        {member.hoTen}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
                   <label>Loại công việc</label>
                   <select 
                     value={newTaskData.loaiCongViec}
                     onChange={e => setNewTaskData({...newTaskData, loaiCongViec: parseInt(e.target.value)})}
-                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%' }}
+                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
                   >
                     <option value={0}>Backend</option>
                     <option value={1}>Frontend</option>
@@ -472,12 +690,14 @@ const SprintDetailPage: React.FC = () => {
                     <option value={7}>BA</option>
                   </select>
                 </div>
+              </div>
+              <div className="form-row">
                 <div className="form-group">
                   <label>Độ ưu tiên</label>
                   <select 
                     value={newTaskData.doUuTien}
                     onChange={e => setNewTaskData({...newTaskData, doUuTien: parseInt(e.target.value)})}
-                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%' }}
+                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
                   >
                     <option value={0}>Thấp</option>
                     <option value={1}>Vừa</option>
@@ -485,23 +705,6 @@ const SprintDetailPage: React.FC = () => {
                     <option value={3}>Khẩn cấp</option>
                   </select>
                 </div>
-              </div>
-              <div className="form-group">
-                <label>Người thực hiện</label>
-                <select 
-                  value={newTaskData.assigneeId || ''}
-                  onChange={e => setNewTaskData({...newTaskData, assigneeId: e.target.value ? parseInt(e.target.value) : null})}
-                  style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%' }}
-                >
-                  <option value="">-- Để trống (Chưa giao) --</option>
-                  {projectMembers.map(member => (
-                    <option key={member.id} value={member.id}>
-                      {member.hoTen} ({member.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-row">
                 <div className="form-group">
                   <label>Story Points</label>
                   <input 
@@ -531,6 +734,14 @@ const SprintDetailPage: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`toast-notification ${toast.type}`}>
+          {toast.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+          <span>{toast.message}</span>
         </div>
       )}
     </div>
