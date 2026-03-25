@@ -130,18 +130,12 @@ namespace Apllication.Service
                 }
                 else
                 {
-                    // Fallback: Tìm Quản lý dự án (hoặc Admin) để gán
-                    var projectMembers = await _duAnRepo.GetMembersAsync(task.DuAnId);
-                    var manager = projectMembers.Select(m => m.NguoiDung)
-                        .FirstOrDefault(u => u.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN"));
-
-                    if (manager != null)
-                    {
-                        task.AssigneeId = manager.Id;
-                        task.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; // Đánh dấu manual vì đây là fallback
-                        task.AiMatchScore = 0;
-                        task.AiReasoning = "AI không tìm thấy ứng viên phù hợp. Tạm gán cho Quản lý dự án phân bổ lại.";
-                    }
+                    // Nếu không tìm thấy ai phù hợp (DiemPhuHop < minScore), 
+                    // ta gán ngược lại cho người tạo (CreatedBy) để họ tự xử lý/phân bổ lại.
+                    task.AssigneeId = task.CreatedBy;
+                    task.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; // Đánh dấu manual vì AI không tìm được người khớp
+                    task.AiMatchScore = 0;
+                    task.AiReasoning = "AI không tìm thấy ứng viên đủ điều kiện kỹ năng. Đã gán cho người tạo công việc để xem xét lại.";
                 }
 
                 if (task.SprintId == null)
