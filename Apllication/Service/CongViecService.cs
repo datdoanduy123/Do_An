@@ -108,9 +108,10 @@ namespace Apllication.Service
             // Thông báo realtime bảng Kanban
             await _notificationService.NotifyTaskUpdated(cv.DuAnId);
 
-            // Nếu có thay đổi người thực hiện, thông báo cho người mới
+            // Nếu có thay đổi người thực hiện, thông báo cho người mới và RESET bộ đếm phạt
             if (cv.AssigneeId.HasValue && cv.AssigneeId != oldAssigneeId)
             {
+                cv.SoLanBiTuChoi = 0; // Reset phạt khi đổi người
                 await _notificationService.NotifyPersonal(
                     cv.AssigneeId.Value,
                     "Giao việc",
@@ -152,7 +153,24 @@ namespace Apllication.Service
                     return false; 
                 }
             }
-
+ 
+            // Phát hiện từ chối: Nếu đang ở Review mà bị đẩy về Todo/InProgress
+            if (cv.TrangThai == TrangThaiCongViec.Review && 
+                (status == TrangThaiCongViec.Todo || status == TrangThaiCongViec.InProgress))
+            {
+                cv.SoLanBiTuChoi++;
+                
+                // Cảnh báo nếu bị từ chối nhiều lần (ví dụ >= 3)
+                if (cv.SoLanBiTuChoi >= 3 && cv.AssigneeId.HasValue)
+                {
+                    await _notificationService.NotifyPersonal(
+                        cv.AssigneeId.Value, 
+                        "Cảnh báo hiệu suất", 
+                        $"Công việc '{cv.TieuDe}' đã bị từ chối {cv.SoLanBiTuChoi} lần. Vui lòng kiểm tra lại chất lượng đầu ra!"
+                    );
+                }
+            }
+ 
             cv.TrangThai = status;
 
             // Tự động ghi nhận ngày bắt đầu thực tế
@@ -211,6 +229,21 @@ namespace Apllication.Service
                 if (!isWorkable && dto.TrangThai != TrangThaiCongViec.Todo && dto.TrangThai != TrangThaiCongViec.Cancelled)
                 {
                     return false;
+                }
+            }
+
+            // Phát hiện từ chối: Nếu đang ở Review mà bị trả về trạng thái trước đó
+            if (cv.TrangThai == TrangThaiCongViec.Review && 
+                (dto.TrangThai == TrangThaiCongViec.Todo || dto.TrangThai == TrangThaiCongViec.InProgress))
+            {
+                cv.SoLanBiTuChoi++;
+                if (cv.SoLanBiTuChoi >= 3 && cv.AssigneeId.HasValue)
+                {
+                    await _notificationService.NotifyPersonal(
+                        cv.AssigneeId.Value, 
+                        "Cảnh báo hiệu suất", 
+                        $"Công việc '{cv.TieuDe}' đã bị từ chối {cv.SoLanBiTuChoi} lần (qua cập nhật tiến độ)."
+                    );
                 }
             }
 
@@ -321,6 +354,7 @@ namespace Apllication.Service
 
             cv.AssigneeId = dto.AssigneeId;
             cv.PhuongThucGiaoViec = PhuongThucGiaoViec.Manual; 
+            cv.SoLanBiTuChoi = 0; // Reset phạt khi giao cho người mới
 
             var result = await _repository.UpdateAsync(cv);
             if (result)
@@ -369,7 +403,8 @@ namespace Apllication.Service
                 NgayKetThucThucTe = cv.NgayKetThucThucTe,
                 SprintStatus = cv.Sprint?.TrangThai,
                 NgayBatDauSprint = cv.Sprint?.NgayBatDau,
-                NgayKetThucSprint = cv.Sprint?.NgayKetThuc
+                NgayKetThucSprint = cv.Sprint?.NgayKetThuc,
+                SoLanBiTuChoi = cv.SoLanBiTuChoi
             };
         }
     }

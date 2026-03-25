@@ -664,3 +664,38 @@
     transform: translateY(0) scale(1);
   }
 }
+/* Rejection Badge */
+.rejection-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fffbeb;
+  color: #d97706;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 1px solid #fef3c7;
+  white-space: nowrap;
+}
+
+.rejection-badge svg {
+  color: #f59e0b;
+}
+
+.rejection-badge.urgent {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fee2e2;
+  animation: pulse-red-border 2s infinite;
+}
+
+.rejection-badge.urgent svg {
+  color: #ef4444;
+}
+
+@keyframes pulse-red-border {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}

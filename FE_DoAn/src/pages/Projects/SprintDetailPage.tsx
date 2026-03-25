@@ -16,7 +16,8 @@ import {
   Play,
   Edit,
   Trash2,
-  CheckSquare
+  CheckSquare,
+  AlertTriangle
 } from 'lucide-react';
 import SprintService from '../../services/SprintService';
 import type { SprintDto } from '../../services/SprintService';
@@ -400,6 +401,12 @@ const SprintDetailPage: React.FC = () => {
                     <span className={`priority-tag ${getPriorityLabel(task.doUuTien).class}`}>
                       {getPriorityLabel(task.doUuTien).text}
                     </span>
+                    {task.soLanBiTuChoi > 0 && (
+                      <div className={`rejection-badge ${task.soLanBiTuChoi >= 3 ? 'urgent' : ''}`} title={`Bị từ chối ${task.soLanBiTuChoi} lần`}>
+                        <AlertTriangle size={12} />
+                        <span>{task.soLanBiTuChoi} lần</span>
+                      </div>
+                    )}
                     <div className="task-card-actions">
                       <span className="task-id">#{task.id}</span>
                       {isAdmin && (

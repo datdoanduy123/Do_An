@@ -90,6 +90,11 @@ namespace Domain.Entities
         public DateTime? NgayBatDauThucTe { get; set; }
         public DateTime? NgayKetThucThucTe { get; set; }
 
+        /// <summary>
+        /// Số lần công việc bị từ chối (trả về từ trạng thái Review).
+        /// </summary>
+        public int SoLanBiTuChoi { get; set; } = 0;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int? CreatedBy { get; set; }
         public User? Creator { get; set; }

@@ -55,6 +55,7 @@ export interface CongViecDto {
   ngayKetThucThucTe?: string;
   ngayBatDauSprint?: string;
   ngayKetThucSprint?: string;
+  soLanBiTuChoi: number;
 }
 
 export interface TaoCongViecDto {
