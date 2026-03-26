@@ -76,9 +76,14 @@ namespace Infrastructure.Repositories
 
         public async Task<Apllication.DTOs.PagedResultDto<CongViec>> LayDanhSachCongViecAsync(Apllication.DTOs.CongViecQueryDto query)
         {
+            // Fix #1: Load sẵn YeuCauCongViecs và Dependencies để tránh N+1 query
+            // khi GiaoViecAIService duyệt từng task để tính điểm kỹ năng và xử lý dependency
             var dbQuery = _context.CongViecs
                 .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
+                .Include(c => c.YeuCauCongViecs)
+                    .ThenInclude(y => y.KyNang)
+                .Include(c => c.Dependencies)
                 .AsQueryable();
 
             if (query.DuAnId.HasValue)
