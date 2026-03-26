@@ -306,7 +306,7 @@ namespace Apllication.Service
             CongViec task, 
             Dictionary<int, double> tempWorkload,
             int sprintId,
-            IEnumerable<CongViecDto> allSprintTasks)
+            IEnumerable<CongViec> allSprintTasks)
         {
             var rules = await _ruleRepo.GetAllActiveRulesAsync();
             double skillWeight = GetRuleValue(rules, "SKILL_MATCH_WEIGHT", 0.6);
