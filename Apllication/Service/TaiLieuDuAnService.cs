@@ -223,7 +223,12 @@ namespace Apllication.Service
                             for (int idx = 0; idx < tasksInTable.Count; idx++)
                             {
                                 var depStr = tasksInTable[idx].DepStr;
-                                if (string.IsNullOrEmpty(depStr)) continue;
+
+                                // Phụ thuộc = "0", rỗng, hoặc "-" nghĩa là task ĐỘC LẬP (không phụ thuộc ai).
+                                // → Không tạo dependency record. AI sẽ ưu tiên giao các task này trước.
+                                if (string.IsNullOrEmpty(depStr) 
+                                    || depStr.Trim() == "0" 
+                                    || depStr.Trim() == "-") continue;
 
                                 CongViec predecessor = null;
                                 if (depStr.ToLower().Contains("task"))

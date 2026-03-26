@@ -198,8 +198,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="sidebar-header">
           <div className="logo-box">
             <div className="logo-icon">D</div>
-            <span className="logo-text">DoAnHub</span>
+            {isSidebarOpen && <span className="logo-text">DoAnHub</span>}
           </div>
+          <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(!isSidebarOpen)}>
+            <Menu size={20} />
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -264,13 +267,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <main className="main-area">
         <header className="main-header">
           <div className="header-left">
-            <button className="icon-btn toggle-sidebar" onClick={() => setSidebarOpen(!isSidebarOpen)}>
-              <Menu size={20} />
-            </button>
-            <div className="search-bar">
-              <Search size={18} className="search-icon" />
-              <input type="text" placeholder="Tìm kiếm dự án, công việc..." />
-            </div>
+            {!isSidebarOpen && (
+              <button className="icon-btn toggle-sidebar" onClick={() => setSidebarOpen(!isSidebarOpen)}>
+                <Menu size={20} />
+              </button>
+            )}
           </div>
 
           <div className="header-right">

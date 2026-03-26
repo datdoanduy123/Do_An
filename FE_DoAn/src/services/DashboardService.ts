@@ -8,6 +8,8 @@ export interface DashboardStats {
   taskStatusDistribution: any[];
   teamWorkload: any[];
   projectProgress: any[];
+  burndownData: any[];
+  velocityData: any[];
   recentProjects: any[];
   myPriorityTasks: any[];
 }
@@ -32,6 +34,8 @@ class DashboardService {
         taskStatusDistribution: data.taskStatusDistribution,
         teamWorkload: data.teamWorkload,
         projectProgress: data.projectProgress,
+        burndownData: data.burndownData,
+        velocityData: data.velocityData,
         recentProjects: data.recentProjects,
         myPriorityTasks: data.myPriorityTasks
       };

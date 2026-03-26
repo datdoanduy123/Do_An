@@ -26,6 +26,7 @@ namespace Apllication.DTOs.CongViec
         public DateTime? NgayBatDauSprint { get; set; }
         public DateTime? NgayKetThucSprint { get; set; }
         public int SoLanBiTuChoi { get; set; }
+        public int? CreatedBy { get; set; }
     }
 
     public class TaoCongViecDto

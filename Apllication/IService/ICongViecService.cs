@@ -13,7 +13,7 @@ namespace Apllication.IService
         Task<CongViecDto> CreateAsync(TaoCongViecDto dto, int creatorId);
         Task<CongViecDto> UpdateAsync(int id, CapNhatCongViecDto dto);
         Task<bool> DeleteAsync(int id);
-        Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status);
+        Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status, int updaterId);
         Task<bool> CapNhatTienDoAsync(int id, CapNhatTienDoDto dto, int updaterId);
         
         /// <summary>

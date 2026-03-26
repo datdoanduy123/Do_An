@@ -440,8 +440,8 @@ const SprintDetailPage: React.FC = () => {
 
                   <h4 className="task-title">{task.tieuDe}</h4>
 
-                  {/* Quick Approval Actions for Managers */}
-                  {col.id === StatusEnum.Review && isAdmin && isSprintActive && (
+                  {/* Quick Approval Actions for Managers & Creators */}
+                  {col.id === StatusEnum.Review && (isAdmin || currentUser?.id === task.createdBy) && isSprintActive && (
                     <div className="task-approval-actions">
                       <button
                         className="btn-reject-small"

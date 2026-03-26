@@ -15,17 +15,20 @@ namespace Apllication.Service
         private readonly ICongViecRepository _repository;
         private readonly INguoiDungRepository _userRepository;
         private readonly INhatKyCongViecRepository _taskLogRepository;
+        private readonly ISprintRepository _sprintRepository;
         private readonly IKanbanNotificationService _notificationService;
 
         public CongViecService(
             ICongViecRepository repository, 
             INguoiDungRepository userRepository,
             INhatKyCongViecRepository taskLogRepository,
+            ISprintRepository sprintRepository,
             IKanbanNotificationService notificationService)
         {
             _repository = repository;
             _userRepository = userRepository;
             _taskLogRepository = taskLogRepository;
+            _sprintRepository = sprintRepository;
             _notificationService = notificationService;
         }
 
@@ -158,10 +161,16 @@ namespace Apllication.Service
             return result;
         }
 
-        public async Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status)
+        public async Task<bool> UpdateStatusAsync(int id, TrangThaiCongViec status, int updaterId)
         {
             var cv = await _repository.GetByIdAsync(id);
             if (cv == null) return false;
+
+            // Ràng buộc nghiệp vụ: Chỉ người giao việc (người tạo task) mới được phép chuyển sang trạng thái Done
+            if (status == TrangThaiCongViec.Done && cv.CreatedBy != updaterId)
+            {
+                throw new Exception("Chỉ người giao việc mới có quyền hoàn thành công việc này.");
+            }
 
             // Ràng buộc nghiệp vụ: Chỉ cho phép cập nhật trạng thái nếu Sprint đang InProgress (hoặc không thuộc Sprint nào)
             if (cv.SprintId.HasValue && cv.Sprint != null)
@@ -225,6 +234,12 @@ namespace Apllication.Service
             {
                 await _notificationService.NotifyTaskUpdated(cv.DuAnId);
                 
+                // Fix #9: Nếu task hoàn thành, kiểm tra xem Sprint có hoàn thành theo không
+                if (status == TrangThaiCongViec.Done && cv.SprintId.HasValue)
+                {
+                    await CheckAndCompleteSprintAsync(cv.SprintId.Value);
+                }
+
                 // Thông báo cho người tạo/quản lý
                 if (cv.CreatedBy.HasValue)
                 {
@@ -244,6 +259,12 @@ namespace Apllication.Service
         {
             var cv = await _repository.GetByIdAsync(id);
             if (cv == null) return false;
+
+            // Ràng buộc nghiệp vụ: Chỉ người giao việc mới được phép chuyển sang trạng thái Done
+            if (dto.TrangThai == TrangThaiCongViec.Done && cv.CreatedBy != updaterId)
+            {
+                throw new Exception("Chỉ người giao việc mới có quyền hoàn thành công việc này.");
+            }
 
             // Ràng buộc nghiệp vụ: Tương tự UpdateStatus
             if (cv.SprintId.HasValue && cv.Sprint != null)
@@ -319,6 +340,12 @@ namespace Apllication.Service
             {
                 await _notificationService.NotifyTaskUpdated(cv.DuAnId);
                 
+                // Fix #9: Nếu task hoàn thành, kiểm tra hoàn thành Sprint
+                if (dto.TrangThai == TrangThaiCongViec.Done && cv.SprintId.HasValue)
+                {
+                    await CheckAndCompleteSprintAsync(cv.SprintId.Value);
+                }
+
                 // Thông báo cho người quản lý
                 if (cv.CreatedBy.HasValue)
                 {
@@ -432,8 +459,34 @@ namespace Apllication.Service
                 SprintStatus = cv.Sprint?.TrangThai,
                 NgayBatDauSprint = cv.Sprint?.NgayBatDau,
                 NgayKetThucSprint = cv.Sprint?.NgayKetThuc,
-                SoLanBiTuChoi = cv.SoLanBiTuChoi
+                SoLanBiTuChoi = cv.SoLanBiTuChoi,
+                CreatedBy = cv.CreatedBy
             };
+        }
+
+        /// <summary>
+        /// Fix #9: Kiểm tra và tự động hoàn thành Sprint nếu tất cả task đã Done.
+        /// </summary>
+        private async Task CheckAndCompleteSprintAsync(int sprintId)
+        {
+            var sprint = await _sprintRepository.GetByIdAsync(sprintId);
+            if (sprint == null || sprint.TrangThai == TrangThaiSprint.Finished) return;
+
+            // Lấy danh sách task thuộc sprint này (dùng repository có sẵn filter dự án / query)
+            // Lưu ý: ICongViecRepository chỉ có GetByProjectIdAsync, chưa có GetBySprintIdAsync cụ thể
+            // nhưng CongViecRepository.LayDanhSachCongViecAsync có thể dùng query.
+            // Để đơn giản và chính xác, ta lọc trên sprint.CongViecs nếu repository đã Include sẵn.
+            // SprintRepository.GetByIdAsync thường Include CongViecs.
+            
+            if (sprint.CongViecs != null && sprint.CongViecs.Any())
+            {
+                bool allDone = sprint.CongViecs.All(c => c.TrangThai == TrangThaiCongViec.Done || c.TrangThai == TrangThaiCongViec.Cancelled);
+                if (allDone)
+                {
+                    sprint.TrangThai = TrangThaiSprint.Finished;
+                    await _sprintRepository.UpdateAsync(sprint);
+                }
+            }
         }
 
         /// <summary>

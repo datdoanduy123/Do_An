@@ -15,7 +15,8 @@ import {
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  AreaChart, Area
+  AreaChart, Area,
+  LineChart, Line
 } from 'recharts';
 import DashboardService from '../../services/DashboardService';
 import type { DashboardStats } from '../../services/DashboardService';
@@ -125,27 +126,20 @@ const DashboardPage: React.FC = () => {
             <div className="chart-card glass">
               <h3><Target size={20} /> Trạng thái công việc</h3>
               <div className="chart-wrapper">
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={230}>
                   <PieChart>
                     <Pie
                       data={stats?.taskStatusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={65}
-                      outerRadius={85}
-                      paddingAngle={5}
-                      dataKey="count"
-                      nameKey="status"
+                      cx="50%" cy="50%"
+                      innerRadius={60} outerRadius={80}
+                      paddingAngle={5} dataKey="count" nameKey="status"
                     >
                       {stats?.taskStatusDistribution.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <RechartsTooltip 
-                      contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                      itemStyle={{ color: '#1e293b', fontWeight: 600 }}
-                    />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle"/>
+                    <RechartsTooltip />
+                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -154,16 +148,13 @@ const DashboardPage: React.FC = () => {
             <div className="chart-card glass">
               <h3><Users size={20} /> Phân bổ nguồn lực</h3>
               <div className="chart-wrapper">
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={230}>
                   <BarChart data={stats?.teamWorkload}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                    <RechartsTooltip 
-                       cursor={{fill: 'rgba(99, 102, 241, 0.05)'}}
-                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                    />
-                    <Bar dataKey="taskCount" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={28} />
+                    <XAxis dataKey="name" fontSize={11} stroke="#64748b" />
+                    <YAxis fontSize={11} stroke="#64748b" />
+                    <RechartsTooltip />
+                    <Bar dataKey="taskCount" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={24} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -171,30 +162,50 @@ const DashboardPage: React.FC = () => {
           </div>
 
           <div className="chart-card glass full-width">
-            <h3><TrendingUp size={20} /> Tiến độ các dự án tiêu biểu</h3>
+            <h3><Clock size={20} /> Sprint Burndown (Giờ còn lại)</h3>
             <div className="chart-wrapper">
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={stats?.projectProgress}>
-                  <defs>
-                    <linearGradient id="colorProgress" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="projectName" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                <LineChart data={stats?.burndownData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="Day" fontSize={11} stroke="#64748b" />
+                  <YAxis fontSize={11} stroke="#64748b" />
                   <RechartsTooltip />
-                  <Area 
-                    type="monotone" 
-                    dataKey="progress" 
-                    stroke="#6366f1" 
-                    fillOpacity={1} 
-                    fill="url(#colorProgress)" 
-                    strokeWidth={4}
-                  />
-                </AreaChart>
+                  <Legend />
+                  <Line name="Lý thuyết" type="monotone" dataKey="Ideal" stroke="#94a3b8" strokeDasharray="5 5" dot={false} />
+                  <Line name="Thực tế" type="monotone" dataKey="Actual" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="chart-row">
+            <div className="chart-card glass">
+              <h3><TrendingUp size={20} /> Vận tốc (Velocity)</h3>
+              <div className="chart-wrapper">
+                <ResponsiveContainer width="100%" height={230}>
+                  <BarChart data={stats?.velocityData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="SprintName" fontSize={11} stroke="#64748b" />
+                    <YAxis fontSize={11} stroke="#64748b" />
+                    <RechartsTooltip />
+                    <Bar name="Giờ làm việc hoàn thành" dataKey="CompletedPoints" fill="#10b981" radius={[4, 4, 0, 0]} barSize={34} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="chart-card glass">
+              <h3><Briefcase size={20} /> Tiến độ dự án (%)</h3>
+              <div className="chart-wrapper">
+                <ResponsiveContainer width="100%" height={230}>
+                  <AreaChart data={stats?.projectProgress}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="ProjectName" fontSize={11} stroke="#64748b" />
+                    <YAxis fontSize={11} stroke="#64748b" />
+                    <RechartsTooltip />
+                    <Area type="monotone" dataKey="Progress" stroke="#6366f1" fill="#6366f1" fillOpacity={0.1} strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>

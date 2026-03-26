@@ -101,10 +101,12 @@ namespace Infrastructure.Repositories
                 dbQuery = dbQuery.Where(c => c.TieuDe.Contains(query.SearchTerm) || c.MoTa!.Contains(query.SearchTerm));
             }
 
-            //if (query.TrangThai.HasValue)
-            //{
-            //    dbQuery = dbQuery.Where(c => c.TrangThai == query.TrangThai.Value);
-            //}
+            // Lọc theo trạng thái công việc (Todo, InProgress, Review, Done...)
+            // Trước đây bị comment-out khiến GetTasksPendingReviewAsync() trả về sai kết quả
+            if (query.TrangThai.HasValue)
+            {
+                dbQuery = dbQuery.Where(c => (int)c.TrangThai == query.TrangThai.Value);
+            }
 
             var totalCount = await dbQuery.CountAsync();
             var items = await dbQuery

@@ -290,18 +290,20 @@ const MyTasksPage: React.FC = () => {
                       {task.trangThai === 2 && (
                         <span className="awaiting-review">Chờ phê duyệt</span>
                       )}
-                      {!isLocked && task.trangThai === 2 && currentUser?.vaiTros?.some((r: string) => {
-                        const nr = r.toLowerCase().replace(/\s+/g, '');
-                        return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
-                      }) && (
-                          <button
-                            className="action-btn done"
-                            onClick={() => handleOpenProgressModal(task, 3)}
-                            title="Hoàn thành"
-                          >
-                            Xong
-                          </button>
-                        )}
+                      {!isLocked && task.trangThai === 2 && (
+                        currentUser?.vaiTros?.some((r: string) => {
+                          const nr = r.toLowerCase().replace(/\s+/g, '');
+                          return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
+                        }) || currentUser?.id === task.createdBy
+                      ) && (
+                        <button
+                          className="action-btn done"
+                          onClick={() => handleOpenProgressModal(task, 3)}
+                          title="Hoàn thành"
+                        >
+                          Xong
+                        </button>
+                      )}
 
                       {task.sprintId && task.sprintStatus === 0 && !isWorkable && (
                         <span className="locked-info" title="Sprint này chưa được quản lý bắt đầu.">Đang đợi bắt đầu</span>
@@ -381,15 +383,27 @@ const MyTasksPage: React.FC = () => {
                 <div className="form-group">
                   <label>Chuyển sang trạng thái</label>
                   <div className="status-selector">
-                    {[0, 1, 2, 3].map(s => (
-                      <button
-                        key={s}
-                        className={`status-opt ${progressData.trangThai === s ? 'active' : ''}`}
-                        onClick={() => setProgressData({ ...progressData, trangThai: s })}
-                      >
-                        {getStatusInfo(s).label}
-                      </button>
-                    ))}
+                    {[0, 1, 2, 3].map(s => {
+                      // Phân quyền: Chỉ hiển thị nút Done (3) nếu là Admin/Quản lý hoặc là người tạo task
+                      if (s === 3) {
+                        const isAdmin = currentUser?.vaiTros?.some((r: string) => {
+                          const nr = r.toLowerCase().replace(/\s+/g, '');
+                          return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
+                        });
+                        const isCreator = currentUser?.id === selectedTask?.createdBy;
+                        if (!isAdmin && !isCreator) return null;
+                      }
+
+                      return (
+                        <button
+                          key={s}
+                          className={`status-opt ${progressData.trangThai === s ? 'active' : ''}`}
+                          onClick={() => setProgressData({ ...progressData, trangThai: s })}
+                        >
+                          {getStatusInfo(s).label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

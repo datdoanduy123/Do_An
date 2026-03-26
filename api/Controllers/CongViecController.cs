@@ -125,7 +125,7 @@ namespace api.Controllers
         {
             try
             {
-                var result = await _congViecService.UpdateStatusAsync(id, status);
+                var result = await _congViecService.UpdateStatusAsync(id, status, CurrentUserId);
                 if (result) return SuccessResponse(null!, "Cap nhat trang thai thanh cong.");
                 return ErrorResponse(400, "Khong the cap nhat trang thai.");
             }

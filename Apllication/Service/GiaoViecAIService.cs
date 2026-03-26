@@ -100,7 +100,9 @@ namespace Apllication.Service
             var pagedTasks = await _congViecRepo.LayDanhSachCongViecAsync(query);
             var tasks = pagedTasks.Items
                 .Where(t => t.AssigneeId == null || t.SprintId == null)
-                .OrderBy(t => t.ViTri)
+                // Task không phụ thuộc (Phụ thuộc = 0) ưu tiên lên đầu, sau đó mới đến task có phụ thuộc
+                .OrderBy(t => t.Dependencies.Any() ? 1 : 0)
+                .ThenBy(t => t.ViTri)
                 .ThenByDescending(t => (int)t.DoUuTien)
                 .ToList();
 
@@ -145,6 +147,10 @@ namespace Apllication.Service
                     task.PhuongThucGiaoViec = PhuongThucGiaoViec.AI;
                     task.AiMatchScore = bestMatch.DiemPhuHop;
                     task.AiReasoning = bestMatch.LyDo;
+
+                    // Đảm bảo task luôn ở trạng thái Todo sau khi AI giao.
+                    // Tránh trường hợp task cũ trong DB có trạng thái không đúng.
+                    task.TrangThai = TrangThaiCongViec.Todo;
 
                     // Cập nhật workload tạm thời cho các task kế tiếp trong phiên này
                     tempWorkload[bestMatch.UserId] = tempWorkload.GetValueOrDefault(bestMatch.UserId) + task.ThoiGianUocTinh;
@@ -208,7 +214,10 @@ namespace Apllication.Service
                 foreach (var userGroup in tasksByAssignee)
                 {
                     var sortedTasks = userGroup
-                        .OrderBy(t => t.ViTri)
+                        // Task không phụ thuộc (Phụ thuộc = 0) ưu tiên lên lịch trước,
+                        // sau đó mới xếp các task có tiền đề vào đủng thời gian chú́ng hoàn thành
+                        .OrderBy(t => t.Dependencies.Any() ? 1 : 0)
+                        .ThenBy(t => t.ViTri)
                         .ThenByDescending(t => (int)t.DoUuTien)
                         .ToList();
 
