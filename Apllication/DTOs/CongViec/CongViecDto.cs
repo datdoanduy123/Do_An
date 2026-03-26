@@ -14,7 +14,6 @@ namespace Apllication.DTOs.CongViec
         public LoaiCongViec LoaiCongViec { get; set; }
         public DoUuTien DoUuTien { get; set; }
         public TrangThaiCongViec TrangThai { get; set; }
-        public int StoryPoints { get; set; }
         public int? AssigneeId { get; set; }
         public string? AssigneeName { get; set; }
         public PhuongThucGiaoViec PhuongThucGiaoViec { get; set; }
@@ -37,7 +36,6 @@ namespace Apllication.DTOs.CongViec
         public string? MoTa { get; set; }
         public LoaiCongViec LoaiCongViec { get; set; }
         public DoUuTien DoUuTien { get; set; } = DoUuTien.Medium;
-        public int StoryPoints { get; set; }
         public int? AssigneeId { get; set; }
         public double ThoiGianUocTinh { get; set; }
         public DateTime? NgayBatDauDuKien { get; set; }
@@ -63,7 +61,6 @@ namespace Apllication.DTOs.CongViec
         public string? MoTa { get; set; }
         public LoaiCongViec LoaiCongViec { get; set; }
         public DoUuTien DoUuTien { get; set; }
-        public int StoryPoints { get; set; }
         public int? AssigneeId { get; set; }
         public double ThoiGianUocTinh { get; set; }
     }

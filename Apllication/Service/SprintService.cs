@@ -40,7 +40,6 @@ namespace Apllication.Service
                 TenSprint = dto.TenSprint,
                 NgayBatDau = dto.NgayBatDau,
                 NgayKetThuc = dto.NgayKetThuc,
-                MucTieuStoryPoints = dto.MucTieuStoryPoints,
                 TrangThai = TrangThaiSprint.New,
                 CreatedBy = creatorId
             };
@@ -57,7 +56,6 @@ namespace Apllication.Service
             s.TenSprint = dto.TenSprint;
             s.NgayBatDau = dto.NgayBatDau;
             s.NgayKetThuc = dto.NgayKetThuc;
-            s.MucTieuStoryPoints = dto.MucTieuStoryPoints;
             s.TrangThai = dto.TrangThai;
 
             return await _repository.UpdateAsync(s);
@@ -77,7 +75,6 @@ namespace Apllication.Service
                 TenSprint = s.TenSprint,
                 NgayBatDau = s.NgayBatDau,
                 NgayKetThuc = s.NgayKetThuc,
-                MucTieuStoryPoints = s.MucTieuStoryPoints,
                 TrangThai = s.TrangThai,
                 TienDo = (s.CongViecs != null && s.CongViecs.Count > 0)
                     ? (double)s.CongViecs.Count(c => c.TrangThai == TrangThaiCongViec.Done) / s.CongViecs.Count * 100

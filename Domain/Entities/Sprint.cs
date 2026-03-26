@@ -21,11 +21,6 @@ namespace Domain.Entities
 
         public DateTime NgayKetThuc { get; set; }
 
-        /// <summary>
-        /// Tổng Story Points tối đa mà Sprint này có thể chứa (Capacity).
-        /// </summary>
-        public int MucTieuStoryPoints { get; set; }
-
         public TrangThaiSprint TrangThai { get; set; } = TrangThaiSprint.New;
         public int? CreatedBy { get; set; }
         public User? Creator { get; set; }

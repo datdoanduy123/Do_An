@@ -156,19 +156,15 @@ namespace Apllication.Service
 
                                 if (string.IsNullOrEmpty(title)) continue;
 
+                                // Tính giờ ước tính dựa trên độ ưu tiên
                                 double estimatedHours = 8;
-                                int storyPoints = 2;
-
                                 var normalizedPriority = priorityStr.ToLower();
                                 if (normalizedPriority.Contains("high") || normalizedPriority.Contains("cao")) {
                                     estimatedHours = 16;
-                                    storyPoints = 5;
                                 } else if (normalizedPriority.Contains("small") || normalizedPriority.Contains("thấp")) {
-                                    estimatedHours = 4;
-                                    storyPoints = 1;
+                                    estimatedHours = 4; 
                                 } else {
                                     estimatedHours = 8;
-                                    storyPoints = 3;
                                 }
 
                                 int.TryParse(new string(positionStr.Where(char.IsDigit).ToArray()), out int viTri);
@@ -199,7 +195,6 @@ namespace Apllication.Service
                                     MoTa = desc,
                                     LoaiCongViec = loai,
                                     DoUuTien = MapDoUuTien(priorityStr),
-                                    StoryPoints = storyPoints,
                                     ThoiGianUocTinh = estimatedHours,
                                     TrangThai = TrangThaiCongViec.Todo,
                                     PhuongThucGiaoViec = PhuongThucGiaoViec.AI,
@@ -293,25 +288,6 @@ namespace Apllication.Service
             if (text.Contains("high") || text.Contains("cao")) return DoUuTien.High;
             if (text.Contains("small") || text.Contains("thấp") || text.Contains("nhỏ")) return DoUuTien.Low;
             return DoUuTien.Medium;
-        }
-
-        private int UocLuongStoryPointsAI(string title, string typeStr)
-        {
-            title = title.ToLower();
-            typeStr = typeStr.ToLower();
-
-            if (title.Contains("kiến trúc") || title.Contains("architecture") || title.Contains("tích hợp") || title.Contains("payment") || title.Contains("thanh toán"))
-                return 8;
-
-            if (title.Contains("api") || title.Contains("database") || title.Contains("logic") || title.Contains("xử lý"))
-                return 5;
-
-            if (typeStr.Contains("back")) return 5;
-            if (typeStr.Contains("front")) return 3;
-            if (typeStr.Contains("ux") || typeStr.Contains("ui")) return 3;
-            if (typeStr.Contains("test")) return 2;
-
-            return 3;
         }
 
         public async Task<IEnumerable<TaiLieuDuAnDto>> GetByProjectIdAsync(int projectId)

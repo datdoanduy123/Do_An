@@ -83,9 +83,6 @@ namespace Apllication.Service
 
         public async Task<bool> TuDongGiaoViecDuAnAsync(int duAnId)
         {
-            var rules = await _ruleRepo.GetAllActiveRulesAsync();
-            int sprintCapacity = (int)GetRuleValue(rules, "SPRINT_CAPACITY", 30);
-
             var query = new CongViecQueryDto { DuAnId = duAnId, PageSize = 1000 };
             var pagedTasks = await _congViecRepo.LayDanhSachCongViecAsync(query);
             var tasks = pagedTasks.Items
@@ -96,7 +93,7 @@ namespace Apllication.Service
 
             if (!tasks.Any()) return true;
 
-            var currentSprint = await GetOrCreateActiveSprintAsync(duAnId, sprintCapacity);
+            var currentSprint = await GetOrCreateActiveSprintAsync(duAnId);
 
             // Dictionary để theo dõi workload gán tạm thời trong phiên chạy này
             var tempWorkload = new Dictionary<int, double>();
@@ -106,8 +103,8 @@ namespace Apllication.Service
                 var task = await _congViecRepo.GetByIdAsync(tDto.Id);
                 if (task == null) continue;
 
-                // Giao việc cho User (Match Score)
-                var suggestions = await GoiYAssigneeWithTempWorkloadAsync(task, tempWorkload);
+                // Giao việc cho User (Match Score), tính workload theo Sprint hiện tại
+                var suggestions = await GoiYAssigneeWithTempWorkloadAsync(task, tempWorkload, task.SprintId ?? currentSprint.Id, pagedTasks.Items);
                 var bestMatch = suggestions.FirstOrDefault();
 
                 if (bestMatch != null)
@@ -117,15 +114,7 @@ namespace Apllication.Service
                     task.AiMatchScore = bestMatch.DiemPhuHop;
                     task.AiReasoning = bestMatch.LyDo;
 
-                    // Cập nhật workload trong DB cho User
-                    var assignee = await _nguoiDungRepo.LayTheoIdAsync(bestMatch.UserId);
-                    if (assignee != null)
-                    {
-                        assignee.KhoiLuongCongViec += task.ThoiGianUocTinh;
-                        await _nguoiDungRepo.UpdateAsync(assignee);
-                    }
-
-                    // Cập nhật workload tạm thời để task sau tính toán chính xác
+                    // Cập nhật workload tạm thời để task sau tính toán chính xác (theo Sprint)
                     tempWorkload[bestMatch.UserId] = tempWorkload.GetValueOrDefault(bestMatch.UserId) + task.ThoiGianUocTinh;
                 }
                 else
@@ -165,6 +154,11 @@ namespace Apllication.Service
             var pagedTasks = await _congViecRepo.LayDanhSachCongViecAsync(query);
             var allTasks = pagedTasks.Items;
 
+            // Đọ́c rules 1 lần duy nhất cho toàn bộ quá trình lên lịch (tránh N+1 query)
+            var rules = await _ruleRepo.GetAllActiveRulesAsync();
+            // Hệ số buffer: mặc định +20% thời gian ước tính để bù đắp họn, fíx bug đột xuất...
+            double bufferRate = GetRuleValue(rules, "BUFFER_RATE", 0.2);
+
             var tasksBySprint = allTasks.Where(t => t.SprintId != null).GroupBy(t => t.SprintId);
 
             foreach (var sprintGroup in tasksBySprint)
@@ -181,7 +175,9 @@ namespace Apllication.Service
                         .ThenByDescending(t => (int)t.DoUuTien)
                         .ToList();
 
-                    DateTime currentPointer = sprint.NgayBatDau;
+                    // Lấy điêń xuất phát thực té nhất có thẻ (không đẻ tìm lịch ngày đã qua trong quá khứ)
+                    DateTime currentPointer = new DateTime[] { sprint.NgayBatDau, DateTime.UtcNow.Date }.Max();
+                    currentPointer = SkipWeekends(currentPointer);
 
                     foreach (var tDto in sortedTasks)
                     {
@@ -205,7 +201,10 @@ namespace Apllication.Service
 
                         task.NgayBatDauDuKien = SkipWeekends(taskStart);
                         
-                        int hoursRemaining = (int)Math.Ceiling(task.ThoiGianUocTinh);
+                        // Áp dụng buffer vào thời gian ước tính trước khi tính ngày kết thúc
+                        // bufferRate được đọc 1 lần ở đầu hàm để tối ưu hiệu năng (tránh N+1 DB query)
+                        // Ví dụ: ThoiGianUocTinh = 8h, bufferRate = 0.2 → hoursRemaining = 9.6h (làm tròn lên 10h)
+                        int hoursRemaining = (int)Math.Ceiling(task.ThoiGianUocTinh * (1 + bufferRate));
                         DateTime endPointer = task.NgayBatDauDuKien.Value;
 
                         while (hoursRemaining > 0)
@@ -260,12 +259,11 @@ namespace Apllication.Service
                 TenSprint = moduleName,
                 NgayBatDau = startDate,
                 NgayKetThuc = startDate.AddDays(14),
-                MucTieuStoryPoints = 30, // Mặc định 30 SP
                 TrangThai = TrangThaiSprint.New
             });
         }
 
-        private async Task<Sprint> GetOrCreateActiveSprintAsync(int duAnId, int capacity)
+        private async Task<Sprint> GetOrCreateActiveSprintAsync(int duAnId)
         {
             var Sprints = await _sprintRepo.GetByProjectIdAsync(duAnId);
             var activeSprint = Sprints.FirstOrDefault(s => s.TrangThai == TrangThaiSprint.New || s.TrangThai == TrangThaiSprint.InProgress);
@@ -281,12 +279,11 @@ namespace Apllication.Service
                 TenSprint = "Sprint 1",
                 NgayBatDau = startDate,
                 NgayKetThuc = startDate.AddDays(14),
-                MucTieuStoryPoints = capacity,
                 TrangThai = TrangThaiSprint.New
             });
         }
 
-        private async Task<Sprint> CreateNextSprintAsync(int duAnId, string lastSprintName, DateTime lastSprintEndDate, int capacity)
+        private async Task<Sprint> CreateNextSprintAsync(int duAnId, string lastSprintName, DateTime lastSprintEndDate)
         {
             int nextNumber = 1;
             if (lastSprintName.Contains("Sprint"))
@@ -301,18 +298,22 @@ namespace Apllication.Service
                 TenSprint = $"Sprint {nextNumber}",
                 NgayBatDau = lastSprintEndDate,
                 NgayKetThuc = lastSprintEndDate.AddDays(14),
-                MucTieuStoryPoints = capacity,
                 TrangThai = TrangThaiSprint.New
             });
         }
 
-        private async Task<IEnumerable<GoiYGiaoViecDto>> GoiYAssigneeWithTempWorkloadAsync(CongViec task, Dictionary<int, double> tempWorkload)
+        private async Task<IEnumerable<GoiYGiaoViecDto>> GoiYAssigneeWithTempWorkloadAsync(
+            CongViec task, 
+            Dictionary<int, double> tempWorkload,
+            int sprintId,
+            IEnumerable<CongViecDto> allSprintTasks)
         {
             var rules = await _ruleRepo.GetAllActiveRulesAsync();
             double skillWeight = GetRuleValue(rules, "SKILL_MATCH_WEIGHT", 0.6);
             double experienceWeight = GetRuleValue(rules, "EXPERIENCE_WEIGHT", 0.4);
             double workloadPenalty = GetRuleValue(rules, "WORKLOAD_PENALTY", 0.1);
             double minScore = GetRuleValue(rules, "MIN_MATCH_SCORE", 0.3);
+            double maxWorkload = GetRuleValue(rules, "MAX_WORKLOAD_HOURS", 40.0);
 
             // 2. Lấy danh sách ứng viên (Chỉ những người tham gia dự án này)
             var projectMembers = await _duAnRepo.GetMembersAsync(task.DuAnId);
@@ -328,7 +329,19 @@ namespace Apllication.Service
                 // KHÔNG giao việc cho người có vai trò quản lý
                 if (user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN")) continue;
 
-                double currentWorkload = user.KhoiLuongCongViec + tempWorkload.GetValueOrDefault(user.Id);
+                // Tính workload THEO SPRINT: tổng giờ task cùng Sprint chưa Done
+                double sprintWorkload = allSprintTasks
+                    .Where(t => t.AssigneeId == user.Id
+                             && t.SprintId == sprintId
+                             && t.TrangThai != TrangThaiCongViec.Done)
+                    .Sum(t => t.ThoiGianUocTinh);
+
+                // Cộng thêm workload tạm thời từ phiên AI này (task vừa giao trong vòng lặp)
+                double currentWorkload = sprintWorkload + tempWorkload.GetValueOrDefault(user.Id);
+
+                // Hard Cap: chặn cứng nếu nhân viên đã đạt ngưỡng tải tối đa TRONG SPRINT
+                // Ngưỡng mặc định: 40h (1 tuần làm việc). Có thể cấu hình qua rule MAX_WORKLOAD_HOURS
+                if (currentWorkload >= maxWorkload) continue; // Bỏ qua hoàn toàn, không tính điểm
 
                 var matchResult = CalculateMatchScore(task, user, skillWeight, experienceWeight, workloadPenalty, currentWorkload);
                 

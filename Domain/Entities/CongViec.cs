@@ -43,11 +43,6 @@ namespace Domain.Entities
         public TrangThaiCongViec TrangThai { get; set; } = TrangThaiCongViec.Todo;
 
         /// <summary>
-        /// Điểm độ khó (Story Points) theo dãy Fibonacci (1, 2, 3, 5, 8, 13...).
-        /// </summary>
-        public int StoryPoints { get; set; }
-
-        /// <summary>
         /// Người được giao công việc.
         /// </summary>
         public int? AssigneeId { get; set; }

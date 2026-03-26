@@ -16,7 +16,6 @@ export interface SprintDto {
   tenSprint: string;
   ngayBatDau: string;
   ngayKetThuc: string;
-  mucTieuStoryPoints: number;
   trangThai: TrangThaiSprint;
   tienDo: number;
 }
@@ -26,13 +25,11 @@ export interface TaoSprintDto {
   tenSprint: string;
   ngayBatDau: string;
   ngayKetThuc: string;
-  mucTieuStoryPoints: number;
 }
 
 export interface CapNhatSprintDto {
   tenSprint: string;
   ngayBatDau: string;
   ngayKetThuc: string;
-  mucTieuStoryPoints: number;
   trangThai: TrangThaiSprint;
 }

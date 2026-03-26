@@ -60,7 +60,6 @@ namespace Apllication.Service
                 LoaiCongViec = dto.LoaiCongViec,
                 DoUuTien = dto.DoUuTien,
                 TrangThai = TrangThaiCongViec.Todo,
-                StoryPoints = dto.StoryPoints,
                 AssigneeId = dto.AssigneeId,
                 ThoiGianUocTinh = dto.ThoiGianUocTinh,
                 NgayBatDauDuKien = dto.NgayBatDauDuKien,
@@ -99,7 +98,6 @@ namespace Apllication.Service
             cv.MoTa = dto.MoTa;
             cv.LoaiCongViec = dto.LoaiCongViec;
             cv.DoUuTien = dto.DoUuTien;
-            cv.StoryPoints = dto.StoryPoints;
             cv.AssigneeId = dto.AssigneeId;
             cv.ThoiGianUocTinh = dto.ThoiGianUocTinh;
 
@@ -108,15 +106,39 @@ namespace Apllication.Service
             // Thông báo realtime bảng Kanban
             await _notificationService.NotifyTaskUpdated(cv.DuAnId);
 
-            // Nếu có thay đổi người thực hiện, thông báo cho người mới và RESET bộ đếm phạt
-            if (cv.AssigneeId.HasValue && cv.AssigneeId != oldAssigneeId)
+            // Nếu có thay đổi người thực hiện: RESET bộ đếm phạt, điều chỉnh KhoiLuongCongViec và gửi thông báo
+            if (cv.AssigneeId != oldAssigneeId)
             {
                 cv.SoLanBiTuChoi = 0; // Reset phạt khi đổi người
-                await _notificationService.NotifyPersonal(
-                    cv.AssigneeId.Value,
-                    "Giao việc",
-                    $"Bạn vừa được gán công việc: '{cv.TieuDe}' thông qua việc chỉnh sửa."
-                );
+
+                // Trừ workload người cũ (User A không còn làm task này nữa)
+                if (oldAssigneeId.HasValue)
+                {
+                    var oldUser = await _userRepository.LayTheoIdAsync(oldAssigneeId.Value);
+                    if (oldUser != null)
+                    {
+                        oldUser.KhoiLuongCongViec = Math.Max(0, oldUser.KhoiLuongCongViec - cv.ThoiGianUocTinh);
+                        await _userRepository.UpdateAsync(oldUser);
+                    }
+                }
+
+                // Cộng workload người mới (User B nhận thêm task này)
+                if (cv.AssigneeId.HasValue)
+                {
+                    var newUser = await _userRepository.LayTheoIdAsync(cv.AssigneeId.Value);
+                    if (newUser != null)
+                    {
+                        newUser.KhoiLuongCongViec += cv.ThoiGianUocTinh;
+                        await _userRepository.UpdateAsync(newUser);
+                    }
+
+                    // Thông báo cho người mới
+                    await _notificationService.NotifyPersonal(
+                        cv.AssigneeId.Value,
+                        "Giao việc",
+                        $"Bạn vừa được gán công việc: '{cv.TieuDe}' thông qua việc chỉnh sửa."
+                    );
+                }
             }
 
             return MapToDto(cv);
@@ -173,10 +195,14 @@ namespace Apllication.Service
  
             cv.TrangThai = status;
 
-            // Tự động ghi nhận ngày bắt đầu thực tế
+            // Tự động ghi nhận ngày bắt đầu thực tế và tính ngày kết thúc dự kiến
             if (status == TrangThaiCongViec.InProgress && cv.NgayBatDauThucTe == null)
             {
                 cv.NgayBatDauThucTe = DateTime.UtcNow;
+
+                // Tính NgayKetThucDuKien = NgayBatDauThucTe + ThoiGianUocTinh (ngày làm việc)
+                // Ví dụ: 8h = 1 ngày, 16h = 2 ngày, bỏ qua T7/CN
+                cv.NgayKetThucDuKien = TinhNgayKetThucDuKien(cv.NgayBatDauThucTe.Value, cv.ThoiGianUocTinh);
             }
 
             // Tự động ghi nhận ngày kết thúc thực tế và giảm khối lượng công việc cho User
@@ -266,10 +292,13 @@ namespace Apllication.Service
                 }
             }
            
-            // Tự động gán ngày bắt đầu nếu mới bắt đầu
+            // Tự động gán ngày bắt đầu và tính ngày kết thúc dự kiến nếu mới bắt đầu
             if (dto.TrangThai == TrangThaiCongViec.InProgress && cv.NgayBatDauThucTe == null)
             {
                 cv.NgayBatDauThucTe = DateTime.UtcNow;
+
+                // Tính NgayKetThucDuKien = NgayBatDauThucTe + ThoiGianUocTinh (ngày làm việc)
+                cv.NgayKetThucDuKien = TinhNgayKetThucDuKien(cv.NgayBatDauThucTe.Value, cv.ThoiGianUocTinh);
             }
 
             // 2. Tạo bản ghi nhật ký (Task Log)
@@ -391,7 +420,6 @@ namespace Apllication.Service
                 LoaiCongViec = cv.LoaiCongViec,
                 DoUuTien = cv.DoUuTien,
                 TrangThai = cv.TrangThai,
-                StoryPoints = cv.StoryPoints,
                 AssigneeId = cv.AssigneeId,
                 AssigneeName = cv.Assignee?.FullName,
                 PhuongThucGiaoViec = cv.PhuongThucGiaoViec,
@@ -406,6 +434,37 @@ namespace Apllication.Service
                 NgayKetThucSprint = cv.Sprint?.NgayKetThuc,
                 SoLanBiTuChoi = cv.SoLanBiTuChoi
             };
+        }
+
+        /// <summary>
+        /// Tính ngày kết thúc dự kiến dựa trên ngày bắt đầu và số giờ ước tính.
+        /// Quy ước: 8h = 1 ngày làm việc, bỏ qua T7/CN.
+        /// Ví dụ: start=Thứ2, hours=16 → kết thúc Thứ3 (2 ngày làm việc)
+        /// </summary>
+        private DateTime TinhNgayKetThucDuKien(DateTime start, double hours)
+        {
+            // Tính số ngày làm việc cần (làm tròn lên nếu không chia đều 8h)
+            int soNgayLamViec = (int)Math.Ceiling(hours / 8.0);
+
+            DateTime result = start.Date;
+            int ngayDaDem = 0;
+
+            while (ngayDaDem < soNgayLamViec)
+            {
+                // Bỏ qua T7 (Saturday) và CN (Sunday)
+                if (result.DayOfWeek != DayOfWeek.Saturday && result.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    ngayDaDem++;
+                }
+
+                // Chưa đủ số ngày thì tiếp tục cộng thêm ngày
+                if (ngayDaDem < soNgayLamViec)
+                {
+                    result = result.AddDays(1);
+                }
+            }
+
+            return result;
         }
     }
 }
