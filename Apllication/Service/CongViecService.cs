@@ -102,6 +102,7 @@ namespace Apllication.Service
             cv.LoaiCongViec = dto.LoaiCongViec;
             cv.DoUuTien = dto.DoUuTien;
             cv.AssigneeId = dto.AssigneeId;
+            cv.SprintId = dto.SprintId;
             cv.ThoiGianUocTinh = dto.ThoiGianUocTinh;
 
             await _repository.UpdateAsync(cv);

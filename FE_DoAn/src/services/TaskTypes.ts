@@ -73,3 +73,13 @@ export interface TaoCongViecDto {
   assigneeId?: number;
   thoiGianThucTe?: number;
 }
+
+export interface CapNhatCongViecDto {
+  tieuDe: string;
+  moTa?: string;
+  loaiCongViec: LoaiCongViec;
+  doUuTien: DoUuTien;
+  assigneeId?: number;
+  sprintId?: number;
+  thoiGianUocTinh: number;
+}

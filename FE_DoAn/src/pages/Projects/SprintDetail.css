@@ -627,6 +627,31 @@
   color: #6366f1;
 }
 
+.task-dropdown-menu .menu-divider {
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 4px 0;
+}
+
+.task-dropdown-menu .menu-label {
+  padding: 6px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.025em;
+}
+
+.task-dropdown-menu button.move-btn {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.task-dropdown-menu button.move-btn:hover {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+
 .task-dropdown-menu button.delete-btn {
   color: #ef4444;
 }

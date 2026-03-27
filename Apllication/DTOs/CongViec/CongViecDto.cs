@@ -71,6 +71,7 @@ namespace Apllication.DTOs.CongViec
         public LoaiCongViec LoaiCongViec { get; set; }
         public DoUuTien DoUuTien { get; set; }
         public int? AssigneeId { get; set; }
+        public int? SprintId { get; set; }
         public double ThoiGianUocTinh { get; set; }
     }
 }

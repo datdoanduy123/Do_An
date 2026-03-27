@@ -40,6 +40,7 @@ const SprintDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [sprint, setSprint] = useState<SprintDto | null>(null);
   const [tasks, setTasks] = useState<CongViecDto[]>([]);
+  const [allSprints, setAllSprints] = useState<SprintDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -134,6 +135,20 @@ const SprintDetailPage: React.FC = () => {
       SignalRService.off('TaskUpdated');
     };
   }, [id, sprint?.duAnId]);
+
+  useEffect(() => {
+    if (sprint?.duAnId) {
+      const fetchSprints = async () => {
+        try {
+          const sprints = await SprintService.getByProjectId(sprint.duAnId);
+          setAllSprints(sprints);
+        } catch (e) {
+          console.error("Failed to fetch all sprints", e);
+        }
+      };
+      fetchSprints();
+    }
+  }, [sprint?.duAnId]);
 
   const columns = [
     { id: StatusEnum.Todo, title: 'Cần làm', icon: <AlertCircle size={18} />, color: '#64748b' },
@@ -274,6 +289,33 @@ const SprintDetailPage: React.FC = () => {
       showToast('Tạo công việc thất bại.', 'error');
     } finally {
       setIsCreatingTask(false);
+    }
+  };
+
+  const handleMoveToSprint = async (taskId: number, targetSprintId: number) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      const payload: any = {
+        tieuDe: task.tieuDe,
+        moTa: task.moTa,
+        loaiCongViec: task.loaiCongViec,
+        doUuTien: task.doUuTien,
+        assigneeId: task.assigneeId,
+        thoiGianUocTinh: task.thoiGianUocTinh,
+        sprintId: targetSprintId
+      };
+      
+      const res = await TaskService.update(taskId, payload);
+      if (res.statusCode === 200) {
+        showToast(`Đã chuyển công việc sang Sprint mới.`);
+        // Reload danh sách task của sprint hiện tại (nó sẽ biến mất khỏi bảng này)
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        setActiveMenuTaskId(null);
+      }
+    } catch (error: any) {
+      showToast(error.message || 'Chuyển Sprint thất bại.', 'error');
     }
   };
 
@@ -425,6 +467,20 @@ const SprintDetailPage: React.FC = () => {
                               <button onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}>
                                 <Edit size={12} /> Sửa
                               </button>
+                              
+                              <div className="menu-divider"></div>
+                              <div className="menu-label">Di chuyển sang:</div>
+                              {allSprints.filter(s => s.id !== Number(id) && s.trangThai !== 2).map(s => (
+                                <button 
+                                  key={s.id} 
+                                  className="move-btn"
+                                  onClick={(e) => { e.stopPropagation(); handleMoveToSprint(task.id, s.id); }}
+                                >
+                                  <Play size={12} /> {s.tenSprint}
+                                </button>
+                              ))}
+
+                              <div className="menu-divider"></div>
                               <button 
                                 className="delete-btn" 
                                 onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
