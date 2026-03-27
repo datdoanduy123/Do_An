@@ -17,7 +17,8 @@ import {
   Edit,
   Trash2,
   CheckSquare,
-  AlertTriangle
+  AlertTriangle,
+  Link
 } from 'lucide-react';
 import SprintService from '../../services/SprintService';
 import type { SprintDto } from '../../services/SprintService';
@@ -146,7 +147,6 @@ const SprintDetailPage: React.FC = () => {
       case 0: return { text: 'Thấp', class: 'p-low' };
       case 1: return { text: 'Vừa', class: 'p-medium' };
       case 2: return { text: 'Cao', class: 'p-high' };
-      case 3: return { text: 'Khẩn cấp', class: 'p-urgent' };
       default: return { text: 'Vừa', class: 'p-medium' };
     }
   };
@@ -440,6 +440,19 @@ const SprintDetailPage: React.FC = () => {
 
                   <h4 className="task-title">{task.tieuDe}</h4>
 
+                  {task.dependencies && task.dependencies.length > 0 && (
+                    <div className="task-card-dependencies">
+                      <Link size={12} />
+                      <div className="dep-list">
+                        {task.dependencies.map(dep => (
+                          <span key={dep.dependsOnTaskId} title={dep.dependsOnTaskTitle} className="dep-tag">
+                            #{dep.dependsOnTaskId}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Quick Approval Actions for Managers & Creators */}
                   {col.id === StatusEnum.Review && (isAdmin || currentUser?.id === task.createdBy) && isSprintActive && (
                     <div className="task-approval-actions">
@@ -605,7 +618,6 @@ const SprintDetailPage: React.FC = () => {
                     <option value={0}>Thấp</option>
                     <option value={1}>Vừa</option>
                     <option value={2}>Cao</option>
-                    <option value={3}>Khẩn cấp</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -709,7 +721,6 @@ const SprintDetailPage: React.FC = () => {
                     <option value={0}>Thấp</option>
                     <option value={1}>Vừa</option>
                     <option value={2}>Cao</option>
-                    <option value={3}>Khẩn cấp</option>
                   </select>
                 </div>
                 <div className="form-group">

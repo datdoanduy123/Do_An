@@ -1,8 +1,15 @@
 using Domain.Enums;
 using System;
+using System.Collections.Generic;
 
 namespace Apllication.DTOs.CongViec
 {
+    public class PhuThuocDto
+    {
+        public int DependsOnTaskId { get; set; }
+        public string? DependsOnTaskTitle { get; set; }
+    }
+
     public class CongViecDto
     {
         public int Id { get; set; }
@@ -27,6 +34,7 @@ namespace Apllication.DTOs.CongViec
         public DateTime? NgayKetThucSprint { get; set; }
         public int SoLanBiTuChoi { get; set; }
         public int? CreatedBy { get; set; }
+        public List<PhuThuocDto> Dependencies { get; set; } = new List<PhuThuocDto>();
     }
 
     public class TaoCongViecDto

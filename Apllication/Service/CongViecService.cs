@@ -166,6 +166,12 @@ namespace Apllication.Service
             var cv = await _repository.GetByIdAsync(id);
             if (cv == null) return false;
 
+            // Ràng buộc nghiệp vụ: Chặn mọi trạng thái "sau Todo" nếu Dependency chưa xong
+            if (status != TrangThaiCongViec.Todo && status != TrangThaiCongViec.Cancelled)
+            {
+                await CheckDependenciesAsync(cv);
+            }
+
             // Ràng buộc nghiệp vụ: Chỉ người giao việc (người tạo task) mới được phép chuyển sang trạng thái Done
             if (status == TrangThaiCongViec.Done && cv.CreatedBy != updaterId)
             {
@@ -259,6 +265,12 @@ namespace Apllication.Service
         {
             var cv = await _repository.GetByIdAsync(id);
             if (cv == null) return false;
+
+            // Ràng buộc nghiệp vụ: Chặn mọi trạng thái "sau Todo" nếu Dependency chưa xong
+            if (dto.TrangThai != TrangThaiCongViec.Todo && dto.TrangThai != TrangThaiCongViec.Cancelled)
+            {
+                await CheckDependenciesAsync(cv);
+            }
 
             // Ràng buộc nghiệp vụ: Chỉ người giao việc mới được phép chuyển sang trạng thái Done
             if (dto.TrangThai == TrangThaiCongViec.Done && cv.CreatedBy != updaterId)
@@ -460,7 +472,12 @@ namespace Apllication.Service
                 NgayBatDauSprint = cv.Sprint?.NgayBatDau,
                 NgayKetThucSprint = cv.Sprint?.NgayKetThuc,
                 SoLanBiTuChoi = cv.SoLanBiTuChoi,
-                CreatedBy = cv.CreatedBy
+                CreatedBy = cv.CreatedBy,
+                Dependencies = cv.Dependencies?.Select(d => new PhuThuocDto
+                {
+                    DependsOnTaskId = d.DependsOnTaskId,
+                    DependsOnTaskTitle = d.DependsOnTask?.TieuDe
+                }).ToList() ?? new List<PhuThuocDto>()
             };
         }
 
@@ -489,34 +506,34 @@ namespace Apllication.Service
             }
         }
 
+        private async Task CheckDependenciesAsync(CongViec task)
+        {
+            if (task.Dependencies != null && task.Dependencies.Any())
+            {
+                foreach (var dep in task.Dependencies)
+                {
+                    var predecessor = await _repository.GetByIdAsync(dep.DependsOnTaskId);
+                    if (predecessor != null && predecessor.TrangThai != TrangThaiCongViec.Done)
+                    {
+                        throw new Exception($"Không thể thực hiện! Bạn phải chờ Task '{predecessor.TieuDe}' (#{(predecessor.Id)}) hoàn thành trước.");
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Tính ngày kết thúc dự kiến dựa trên ngày bắt đầu và số giờ ước tính.
-        /// Quy ước: 8h = 1 ngày làm việc, bỏ qua T7/CN.
-        /// Ví dụ: start=Thứ2, hours=16 → kết thúc Thứ3 (2 ngày làm việc)
         /// </summary>
         private DateTime TinhNgayKetThucDuKien(DateTime start, double hours)
         {
-            // Tính số ngày làm việc cần (làm tròn lên nếu không chia đều 8h)
             int soNgayLamViec = (int)Math.Ceiling(hours / 8.0);
-
             DateTime result = start.Date;
             int ngayDaDem = 0;
-
             while (ngayDaDem < soNgayLamViec)
             {
-                // Bỏ qua T7 (Saturday) và CN (Sunday)
-                if (result.DayOfWeek != DayOfWeek.Saturday && result.DayOfWeek != DayOfWeek.Sunday)
-                {
-                    ngayDaDem++;
-                }
-
-                // Chưa đủ số ngày thì tiếp tục cộng thêm ngày
-                if (ngayDaDem < soNgayLamViec)
-                {
-                    result = result.AddDays(1);
-                }
+                if (result.DayOfWeek != DayOfWeek.Saturday && result.DayOfWeek != DayOfWeek.Sunday) ngayDaDem++;
+                if (ngayDaDem < soNgayLamViec) result = result.AddDays(1);
             }
-
             return result;
         }
     }

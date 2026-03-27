@@ -22,6 +22,8 @@ namespace Infrastructure.Repositories
             return await _context.CongViecs
                 .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
+                .Include(c => c.Dependencies)
+                    .ThenInclude(d => d.DependsOnTask)
                 .Include(c => c.YeuCauCongViecs)
                 .ThenInclude(y => y.KyNang)
                 .FirstOrDefaultAsync(c => c.Id == id);
@@ -33,6 +35,8 @@ namespace Infrastructure.Repositories
                 .Where(c => c.DuAnId == projectId)
                 .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
+                .Include(c => c.Dependencies)
+                    .ThenInclude(d => d.DependsOnTask)
                 .ToListAsync();
         }
 
@@ -42,6 +46,8 @@ namespace Infrastructure.Repositories
                 .Where(c => c.AssigneeId == assigneeId)
                 .Include(c => c.Sprint)
                 .Include(c => c.Assignee)
+                .Include(c => c.Dependencies)
+                    .ThenInclude(d => d.DependsOnTask)
                 .ToListAsync();
         }
 
@@ -84,6 +90,7 @@ namespace Infrastructure.Repositories
                 .Include(c => c.YeuCauCongViecs)
                     .ThenInclude(y => y.KyNang)
                 .Include(c => c.Dependencies)
+                    .ThenInclude(d => d.DependsOnTask)
                 .AsQueryable();
 
             if (query.DuAnId.HasValue)

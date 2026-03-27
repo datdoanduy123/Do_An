@@ -156,12 +156,11 @@ namespace Apllication.Service
 
                                 if (string.IsNullOrEmpty(title)) continue;
 
-                                // Tính giờ ước tính dựa trên độ ưu tiên
                                 double estimatedHours = 8;
                                 var normalizedPriority = priorityStr.ToLower();
-                                if (normalizedPriority.Contains("high") || normalizedPriority.Contains("cao")) {
+                                if (normalizedPriority.Contains("high") || normalizedPriority.Contains("cao") || normalizedPriority.Contains("urgent") || normalizedPriority.Contains("khẩn")) {
                                     estimatedHours = 16;
-                                } else if (normalizedPriority.Contains("small") || normalizedPriority.Contains("thấp")) {
+                                } else if (normalizedPriority.Contains("low") || normalizedPriority.Contains("thấp") || normalizedPriority.Contains("small")) {
                                     estimatedHours = 4; 
                                 } else {
                                     estimatedHours = 8;
@@ -231,13 +230,18 @@ namespace Apllication.Service
                                     || depStr.Trim() == "-") continue;
 
                                 CongViec predecessor = null;
-                                if (depStr.ToLower().Contains("task"))
+                                string sttOnly = new string(depStr.Where(char.IsDigit).ToArray());
+
+                                if (!string.IsNullOrEmpty(sttOnly) && (depStr.ToLower().Contains("task") || int.TryParse(depStr.Trim(), out _)))
                                 {
-                                    var sttStr = new string(depStr.Where(char.IsDigit).ToArray());
-                                    if (int.TryParse(sttStr, out int stt) && stt > 0 && stt <= tasksInTable.Count)
+                                    if (int.TryParse(sttOnly, out int stt) && stt > 0 && stt <= tasksInTable.Count)
                                         predecessor = tasksInTable[stt - 1].Task;
                                 }
-                                else predecessor = tasksInTable.FirstOrDefault(t => t.Task.TieuDe.Equals(depStr, StringComparison.OrdinalIgnoreCase)).Task;
+
+                                if (predecessor == null)
+                                {
+                                    predecessor = tasksInTable.FirstOrDefault(t => t.Task.TieuDe.Equals(depStr, StringComparison.OrdinalIgnoreCase)).Task;
+                                }
 
                                 if (predecessor != null && predecessor != tasksInTable[idx].Task)
                                 {
@@ -289,9 +293,8 @@ namespace Apllication.Service
         private DoUuTien MapDoUuTien(string text)
         {
             text = text.ToLower();
-            if (text.Contains("urgent") || text.Contains("khẩn")) return DoUuTien.Urgent;
-            if (text.Contains("high") || text.Contains("cao")) return DoUuTien.High;
-            if (text.Contains("small") || text.Contains("thấp") || text.Contains("nhỏ")) return DoUuTien.Low;
+            if (text.Contains("high") || text.Contains("cao") || text.Contains("urgent") || text.Contains("khẩn")) return DoUuTien.High;
+            if (text.Contains("low") || text.Contains("thấp") || text.Contains("nhỏ") || text.Contains("small")) return DoUuTien.Low;
             return DoUuTien.Medium;
         }
 

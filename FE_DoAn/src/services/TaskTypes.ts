@@ -57,6 +57,10 @@ export interface CongViecDto {
   ngayKetThucSprint?: string;
   soLanBiTuChoi: number;
   createdBy?: number;
+  dependencies?: {
+    dependsOnTaskId: number;
+    dependsOnTaskTitle?: string;
+  }[];
 }
 
 export interface TaoCongViecDto {

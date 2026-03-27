@@ -203,6 +203,37 @@
   color: #64748b;
 }
 
+.task-row-dependencies {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  color: #64748b;
+}
+
+.dep-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dep-tag {
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  cursor: help;
+}
+
+.dep-tag:hover {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+
 .task-meta {
   display: flex;
   align-items: center;

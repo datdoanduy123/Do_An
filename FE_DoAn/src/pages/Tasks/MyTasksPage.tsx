@@ -8,7 +8,8 @@ import {
   MoreVertical,
   Flag,
   X,
-  Lock
+  Lock,
+  Link
 } from 'lucide-react';
 import TaskService from '../../services/TaskService';
 import UserService from '../../services/UserService';
@@ -128,8 +129,7 @@ const MyTasksPage: React.FC = () => {
       case 0: return { color: '#10b981', label: 'Thấp', bg: '#d1fae5' };
       case 1: return { color: '#3b82f6', label: 'Vừa', bg: '#dbeafe' };
       case 2: return { color: '#f59e0b', label: 'Cao', bg: '#fef3c7' };
-      case 3: return { color: '#ef4444', label: 'Khẩn cấp', bg: '#fee2e2' };
-      default: return { color: '#64748b', label: 'Vừa', bg: '#f1f5f9' };
+      default: return { color: '#3b82f6', label: 'Vừa', bg: '#dbeafe' };
     }
   };
 
@@ -237,6 +237,18 @@ const MyTasksPage: React.FC = () => {
                         </div>
                         <span className="progress-text">{calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh)}%</span>
                       </div>
+                      {task.dependencies && task.dependencies.length > 0 && (
+                        <div className="task-row-dependencies">
+                          <Link size={12} />
+                          <div className="dep-list">
+                            {task.dependencies.map(dep => (
+                              <span key={dep.dependsOnTaskId} title={dep.dependsOnTaskTitle} className="dep-tag">
+                                #{dep.dependsOnTaskId}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className="task-meta">
                         <span className="time-tracking">
                           <strong>{task.thoiGianThucTe || 0}h</strong> / {task.thoiGianUocTinh}h
