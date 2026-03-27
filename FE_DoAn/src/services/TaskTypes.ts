@@ -44,7 +44,6 @@ export interface CongViecDto {
   loaiCongViec: LoaiCongViec;
   doUuTien: DoUuTien;
   trangThai: TrangThaiCongViec;
-  storyPoints: number;
   assigneeId?: number;
   assigneeName?: string;
   thoiGianUocTinh: number;
@@ -70,7 +69,6 @@ export interface TaoCongViecDto {
   moTa?: string;
   loaiCongViec: LoaiCongViec;
   doUuTien: DoUuTien;
-  storyPoints: number;
   thoiGianUocTinh: number;
   assigneeId?: number;
   thoiGianThucTe?: number;

@@ -515,7 +515,8 @@ namespace Apllication.Service
                     var predecessor = await _repository.GetByIdAsync(dep.DependsOnTaskId);
                     if (predecessor != null && predecessor.TrangThai != TrangThaiCongViec.Done)
                     {
-                        throw new Exception($"Không thể thực hiện! Bạn phải chờ Task '{predecessor.TieuDe}' (#{(predecessor.Id)}) hoàn thành trước.");
+                        var sprintInfo = predecessor.Sprint != null ? $"trong '{predecessor.Sprint.TenSprint}' " : "";
+                        throw new Exception($"Không thể thực hiện! Bạn phải chờ Task '{predecessor.TieuDe}' (#{(predecessor.Id)}) {sprintInfo}hoàn thành trước.");
                     }
                 }
             }

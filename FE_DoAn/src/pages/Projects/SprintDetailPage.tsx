@@ -18,7 +18,8 @@ import {
   Trash2,
   CheckSquare,
   AlertTriangle,
-  Link
+  Link,
+  X
 } from 'lucide-react';
 import SprintService from '../../services/SprintService';
 import type { SprintDto } from '../../services/SprintService';
@@ -53,7 +54,6 @@ const SprintDetailPage: React.FC = () => {
     moTa: '',
     loaiCongViec: 0,
     doUuTien: 1,
-    storyPoints: 0,
     thoiGianUocTinh: 0,
     assigneeId: null as number | null
   });
@@ -67,7 +67,7 @@ const SprintDetailPage: React.FC = () => {
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5200);
   };
 
   useEffect(() => {
@@ -173,7 +173,6 @@ const SprintDetailPage: React.FC = () => {
       moTa: task.moTa || '',
       loaiCongViec: task.loaiCongViec,
       doUuTien: task.doUuTien,
-      storyPoints: task.storyPoints,
       thoiGianUocTinh: task.thoiGianUocTinh,
       assigneeId: task.assigneeId || null
     });
@@ -190,7 +189,7 @@ const SprintDetailPage: React.FC = () => {
         setShowEditTaskModal(false);
         setEditingTask(null);
         setNewTaskData({
-          tieuDe: '', moTa: '', loaiCongViec: 0, doUuTien: 1, storyPoints: 0, thoiGianUocTinh: 0, assigneeId: null
+          tieuDe: '', moTa: '', loaiCongViec: 0, doUuTien: 1, thoiGianUocTinh: 0, assigneeId: null
         });
         // Reload tasks will happen via SignalR or manual fetch
         const updated = await TaskService.getByProjectId(sprint!.duAnId);
@@ -205,7 +204,7 @@ const SprintDetailPage: React.FC = () => {
 
   const handleTaskAction = async (taskId: number, approve: boolean) => {
     if (!isSprintActive) {
-      alert('Chỉ có thể phê duyệt công việc khi Sprint đang hoạt động.');
+      showToast('Chỉ có thể phê duyệt công việc khi Sprint đang hoạt động.', 'error');
       return;
     }
     try {
@@ -213,9 +212,11 @@ const SprintDetailPage: React.FC = () => {
       const success = await TaskService.updateStatus(taskId, targetStatus);
       if (success) {
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, trangThai: targetStatus as any } : t));
+        showToast(approve ? 'Đã phê duyệt công việc.' : 'Đã yêu cầu chỉnh sửa.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Action failed:', error);
+      showToast(error.message || 'Thao tác thất bại.', 'error');
     }
   };
 
@@ -236,7 +237,6 @@ const SprintDetailPage: React.FC = () => {
         tenSprint: sprint.tenSprint,
         ngayBatDau: sprint.ngayBatDau,
         ngayKetThuc: sprint.ngayKetThuc,
-        mucTieuStoryPoints: sprint.mucTieuStoryPoints,
         trangThai: status as any
       });
       if (success) {
@@ -266,12 +266,12 @@ const SprintDetailPage: React.FC = () => {
       
       setShowCreateTaskModal(false);
       setNewTaskData({
-        tieuDe: '', moTa: '', loaiCongViec: 0, doUuTien: 1, storyPoints: 0, thoiGianUocTinh: 0, assigneeId: null
+        tieuDe: '', moTa: '', loaiCongViec: 0, doUuTien: 1, thoiGianUocTinh: 0, assigneeId: null
       });
       showToast('Đã tạo công việc mới thành công!');
     } catch (error) {
       console.error('Create task failed:', error);
-      alert('Tạo công việc thất bại.');
+      showToast('Tạo công việc thất bại.', 'error');
     } finally {
       setIsCreatingTask(false);
     }
@@ -534,9 +534,6 @@ const SprintDetailPage: React.FC = () => {
                         <Clock size={12} />
                         <span>{task.thoiGianUocTinh}h</span>
                       </div>
-                      <div className="story-points">
-                        <span>{task.storyPoints} SP</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -619,15 +616,6 @@ const SprintDetailPage: React.FC = () => {
                     <option value={1}>Vừa</option>
                     <option value={2}>Cao</option>
                   </select>
-                </div>
-                <div className="form-group">
-                  <label>Story Points</label>
-                  <input 
-                    type="number" 
-                    value={newTaskData.storyPoints}
-                    onChange={e => setNewTaskData({...newTaskData, storyPoints: parseInt(e.target.value)})}
-                    min="0"
-                  />
                 </div>
                 <div className="form-group">
                   <label>Ước tính (giờ)</label>
@@ -724,15 +712,6 @@ const SprintDetailPage: React.FC = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Story Points</label>
-                  <input 
-                    type="number" 
-                    min={0}
-                    value={newTaskData.storyPoints}
-                    onChange={e => setNewTaskData({...newTaskData, storyPoints: parseInt(e.target.value) || 0})}
-                  />
-                </div>
-                <div className="form-group">
                   <label>Thời gian ước tính (Giờ)</label>
                   <input 
                     type="number" 
@@ -755,11 +734,17 @@ const SprintDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Toast Notification */}
+      {/* Toast Notification V2 */}
       {toast && (
-        <div className={`toast-notification ${toast.type}`}>
-          {toast.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-          <span>{toast.message}</span>
+        <div className={`toast-notification-v2 ${toast.type}`}>
+          <div className="toast-icon">
+            {toast.type === 'success' ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
+          </div>
+          <div className="toast-content">
+            <span className="toast-title">{toast.type === 'success' ? 'Thành công' : 'Cảnh báo'}</span>
+            <span className="toast-msg">{toast.message}</span>
+          </div>
+          <button className="toast-close" onClick={() => setToast(null)}><X size={16} /></button>
         </div>
       )}
     </div>

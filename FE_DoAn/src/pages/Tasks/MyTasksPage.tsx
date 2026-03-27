@@ -46,6 +46,14 @@ const MyTasksPage: React.FC = () => {
     ghiChu: '',
     trangThai: 0
   });
+  
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 5200); // Tăng thời gian hiển thị cho dễ đọc
+  };
 
   useEffect(() => {
     const fetchMyTasks = async () => {
@@ -77,7 +85,7 @@ const MyTasksPage: React.FC = () => {
   const handleOpenProgressModal = (task: CongViecDto, targetStatus?: number) => {
     // Kiểm tra nếu Sprint chưa bắt đầu hoặc đã kết thúc
     if (!isTaskWorkable(task)) {
-      alert('Công việc này thuộc Sprint chưa bắt đầu hoặc đã kết thúc. Bạn không thể cập nhật tiến độ.');
+      showToast('Công việc này thuộc Sprint chưa bắt đầu hoặc đã kết thúc.', 'error');
       return;
     }
 
@@ -110,11 +118,12 @@ const MyTasksPage: React.FC = () => {
             }
             : t
         ));
+        showToast('Cập nhật tiến độ thành công!');
         setShowProgressModal(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update progress:', error);
-      alert('Có lỗi xảy ra hoặc Sprint không hợp lệ để cập nhật.');
+      showToast(error.message || 'Cập nhật thất bại.', 'error');
     }
   };
 
@@ -451,6 +460,20 @@ const MyTasksPage: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`toast-notification-v2 ${toast.type}`}>
+          <div className="toast-icon">
+            {toast.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+          </div>
+          <div className="toast-content">
+            <span className="toast-title">{toast.type === 'success' ? 'Thành công' : 'Cảnh báo'}</span>
+            <span className="toast-msg">{toast.message}</span>
+          </div>
+          <button className="toast-close" onClick={() => setToast(null)}><X size={16} /></button>
         </div>
       )}
     </div>

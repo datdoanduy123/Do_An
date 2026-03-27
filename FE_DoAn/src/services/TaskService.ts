@@ -41,16 +41,26 @@ class TaskService {
    * Cập nhật trạng thái công việc.
    */
   async updateStatus(id: number, status: number): Promise<boolean> {
-    const response = await api.patch(`/CongViec/${id}/cap-nhat-trang-thai?status=${status}`);
-    return response.data.statusCode === 200;
+    try {
+      const response = await api.patch(`/CongViec/${id}/cap-nhat-trang-thai?status=${status}`);
+      return response.data.statusCode === 200;
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Không thể cập nhật trạng thái.';
+      throw new Error(message);
+    }
   }
 
   /**
    * Cập nhật tiến độ công việc (thời gian làm việc và trạng thái).
    */
   async updateProgress(id: number, data: { trangThai: number, thoiGianLamViecThem: number, ghiChu?: string }): Promise<boolean> {
-    const response = await api.put(`/CongViec/${id}/cap-nhat-tien-do`, data);
-    return response.data.statusCode === 200;
+    try {
+      const response = await api.put(`/CongViec/${id}/cap-nhat-tien-do`, data);
+      return response.data.statusCode === 200;
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Không thể cập nhật tiến độ.';
+      throw new Error(message);
+    }
   }
 
   /**
