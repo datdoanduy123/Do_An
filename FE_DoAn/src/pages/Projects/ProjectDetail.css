@@ -798,10 +798,33 @@
   font-size: 0.7rem;
   font-weight: 800;
   color: #6366f1;
-  background: #f5f3ff;
-  padding: 2px 10px;
-  border-radius: 100px;
-  border: 1px solid rgba(99, 102, 241, 0.1);
+  background: #eef2ff;
+  padding: 4px 10px;
+  border-radius: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.member-role-tag.editable {
+  border: 1px dashed #6366f1;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+}
+
+.member-role-tag.editable:hover {
+  background: #e0e7ff;
+}
+
+.role-select {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  outline: none;
+  font-weight: 600;
+  color: #475569;
 }
 
 .remove-member-btn {

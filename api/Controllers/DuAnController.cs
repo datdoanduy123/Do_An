@@ -3,6 +3,7 @@ using api.Attributes;
 using Apllication.DTOs.DuAn;
 using Apllication.IService;
 using Domain.Entities;
+using Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
@@ -116,13 +117,29 @@ namespace api.Controllers
 
         [QuyenHan("PROJECT_UPDATE")]
         [HttpPost("{id}/members/{userId}")]
-        public async Task<IActionResult> ThemThanhVien(int id, int userId)
+        public async Task<IActionResult> ThemThanhVien(int id, int userId, [FromQuery] ProjectRole role = ProjectRole.Member)
         {
             try
             {
-                var result = await _duAnService.AddMemberAsync(id, userId);
+                var result = await _duAnService.AddMemberAsync(id, userId, role);
                 if (result) return SuccessResponse(null!, "Them thanh vien thanh cong.");
                 return ErrorResponse(400, "Khong the them thanh vien.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [QuyenHan("PROJECT_UPDATE")]
+        [HttpPut("{id}/members/{userId}/role")]
+        public async Task<IActionResult> CapNhatVaiTroThanhVien(int id, int userId, [FromBody] ProjectRole newRole)
+        {
+            try
+            {
+                var result = await _duAnService.UpdateMemberRoleAsync(id, userId, newRole);
+                if (result) return SuccessResponse(null!, "Cap nhat chuc danh thanh cong.");
+                return ErrorResponse(400, "Khong the cap nhat chuc danh (co the user khong co trong du an).");
             }
             catch (Exception ex)
             {

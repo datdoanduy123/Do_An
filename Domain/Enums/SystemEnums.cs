@@ -48,4 +48,14 @@ namespace Domain.Enums
         Manual = 0,
         AI = 1
     }
+
+    public enum ProjectRole
+    {
+        Member = 0,
+        Developer = 1,
+        Tester = 2,
+        QA = 3,
+        PM = 4,
+        BA = 5
+    }
 }

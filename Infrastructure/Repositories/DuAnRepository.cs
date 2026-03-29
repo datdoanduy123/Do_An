@@ -1,6 +1,6 @@
-using System;
 using Apllication.IRepositories;
 using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -67,7 +67,7 @@ namespace Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<bool> AddMemberAsync(int duAnId, int userId)
+        public async Task<bool> AddMemberAsync(int duAnId, int userId, ProjectRole role = ProjectRole.Member)
         {
             var exists = await _context.DuAnNguoiDungs.AnyAsync(m => m.DuAnId == duAnId && m.NguoiDungId == userId);
             if (exists) return true;
@@ -76,7 +76,7 @@ namespace Infrastructure.Repositories
             {
                 DuAnId = duAnId,
                 NguoiDungId = userId,
-                ProjectRole = "Member",
+                ProjectRole = role,
                 JointAt = DateTime.UtcNow
             };
 
@@ -92,6 +92,17 @@ namespace Infrastructure.Repositories
             if (membership == null) return false;
 
             _context.DuAnNguoiDungs.Remove(membership);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> UpdateMemberRoleAsync(int duAnId, int userId, ProjectRole newRole)
+        {
+            var membership = await _context.DuAnNguoiDungs
+                .FirstOrDefaultAsync(m => m.DuAnId == duAnId && m.NguoiDungId == userId);
+
+            if (membership == null) return false;
+
+            membership.ProjectRole = newRole;
             return await _context.SaveChangesAsync() > 0;
         }
     }

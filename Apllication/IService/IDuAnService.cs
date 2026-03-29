@@ -1,5 +1,6 @@
 using Apllication.DTOs.DuAn;
 using Domain.Entities;
+using Domain.Enums;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -13,8 +14,9 @@ namespace Apllication.IService
         Task<bool> UpdateAsync(int id, CapNhatDuAnDto dto);
         Task<bool> DeleteAsync(int id);
         Task<IEnumerable<ThanhVienDuAnDto>> GetMembersAsync(int id);
-        Task<bool> AddMemberAsync(int duAnId, int userId);
-        Task<bool> RemoveMemberAsync(int id, int userId);
+        Task<bool> AddMemberAsync(int duAnId, int userId, ProjectRole role = ProjectRole.Member);
+        Task<bool> UpdateMemberRoleAsync(int duAnId, int userId, ProjectRole newRole);
+        Task<bool> RemoveMemberAsync(int duAnId, int userId);
         Task<IEnumerable<object>> GetSkillCoverageAsync(int projectId);
     }
 }

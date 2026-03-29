@@ -27,7 +27,7 @@ import TaskService from '../../services/TaskService';
 import UserService from '../../services/UserService';
 import type { CongViecDto } from '../../services/TaskService';
 import { TrangThaiCongViec as StatusEnum } from '../../services/TaskService';
-import ProjectService from '../../services/ProjectService';
+import ProjectService, { ProjectRole } from '../../services/ProjectService';
 import type { ThanhVienDuAnDto } from '../../services/ProjectTypes';
 import SignalRService from '../../services/SignalRService';
 import './SprintDetail.css';
@@ -510,7 +510,11 @@ const SprintDetailPage: React.FC = () => {
                   )}
 
                   {/* Quick Approval Actions for Managers & Creators */}
-                  {col.id === StatusEnum.Review && (isAdmin || currentUser?.id === task.createdBy) && isSprintActive && (
+                  {col.id === StatusEnum.Review && (
+                    isAdmin || 
+                    currentUser?.id === task.createdBy || 
+                    [ProjectRole.PM, ProjectRole.Tester, ProjectRole.QA].includes(projectMembers.find(m => m.id === currentUser?.id)?.vaiTro as any)
+                  ) && isSprintActive && (
                     <div className="task-approval-actions">
                       <button
                         className="btn-reject-small"

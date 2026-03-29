@@ -1,4 +1,5 @@
 import api from './api';
+import { ProjectRole, TrangThaiDuAn } from './ProjectTypes';
 import type { DuAnDto, TaoDuAnDto, CapNhatDuAnDto, ThanhVienDuAnDto } from './ProjectTypes';
 
 /**
@@ -56,8 +57,18 @@ class ProjectService {
   /**
    * Thêm thành viên vào dự án.
    */
-  async addMember(id: number, userId: number): Promise<any> {
-    const response = await api.post(`/DuAn/${id}/members/${userId}`);
+  async addMember(id: number, userId: number, role: ProjectRole = ProjectRole.Member): Promise<any> {
+    const response = await api.post(`/DuAn/${id}/members/${userId}?role=${role}`);
+    return response.data;
+  }
+
+  /**
+   * Cập nhật chức danh thành viên dự án.
+   */
+  async updateMemberRole(id: number, userId: number, newRole: ProjectRole): Promise<any> {
+    const response = await api.put(`/DuAn/${id}/members/${userId}/role`, newRole, {
+      headers: { 'Content-Type': 'application/json' }
+    });
     return response.data;
   }
 

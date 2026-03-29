@@ -11,6 +11,17 @@ export const TrangThaiDuAn = {
 
 export type TrangThaiDuAn = typeof TrangThaiDuAn[keyof typeof TrangThaiDuAn];
 
+export const ProjectRole = {
+  Member: 0,
+  Developer: 1,
+  Tester: 2,
+  QA: 3,
+  PM: 4,
+  BA: 5
+} as const;
+
+export type ProjectRole = typeof ProjectRole[keyof typeof ProjectRole];
+
 export interface DuAnDto {
   id: number;
   tenDuAn: string;
@@ -26,7 +37,7 @@ export interface ThanhVienDuAnDto {
   id: number;
   hoTen: string;
   email: string;
-  vaiTro?: string;
+  vaiTro?: ProjectRole;
   ngayThamGia: string;
   soCongViec: number;
   kyNang: string[];

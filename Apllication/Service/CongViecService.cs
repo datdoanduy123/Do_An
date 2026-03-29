@@ -17,19 +17,22 @@ namespace Apllication.Service
         private readonly INhatKyCongViecRepository _taskLogRepository;
         private readonly ISprintRepository _sprintRepository;
         private readonly IKanbanNotificationService _notificationService;
+        private readonly IDuAnRepository _projectRepository;
 
         public CongViecService(
             ICongViecRepository repository, 
             INguoiDungRepository userRepository,
             INhatKyCongViecRepository taskLogRepository,
             ISprintRepository sprintRepository,
-            IKanbanNotificationService notificationService)
+            IKanbanNotificationService notificationService,
+            IDuAnRepository projectRepository)
         {
             _repository = repository;
             _userRepository = userRepository;
             _taskLogRepository = taskLogRepository;
             _sprintRepository = sprintRepository;
             _notificationService = notificationService;
+            _projectRepository = projectRepository;
         }
 
         public async Task<CongViecDto> GetByIdAsync(int id)
@@ -173,10 +176,21 @@ namespace Apllication.Service
                 await CheckDependenciesAsync(cv);
             }
 
-            // Ràng buộc nghiệp vụ: Chỉ người giao việc (người tạo task) mới được phép chuyển sang trạng thái Done
+            // Ràng buộc nghiệp vụ: Bổ sung quyền Tester/QA được phép Review
             if (status == TrangThaiCongViec.Done && cv.CreatedBy != updaterId)
             {
-                throw new Exception("Chỉ người giao việc mới có quyền hoàn thành công việc này.");
+                var isAdmin = (await _userRepository.LayDanhSachMaVaiTroCuaNguoiDungAsync(updaterId)).Contains("QUAN_LY");
+                if (!isAdmin)
+                {
+                    var members = await _projectRepository.GetMembersAsync(cv.DuAnId);
+                    var currentRole = members.FirstOrDefault(m => m.NguoiDungId == updaterId)?.ProjectRole;
+                    bool isTesterOrPM = currentRole == ProjectRole.Tester || currentRole == ProjectRole.QA || currentRole == ProjectRole.PM;
+                    
+                    if (!isTesterOrPM) 
+                    {
+                        throw new Exception("Chỉ người quản lý, người giao việc hoặc Tester/QA mới có quyền chuyển trạng thái Hoàn thành.");
+                    }
+                }
             }
 
             // Ràng buộc nghiệp vụ: Chỉ cho phép cập nhật trạng thái nếu Sprint đang InProgress (hoặc không thuộc Sprint nào)
@@ -273,10 +287,21 @@ namespace Apllication.Service
                 await CheckDependenciesAsync(cv);
             }
 
-            // Ràng buộc nghiệp vụ: Chỉ người giao việc mới được phép chuyển sang trạng thái Done
+            // Ràng buộc nghiệp vụ: Tương tự UpdateStatus
             if (dto.TrangThai == TrangThaiCongViec.Done && cv.CreatedBy != updaterId)
             {
-                throw new Exception("Chỉ người giao việc mới có quyền hoàn thành công việc này.");
+                var isAdmin = (await _userRepository.LayDanhSachMaVaiTroCuaNguoiDungAsync(updaterId)).Contains("QUAN_LY");
+                if (!isAdmin)
+                {
+                    var members = await _projectRepository.GetMembersAsync(cv.DuAnId);
+                    var currentRole = members.FirstOrDefault(m => m.NguoiDungId == updaterId)?.ProjectRole;
+                    bool isTesterOrPM = currentRole == ProjectRole.Tester || currentRole == ProjectRole.QA || currentRole == ProjectRole.PM;
+                    
+                    if (!isTesterOrPM) 
+                    {
+                        throw new Exception("Chỉ người quản lý, người giao việc hoặc Tester/QA mới có quyền hoàn thành công việc này.");
+                    }
+                }
             }
 
             // Ràng buộc nghiệp vụ: Tương tự UpdateStatus

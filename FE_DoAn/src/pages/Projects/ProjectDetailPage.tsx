@@ -23,8 +23,8 @@ import {
   Play
 } from 'lucide-react';
 
-import ProjectService from '../../services/ProjectService';
-import type { DuAnDto } from '../../services/ProjectService';
+import ProjectService, { ProjectRole } from '../../services/ProjectService';
+import type { DuAnDto, ThanhVienDuAnDto } from '../../services/ProjectService';
 import UserService from '../../services/UserService';
 import SprintService from '../../services/SprintService';
 import type { SprintDto } from '../../services/SprintService';
@@ -32,6 +32,20 @@ import { TrangThaiSprint as TrangThaiEnum } from '../../services/SprintService';
 import DocumentService from '../../services/DocumentService';
 import type { TaiLieuDuAnDto } from '../../services/DocumentService';
 import './ProjectDetail.css';
+
+/**
+ * Lấy nhãn hiển thị cho ProjectRole enum.
+ */
+const getRoleLabel = (role?: ProjectRole) => {
+  switch (role) {
+    case ProjectRole.PM: return 'PM';
+    case ProjectRole.Developer: return 'Developer';
+    case ProjectRole.Tester: return 'Tester';
+    case ProjectRole.QA: return 'QA';
+    case ProjectRole.BA: return 'BA';
+    default: return 'Member';
+  }
+};
 
 /**
  * Trang chi tiết dự án - Hiển thị danh sách Sprint.
@@ -45,11 +59,12 @@ const ProjectDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [docLoading, setDocLoading] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<ProjectRole>(ProjectRole.Member);
   const [allAvailableUsers, setAllAvailableUsers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const [showAddMember, setShowAddMember] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [showCreateSprintModal, setShowCreateSprintModal] = useState(false);
   const [newSprintData, setNewSprintData] = useState({
@@ -152,14 +167,29 @@ const ProjectDetailPage: React.FC = () => {
     if (!selectedUserId || !id) return;
     try {
       setDocLoading(true);
-      await ProjectService.addMember(Number(id), Number(selectedUserId));
+      await ProjectService.addMember(Number(id), Number(selectedUserId), selectedRole);
       const updatedMembers = await ProjectService.getMembers(Number(id));
       setMembers(updatedMembers);
       setShowAddMember(false);
       setSelectedUserId('');
+      setSelectedRole(ProjectRole.Member);
     } catch (error) {
       console.error('Add member failed:', error);
       alert('Thêm thành viên thất bại.');
+    } finally {
+      setDocLoading(false);
+    }
+  };
+
+  const handleUpdateMemberRole = async (userId: number, newRole: ProjectRole) => {
+    try {
+      setDocLoading(true);
+      await ProjectService.updateMemberRole(Number(id), userId, newRole);
+      const updatedMembers = await ProjectService.getMembers(Number(id));
+      setMembers(updatedMembers);
+    } catch (error) {
+      console.error('Update role failed:', error);
+      alert('Cập nhật chức danh thất bại.');
     } finally {
       setDocLoading(false);
     }
@@ -412,11 +442,23 @@ const ProjectDetailPage: React.FC = () => {
             >
               <option value="">Chọn nhân viên...</option>
               {allAvailableUsers
-                .filter(u => !members.some(m => m.nguoiDungId === u.id))
+                .filter(u => !members.some(m => m.id === u.id))
                 .map(u => (
                   <option key={u.id} value={u.id}>{u.hoTen} ({u.tenDangNhap})</option>
                 ))
               }
+            </select>
+            <select
+              className="role-select"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(Number(e.target.value) as ProjectRole)}
+            >
+              <option value={ProjectRole.Member}>Member</option>
+              <option value={ProjectRole.Developer}>Developer</option>
+              <option value={ProjectRole.Tester}>Tester</option>
+              <option value={ProjectRole.QA}>QA</option>
+              <option value={ProjectRole.PM}>PM</option>
+              <option value={ProjectRole.BA}>BA</option>
             </select>
             <button className="confirm-add-btn" onClick={handleAddMember} disabled={docLoading}>
               {docLoading ? '...' : 'Xác nhận'}
@@ -452,7 +494,22 @@ const ProjectDetailPage: React.FC = () => {
                     <Activity size={12} />
                     <span>{member.soCongViec} Tasks</span>
                   </div>
-                  <div className="member-role-tag">{member.vaiTro || 'Member'}</div>
+                  {canManageMembers ? (
+                    <select
+                      className="member-role-tag editable"
+                      value={member.vaiTro ?? ProjectRole.Member}
+                      onChange={(e) => handleUpdateMemberRole(member.id, Number(e.target.value) as ProjectRole)}
+                    >
+                      <option value={ProjectRole.Member}>Member</option>
+                      <option value={ProjectRole.Developer}>Developer</option>
+                      <option value={ProjectRole.Tester}>Tester</option>
+                      <option value={ProjectRole.QA}>QA</option>
+                      <option value={ProjectRole.PM}>PM</option>
+                      <option value={ProjectRole.BA}>BA</option>
+                    </select>
+                  ) : (
+                    <div className="member-role-tag">{getRoleLabel(member.vaiTro)}</div>
+                  )}
                 </div>
               </div>
               {canManageMembers && (

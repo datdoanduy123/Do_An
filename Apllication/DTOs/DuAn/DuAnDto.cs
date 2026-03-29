@@ -37,7 +37,7 @@ namespace Apllication.DTOs.DuAn
         public int Id { get; set; }
         public string HoTen { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public string? VaiTro { get; set; }
+        public ProjectRole? VaiTro { get; set; }
         public DateTime NgayThamGia { get; set; }
         public int SoCongViec { get; set; }
         public List<string> KyNang { get; set; } = new();

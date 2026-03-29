@@ -1,4 +1,5 @@
 using System;
+using Domain.Enums;
 
 namespace Domain.Entities
 {
@@ -17,7 +18,7 @@ namespace Domain.Entities
         /// <summary>
         /// Vai trò trong dự án (ví dụ: PM, Developer, Tester, Client)
         /// </summary>
-        public string ProjectRole { get; set; } = "Member";
+        public ProjectRole ProjectRole { get; set; } = ProjectRole.Member;
 
         public DateTime JointAt { get; set; } = DateTime.UtcNow;
     }

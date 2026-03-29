@@ -119,9 +119,14 @@ namespace Apllication.Service
             });
         }
 
-        public async Task<bool> AddMemberAsync(int duAnId, int userId)
+        public async Task<bool> AddMemberAsync(int duAnId, int userId, ProjectRole role = ProjectRole.Member)
         {
-            return await _repository.AddMemberAsync(duAnId, userId);
+            return await _repository.AddMemberAsync(duAnId, userId, role);
+        }
+
+        public async Task<bool> UpdateMemberRoleAsync(int duAnId, int userId, ProjectRole newRole)
+        {
+            return await _repository.UpdateMemberRoleAsync(duAnId, userId, newRole);
         }
 
         public async Task<bool> RemoveMemberAsync(int id, int userId)
