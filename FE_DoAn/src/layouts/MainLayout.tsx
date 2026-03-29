@@ -172,8 +172,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Menu chung cho mọi người (nhưng Dashboard đã bị tách ra trên)
   menuItems.push(
     { path: '/projects', icon: <Briefcase size={20} />, label: 'Dự án' },
-    { path: '/my-tasks', icon: <CheckCircle2 size={20} />, label: 'Công việc của tôi' },
-    { path: '/members', icon: <Users size={20} />, label: 'Thành viên' }
+    { path: '/my-tasks', icon: <CheckCircle2 size={20} />, label: 'Công việc của tôi' }
   );
 
   if (isAdmin) {
