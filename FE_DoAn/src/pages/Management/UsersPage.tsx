@@ -17,9 +17,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Zap,
-  Star,
-  Award,
-  History
+  Award
 } from 'lucide-react';
 import UserService, { 
   type NguoiDungDto
@@ -36,6 +34,58 @@ interface Toast {
   message: string;
   type: 'success' | 'error' | 'info';
 }
+
+/**
+ * Component hiển thị từng thẻ kỹ năng trong Modal.
+ */
+const SkillCard: React.FC<{
+  skill: KyNangDto;
+  userSkills: UserSkillDto[];
+  onEdit: (editing: any) => void;
+  onRemove: (id: number) => void;
+}> = ({ skill, userSkills, onEdit, onRemove }) => {
+  const userSkill = userSkills.find(s => s.kyNangId === skill.id);
+  
+  return (
+    <div className={`skill-card ${userSkill ? 'assigned' : ''}`}>
+      <div className="skill-card-info">
+        <span className="skill-name">{skill.tenKyNang}</span>
+        <span className="skill-code">{skill.tenCongNghe}</span>
+      </div>
+      
+      {userSkill ? (
+        <div className="skill-card-actions">
+          <div className="skill-stats">
+            <span className="stat-lvl">Lvl: {userSkill.level}</span>
+            <span className="stat-exp">Exp: {userSkill.soNamKinhNghiem}y</span>
+          </div>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button 
+              className="skill-icon-btn edit" 
+              onClick={() => onEdit({
+                kyNangId: skill.id,
+                level: userSkill.level,
+                soNamKinhNghiem: userSkill.soNamKinhNghiem
+              })}
+            >
+              <Edit size={14} />
+            </button>
+            <button className="skill-icon-btn delete" onClick={() => onRemove(skill.id)}>
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button 
+          className="skill-add-btn"
+          onClick={() => onEdit({ kyNangId: skill.id, level: 1, soNamKinhNghiem: 0 })}
+        >
+          <Plus size={14} /> Gán
+        </button>
+      )}
+    </div>
+  );
+};
 
 /**
  * Trang Quản lý Người dùng (Users).
@@ -71,6 +121,11 @@ const UsersPage: React.FC = () => {
     level: number;
     soNamKinhNghiem: number;
   } | null>(null);
+
+  // States for Hierarchy Layout
+  const [hierarchy, setHierarchy] = useState<any[]>([]);
+  const [activeDomainId, setActiveDomainId] = useState<number | null>(null);
+  const [skillSearch, setSkillSearch] = useState('');
 
   // States for Custom Confirm
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -225,10 +280,14 @@ const UsersPage: React.FC = () => {
     setIsSkillModalOpen(true);
     setSkillLoading(true);
     try {
-      const res = await SkillService.getSkills({ pageSize: 100 });
+      const h = await SkillService.getHierarchy();
+      setHierarchy(h);
+      if (h.length > 0) setActiveDomainId(h[0].id);
+      
+      const res = await SkillService.getSkills({ pageSize: 500 }); // Pre-load for searching
       setAllSkills(res.items);
     } catch (error) {
-      showToast('Không thể tải danh sách kỹ năng', 'error');
+      showToast('Không thể tải dữ liệu kỹ năng', 'error');
     } finally {
       setSkillLoading(false);
     }
@@ -590,7 +649,7 @@ const UsersPage: React.FC = () => {
       {/* Skill Assignment Modal */}
       {isSkillModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '800px' }}>
+          <div className="modal-content" style={{ maxWidth: '900px' }}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Zap size={24} color="#f59e0b" />
@@ -598,91 +657,127 @@ const UsersPage: React.FC = () => {
               </div>
               <button className="close-btn" onClick={() => setIsSkillModalOpen(false)}><X size={20} /></button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body p-0">
               {skillLoading ? (
-                <div style={{ padding: '30px', textAlign: 'center' }}>Đang tải...</div>
+                <div style={{ padding: '60px', textAlign: 'center' }}>Đang tải cấu trúc kỹ năng...</div>
               ) : (
-                <div className="skill-assignment-container">
-                  <div className="skill-available-list">
-                    <h4>Danh sách kỹ năng</h4>
-                    <div className="skill-grid">
-                      {allSkills.map(skill => {
-                        const userSkill = userSkills.find(s => s.kyNangId === skill.id);
+                <div className="skill-hierarchy-layout">
+                  {/* Left Sidebar: Domains */}
+                  <div className="skill-sidebar">
+                    <div className="sidebar-search">
+                      <Search size={14} className="search-icon" />
+                      <input 
+                        type="text" 
+                        placeholder="Tìm kỹ năng..." 
+                        value={skillSearch}
+                        onChange={(e) => setSkillSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="sidebar-menu">
+                      {hierarchy.map(domain => {
+                        const totalSkills = domain.congNghes?.reduce((sum: number, tech: any) => sum + (tech.kyNangs?.length || 0), 0) || 0;
+                        const userOwned = domain.congNghes?.reduce((sum: number, tech: any) => {
+                          const ownedInTech = tech.kyNangs?.filter((k: any) => userSkills.some(us => us.kyNangId === k.id)).length || 0;
+                          return sum + ownedInTech;
+                        }, 0) || 0;
+
                         return (
-                          <div key={skill.id} className={`skill-card ${userSkill ? 'assigned' : ''}`}>
-                            <div className="skill-card-info">
-                              <span className="skill-name">{skill.tenKyNang}</span>
-                              <span className="skill-code">{skill.maKyNang}</span>
-                            </div>
-                            
-                            {userSkill ? (
-                              <div className="skill-card-actions">
-                                <div className="skill-stats">
-                                  <span>Lvl: {userSkill.level}</span>
-                                  <span>Exp: {userSkill.soNamKinhNghiem}y</span>
-                                </div>
-                                <div style={{ display: 'flex', gap: '4px' }}>
-                                  <button 
-                                    className="skill-icon-btn edit" 
-                                    onClick={() => setEditingSkill({
-                                      kyNangId: skill.id,
-                                      level: userSkill.level,
-                                      soNamKinhNghiem: userSkill.soNamKinhNghiem
-                                    })}
-                                  >
-                                    <Edit size={14} />
-                                  </button>
-                                  <button className="skill-icon-btn delete" onClick={() => handleRemoveSkill(skill.id)}>
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button 
-                                className="skill-add-btn"
-                                onClick={() => setEditingSkill({ kyNangId: skill.id, level: 1, soNamKinhNghiem: 0 })}
-                              >
-                                <Plus size={14} /> Gán
-                              </button>
-                            )}
+                          <div 
+                            key={domain.id} 
+                            className={`sidebar-item ${activeDomainId === domain.id && !skillSearch ? 'active' : ''}`}
+                            onClick={() => {
+                              setActiveDomainId(domain.id);
+                              setSkillSearch('');
+                            }}
+                          >
+                            {domain.tenNhom}
+                            <span className={`domain-count ${userOwned > 0 ? 'has-skills' : ''}`}>
+                              {userOwned > 0 ? `${userOwned}/${totalSkills}` : totalSkills}
+                            </span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  {editingSkill && (
-                    <div className="skill-edit-panel">
-                      <div className="edit-panel-header">
-                        <Award size={18} />
-                        <span>Thiết lập: <b>{allSkills.find(s => s.id === editingSkill.kyNangId)?.tenKyNang}</b></span>
+                  {/* Right Content Area */}
+                  <div className="skill-main-content">
+                    {skillSearch ? (
+                      <div className="tech-section">
+                        <h4 className="section-title">Kết quả tìm kiếm cho: "{skillSearch}"</h4>
+                        <div className="skill-grid">
+                          {allSkills
+                            .filter(s => s.tenKyNang.toLowerCase().includes(skillSearch.toLowerCase()))
+                            .map(skill => (
+                              <SkillCard 
+                                key={skill.id} 
+                                skill={skill} 
+                                userSkills={userSkills} 
+                                onEdit={(s) => setEditingSkill(s)}
+                                onRemove={(id) => handleRemoveSkill(id)}
+                              />
+                            ))
+                          }
+                        </div>
                       </div>
-                      <div className="edit-panel-body">
-                        <div className="form-group-inline">
-                          <label><Star size={14} /> Cấp độ (1-5):</label>
-                          <input 
-                            type="number" 
-                            min="1" max="5" 
-                            value={editingSkill.level}
-                            onChange={(e) => setEditingSkill({...editingSkill, level: parseInt(e.target.value)})}
-                          />
+                    ) : (
+                      hierarchy.find(d => d.id === activeDomainId)?.congNghes?.map((tech: any) => (
+                        <div key={tech.id} className="tech-section">
+                          <h4 className="tech-title">{tech.tenCongNghe}</h4>
+                          <div className="skill-grid">
+                            {tech.kyNangs?.map((skill: any) => (
+                              <SkillCard 
+                                key={skill.id} 
+                                skill={skill} 
+                                userSkills={userSkills} 
+                                onEdit={(s) => setEditingSkill(s)}
+                                onRemove={(id) => handleRemoveSkill(id)}
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <div className="form-group-inline">
-                          <label><History size={14} /> Kinh nghiệm (năm):</label>
-                          <input 
-                            type="number" 
-                            min="0"
-                            value={editingSkill.soNamKinhNghiem}
-                            onChange={(e) => setEditingSkill({...editingSkill, soNamKinhNghiem: parseInt(e.target.value)})}
-                          />
+                      ))
+                    )}
+                  </div>
+
+                  {/* Floating Edit Panel */}
+                  {editingSkill && (
+                    <div className="skill-floating-panel">
+                      <div className="panel-header">
+                        <Award size={18} />
+                        <span>Thiết lập năng lực</span>
+                        <button className="close-mini-btn" onClick={() => setEditingSkill(null)}><X size={14} /></button>
+                      </div>
+                      <div className="panel-body">
+                        <h5 className="target-skill-name">
+                          {allSkills.find(s => s.id === editingSkill.kyNangId)?.tenKyNang}
+                        </h5>
+                        <div className="panel-form">
+                          <div className="form-item">
+                            <label>Cấp độ (1-5)</label>
+                            <div className="level-picker">
+                              {[1,2,3,4,5].map(lv => (
+                                <button 
+                                  key={lv}
+                                  className={`lv-btn ${editingSkill.level === lv ? 'active' : ''}`}
+                                  onClick={() => setEditingSkill({...editingSkill, level: lv})}
+                                >{lv}</button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="form-item">
+                            <label>Số năm kinh nghiệm</label>
+                            <input 
+                              type="number" 
+                              className="panel-input"
+                              value={editingSkill.soNamKinhNghiem}
+                              onChange={(e) => setEditingSkill({...editingSkill, soNamKinhNghiem: parseInt(e.target.value) || 0})}
+                            />
+                          </div>
                         </div>
-                        <div className="edit-panel-footer">
-                          <button className="btn-cancel" onClick={() => setEditingSkill(null)}>Hủy</button>
-                          <button 
-                            className="btn-save" 
-                            onClick={() => handleUpdateSkill(editingSkill.kyNangId, editingSkill.level, editingSkill.soNamKinhNghiem)}
-                          >
-                            Xác nhận
+                        <div className="panel-footer">
+                          <button className="btn-save-mini" onClick={() => handleUpdateSkill(editingSkill.kyNangId, editingSkill.level, editingSkill.soNamKinhNghiem)}>
+                            Lưu cấu hình
                           </button>
                         </div>
                       </div>

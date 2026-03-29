@@ -95,5 +95,75 @@ namespace api.Controllers
                 return ErrorResponse(500, ex.Message);
             }
         }
+
+        [HttpGet("hierarchy")]
+        public async Task<IActionResult> GetHierarchy()
+        {
+            try
+            {
+                var result = await _kyNangService.GetHierarchyAsync();
+                return SuccessResponse(result, "Lay cau truc phan cap thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpGet("nhom-danh-sach")]
+        public async Task<IActionResult> GetNhomKyNangs()
+        {
+            try
+            {
+                var result = await _kyNangService.GetAllNhomAsync();
+                return SuccessResponse(result, "Lay danh sach nhom thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpGet("cong-nghe-theo-nhom/{nhomId}")]
+        public async Task<IActionResult> GetCongNgheByNhom(int nhomId)
+        {
+            try
+            {
+                var result = await _kyNangService.GetCongNgheByNhomAsync(nhomId);
+                return SuccessResponse(result, "Lay danh sach cong nghe thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpPost("tao-nhom")]
+        public async Task<IActionResult> TaoNhom(TaoNhomKyNangDto dto)
+        {
+            try
+            {
+                var result = await _kyNangService.TaoNhomAsync(dto);
+                return SuccessResponse(result, "Tao nhom ky nang thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
+        [HttpPost("tao-cong-nghe")]
+        public async Task<IActionResult> TaoCongNghe(TaoCongNgheDto dto)
+        {
+            try
+            {
+                var result = await _kyNangService.TaoCongNgheAsync(dto);
+                return SuccessResponse(result, "Tao cong nghe thanh cong.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
     }
 }

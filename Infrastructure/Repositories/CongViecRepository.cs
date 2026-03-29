@@ -91,6 +91,8 @@ namespace Infrastructure.Repositories
                 .Include(c => c.Assignee)
                 .Include(c => c.YeuCauCongViecs)
                     .ThenInclude(y => y.KyNang)
+                        .ThenInclude(k => k!.CongNghe)
+                            .ThenInclude(cn => cn!.NhomKyNang)
                 .Include(c => c.Dependencies)
                     .ThenInclude(d => d.DependsOnTask)
                 .AsQueryable();
@@ -138,6 +140,8 @@ namespace Infrastructure.Repositories
                 .Where(c => c.DuAnId == projectId)
                 .Include(c => c.YeuCauCongViecs)
                 .ThenInclude(y => y.KyNang)
+                    .ThenInclude(k => k!.CongNghe)
+                        .ThenInclude(cn => cn!.NhomKyNang)
                 .ToListAsync();
         }
     }
