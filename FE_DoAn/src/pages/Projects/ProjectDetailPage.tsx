@@ -155,12 +155,10 @@ const ProjectDetailPage: React.FC = () => {
       return { text: 'Chờ đóng (Xong)', class: 'status-finished-pending' };
     }
 
-    switch (sprint.trangThai) {
-      case TrangThaiEnum.New: return { text: 'Mới', class: 'status-new' };
-      case TrangThaiEnum.InProgress: return { text: 'Đang thực hiện', class: 'status-inprogress' };
-      case TrangThaiEnum.Finished: return { text: 'Đã kết thúc', class: 'status-finished' };
-      default: return { text: 'Không xác định', class: '' };
-    }
+    if (sprint.trangThai === TrangThaiEnum.Finished) return { text: 'Đã kết thúc', class: 'status-finished' };
+    if (sprint.trangThai === TrangThaiEnum.InProgress || sprint.tienDo! > 0) return { text: 'Đang thực hiện', class: 'status-inprogress' };
+    
+    return { text: 'Mới', class: 'status-new' };
   };
 
   const handleAddMember = async () => {

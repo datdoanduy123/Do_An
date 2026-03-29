@@ -12,10 +12,9 @@ import {
   X
 } from 'lucide-react';
 import ProjectService from '../../services/ProjectService';
-import type { DuAnDto, TrangThaiDuAn, TaoDuAnDto } from '../../services/ProjectService';
+import type { DuAnDto, TaoDuAnDto } from '../../services/ProjectService';
 import { TrangThaiDuAn as TrangThaiEnum } from '../../services/ProjectService';
 import UserService from '../../services/UserService';
-import type { NguoiDungDto } from '../../services/UserService';
 import './Projects.css';
 
 /**
@@ -66,14 +65,11 @@ const ProjectsPage: React.FC = () => {
     fetchUser();
   }, []);
 
-  const getStatusLabel = (status: TrangThaiDuAn) => {
-    switch (status) {
-      case TrangThaiEnum.Planning: return { text: 'Mới', class: 'status-new' };
-      case TrangThaiEnum.Active: return { text: 'Đang thực hiện', class: 'status-inprogress' };
-      case TrangThaiEnum.Completed: return { text: 'Hoàn thành', class: 'status-completed' };
-      case TrangThaiEnum.Cancelled: return { text: 'Đã hủy', class: 'status-cancelled' };
-      default: return { text: 'Không xác định', class: '' };
-    }
+  const getStatusLabel = (project: DuAnDto) => {
+    if (project.trangThai === TrangThaiEnum.Completed) return { text: 'Hoàn thành', class: 'status-completed' };
+    if (project.trangThai === TrangThaiEnum.Cancelled) return { text: 'Đã hủy', class: 'status-cancelled' };
+    if (project.trangThai === TrangThaiEnum.Active || project.tienDo! > 0) return { text: 'Đang thực hiện', class: 'status-inprogress' };
+    return { text: 'Mới', class: 'status-new' };
   };
 
   const filteredProjects = projects.filter(p =>
@@ -199,8 +195,8 @@ const ProjectsPage: React.FC = () => {
                     <Calendar size={14} />
                     <span>{new Date(project.ngayBatDau).toLocaleDateString('vi-VN')}</span>
                   </div>
-                  <span className={`status-tag ${getStatusLabel(project.trangThai).class}`}>
-                    {getStatusLabel(project.trangThai).text}
+                  <span className={`status-tag ${getStatusLabel(project).class}`}>
+                    {getStatusLabel(project).text}
                   </span>
                 </div>
               </div>

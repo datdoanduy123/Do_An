@@ -79,13 +79,10 @@ const DashboardPage: React.FC = () => {
   }, [selectedProjectId]);
 
 
-  const getSprintStatusLabel = (status: number) => {
-    switch (status) {
-      case 0: return { text: 'Mới tạo', class: 'bg-slate-100 text-slate-700' };
-      case 1: return { text: 'Đang chạy', class: 'bg-blue-100 text-blue-700' };
-      case 2: return { text: 'Hoàn thành', class: 'bg-emerald-100 text-emerald-700' };
-      default: return { text: 'N/A', class: 'bg-gray-100 text-gray-700' };
-    }
+  const getSprintStatusLabel = (status: number, tienDo: number, hasActiveTasks: boolean) => {
+    if (status === 2) return { text: 'Hoàn thành', class: 'bg-emerald-100 text-emerald-700' };
+    if (status === 1 || tienDo > 0 || hasActiveTasks) return { text: 'Đang chạy', class: 'bg-blue-100 text-blue-700' };
+    return { text: 'Mới tạo', class: 'bg-slate-100 text-slate-700' };
   };
 
   if (loading) {
@@ -140,7 +137,8 @@ const DashboardPage: React.FC = () => {
                {sprints.map(sprint => {
                  // Lấy các task thuộc sprint này
                  const sprintTasks = tasks.filter(t => t.sprintId === sprint.id);
-                 const statusStyle = getSprintStatusLabel(sprint.trangThai!);
+                 const hasActive = sprintTasks.some(t => t.trangThai > 0 && t.trangThai < 3);
+                 const statusStyle = getSprintStatusLabel(sprint.trangThai!, sprint.tienDo || 0, hasActive);
                  
                  return (
                    <div key={sprint.id} className="sprint-lane">
