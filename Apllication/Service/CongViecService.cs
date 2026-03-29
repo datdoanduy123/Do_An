@@ -18,6 +18,7 @@ namespace Apllication.Service
         private readonly ISprintRepository _sprintRepository;
         private readonly IKanbanNotificationService _notificationService;
         private readonly IDuAnRepository _projectRepository;
+        private readonly ITraoLoiRepository _commentRepository;
 
         public CongViecService(
             ICongViecRepository repository, 
@@ -25,7 +26,8 @@ namespace Apllication.Service
             INhatKyCongViecRepository taskLogRepository,
             ISprintRepository sprintRepository,
             IKanbanNotificationService notificationService,
-            IDuAnRepository projectRepository)
+            IDuAnRepository projectRepository,
+            ITraoLoiRepository commentRepository)
         {
             _repository = repository;
             _userRepository = userRepository;
@@ -33,6 +35,7 @@ namespace Apllication.Service
             _sprintRepository = sprintRepository;
             _notificationService = notificationService;
             _projectRepository = projectRepository;
+            _commentRepository = commentRepository;
         }
 
         public async Task<CongViecDto> GetByIdAsync(int id)
@@ -188,7 +191,15 @@ namespace Apllication.Service
                     
                     if (!isTesterOrPM) 
                     {
-                        throw new Exception("Chỉ người quản lý, người giao việc hoặc Tester/QA mới có quyền chuyển trạng thái Hoàn thành.");
+                        // THÔNG MINH: Nếu Developer cố tình kéo vào Done -> Tự động chuyển thành Review
+                        if (currentRole == ProjectRole.Developer)
+                        {
+                            status = TrangThaiCongViec.Review;
+                        }
+                        else
+                        {
+                            throw new Exception("Chỉ người quản lý, người giao việc hoặc Tester/QA mới có quyền chuyển trạng thái Hoàn thành.");
+                        }
                     }
                 }
             }
@@ -212,6 +223,16 @@ namespace Apllication.Service
             {
                 cv.SoLanBiTuChoi++;
                 
+                // Tự động thêm một bình luận hệ thống nếu chưa có lý do cụ thể (Trường hợp kéo thả tay)
+                await _commentRepository.AddAsync(new TraoLoiCongViec
+                {
+                    CongViecId = cv.Id,
+                    NguoiTaoId = updaterId,
+                    NoiDung = "Công việc bị từ chối và yêu cầu làm lại.",
+                    Loai = 1, // Rejection
+                    CreatedAt = DateTime.UtcNow
+                });
+
                 // Cảnh báo nếu bị từ chối nhiều lần (ví dụ >= 3)
                 if (cv.SoLanBiTuChoi >= 3 && cv.AssigneeId.HasValue)
                 {
@@ -461,6 +482,92 @@ namespace Apllication.Service
             return result;
         }
 
+        public async Task<bool> RejectTaskWithReasonAsync(int id, string reason, int rejectorId)
+        {
+            var cv = await _repository.GetByIdAsync(id);
+            if (cv == null) return false;
+
+            if (cv.TrangThai != TrangThaiCongViec.Review)
+                throw new Exception("Chỉ có thể từ chối các công việc đang ở trạng thái Review.");
+
+            // 1. Tăng số lần bị từ chối
+            cv.SoLanBiTuChoi++;
+            cv.TrangThai = TrangThaiCongViec.InProgress;
+
+            // 2. Lưu lý do từ chối vào bảng thảo luận
+            await _commentRepository.AddAsync(new TraoLoiCongViec
+            {
+                CongViecId = id,
+                NguoiTaoId = rejectorId,
+                NoiDung = reason,
+                Loai = 1, // Loại: Từ chối
+                CreatedAt = DateTime.UtcNow
+            });
+
+            // 3. Ghi nhật ký hệ thống
+            await _taskLogRepository.AddAsync(new NhatKyCongViec
+            {
+                CongViecId = id,
+                NguoiCapNhatId = rejectorId,
+                GhiChu = $"Từ chối công việc. Lý do: {reason}",
+                NgayCapNhat = DateTime.UtcNow
+            });
+
+            var result = await _repository.UpdateAsync(cv);
+            if (result)
+            {
+                await _notificationService.NotifyTaskUpdated(cv.DuAnId);
+                if (cv.AssigneeId.HasValue)
+                {
+                    await _notificationService.NotifyPersonal(
+                        cv.AssigneeId.Value, 
+                        "Công việc bị từ chối", 
+                        $"Công việc '{cv.TieuDe}' đã bị từ chối. Lý do: {reason}"
+                    );
+                }
+            }
+            return result;
+        }
+
+        public async Task<TraoLoiDto> AddCommentAsync(int taskId, TaoTraoLoiDto dto, int creatorId)
+        {
+            var traoLoi = new TraoLoiCongViec
+            {
+                CongViecId = taskId,
+                NguoiTaoId = creatorId,
+                NoiDung = dto.NoiDung,
+                Loai = dto.Loai,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var added = await _commentRepository.AddAsync(traoLoi);
+            var user = await _userRepository.LayTheoIdAsync(creatorId);
+
+            return new TraoLoiDto
+            {
+                Id = added.Id,
+                NguoiTaoId = added.NguoiTaoId,
+                TenNguoiTao = user?.FullName,
+                NoiDung = added.NoiDung,
+                Loai = added.Loai,
+                CreatedAt = added.CreatedAt
+            };
+        }
+
+        public async Task<IEnumerable<TraoLoiDto>> GetCommentsAsync(int taskId)
+        {
+            var comments = await _commentRepository.GetByCongViecIdAsync(taskId);
+            return comments.Select(c => new TraoLoiDto
+            {
+                Id = c.Id,
+                NguoiTaoId = c.NguoiTaoId,
+                TenNguoiTao = c.NguoiTao?.FullName,
+                NoiDung = c.NoiDung,
+                Loai = c.Loai,
+                CreatedAt = c.CreatedAt
+            });
+        }
+
         public async Task<IEnumerable<CongViecDto>> GetTasksPendingReviewAsync()
         {
             var query = new Apllication.DTOs.CongViecQueryDto
@@ -503,7 +610,16 @@ namespace Apllication.Service
                 {
                     DependsOnTaskId = d.DependsOnTaskId,
                     DependsOnTaskTitle = d.DependsOnTask?.TieuDe
-                }).ToList() ?? new List<PhuThuocDto>()
+                }).ToList() ?? new List<PhuThuocDto>(),
+                TraoLois = cv.TraoLoiCongViecs?.Select(c => new TraoLoiDto
+                {
+                    Id = c.Id,
+                    NguoiTaoId = c.NguoiTaoId,
+                    TenNguoiTao = c.NguoiTao?.FullName,
+                    NoiDung = c.NoiDung,
+                    Loai = c.Loai,
+                    CreatedAt = c.CreatedAt
+                }).ToList() ?? new List<TraoLoiDto>()
             };
         }
 

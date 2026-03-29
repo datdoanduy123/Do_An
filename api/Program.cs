@@ -41,6 +41,7 @@ builder.Services.AddScoped<INhatKyCongViecRepository, NhatKyCongViecRepository>(
 builder.Services.AddScoped<IQuyTacGiaoViecAIRepository, QuyTacGiaoViecAIRepository>();
 builder.Services.AddScoped<IKyNangRepository, KyNangRepository>();
 builder.Services.AddScoped<IThongBaoRepository, ThongBaoRepository>();
+builder.Services.AddScoped<ITraoLoiRepository, TraoLoiRepository>();
 
 // Dang ky Service
 builder.Services.AddScoped<IDichVuToken, DichVuToken>();

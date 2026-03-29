@@ -767,3 +767,139 @@
   70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
+
+/* Discussion Section Styles */
+.task-discussion-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.task-discussion-section h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.comment-item {
+    background: #f8fafc;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+}
+
+.comment-item.rejection-reason {
+    background: #fff7ed;
+    border-color: #ffedd5;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.comment-header .author {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #334155;
+}
+
+.comment-header .time {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.comment-header .type-tag {
+    background: #ea580c;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.comment-body {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.empty-comments {
+    text-align: center;
+    padding: 2rem;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 2px dashed #e2e8f0;
+}
+
+.comment-input-area {
+    display: flex;
+    gap: 12px;
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    align-items: flex-end;
+}
+
+.comment-input-area textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+}
+
+.comment-input-area button {
+    background: #6366f1;
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.comment-input-area button:hover:not(:disabled) {
+    background: #4f46e5;
+    transform: translateY(-2px);
+}
+
+.comment-input-area button:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+}

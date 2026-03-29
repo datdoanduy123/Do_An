@@ -1,0 +1,104 @@
+/* Rejection Modal Styles */
+.rejection-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.rejection-modal-content {
+    background: white;
+    width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.rejection-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #eef2f6;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.header-icon {
+    font-size: 2rem;
+    margin-right: 1rem;
+}
+
+.header-text h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #ef4444;
+}
+
+.header-text p {
+    margin: 0.25rem 0 0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.rejection-modal-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.rejection-modal-body label {
+    font-weight: 500;
+    color: #1e293b;
+    margin-bottom: 1rem;
+}
+
+.rejection-modal-body textarea {
+    min-height: 150px;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    resize: vertical;
+}
+
+.btn-confirm {
+    background: #ef4444; /* Rojo */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.modal-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}

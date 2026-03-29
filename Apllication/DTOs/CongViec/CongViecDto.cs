@@ -35,6 +35,7 @@ namespace Apllication.DTOs.CongViec
         public int SoLanBiTuChoi { get; set; }
         public int? CreatedBy { get; set; }
         public List<PhuThuocDto> Dependencies { get; set; } = new List<PhuThuocDto>();
+        public List<TraoLoiDto> TraoLois { get; set; } = new();
     }
 
     public class TaoCongViecDto

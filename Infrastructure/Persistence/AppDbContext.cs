@@ -30,6 +30,7 @@ namespace Infrastructure.Persistence
         public DbSet<YeuCauCongViec> YeuCauCongViecs { get; set; }
         public DbSet<QuyTacGiaoViecAI> QuyTacGiaoViecAIs { get; set; }
         public DbSet<ThongBao> ThongBaos { get; set; }
+        public DbSet<TraoLoiCongViec> TraoLoiCongViecs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

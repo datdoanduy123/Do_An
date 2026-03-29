@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260329092427_UpdateProjectRoleToEnum1")]
+    partial class UpdateProjectRoleToEnum1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -534,9 +537,6 @@ namespace Infrastructure.Migrations
                     b.Property<int>("CongViecId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("CongViecId1")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -548,14 +548,11 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("NoiDung")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CongViecId");
-
-                    b.HasIndex("CongViecId1");
 
                     b.HasIndex("NguoiTaoId");
 
@@ -878,14 +875,10 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.CongViec", null)
-                        .WithMany("TraoLoiCongViecs")
-                        .HasForeignKey("CongViecId1");
-
                     b.HasOne("Domain.Entities.User", "NguoiTao")
                         .WithMany()
                         .HasForeignKey("NguoiTaoId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("CongViec");
@@ -934,8 +927,6 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.CongViec", b =>
                 {
                     b.Navigation("Dependencies");
-
-                    b.Navigation("TraoLoiCongViecs");
 
                     b.Navigation("YeuCauCongViecs");
                 });
