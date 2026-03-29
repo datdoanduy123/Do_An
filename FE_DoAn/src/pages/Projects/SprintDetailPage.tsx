@@ -301,10 +301,28 @@ const SprintDetailPage: React.FC = () => {
     return normalized === 'quanly' || normalized === 'admin' || normalized === 'quảnlý';
   });
 
+  const userProjectMember = projectMembers.find(m => m.id === currentUser?.id);
+  const isProjectPM = userProjectMember?.vaiTro === ProjectRole.PM;
+
   const isSprintActive = !!sprint && (
     sprint.trangThai === 1 ||
     (sprint.trangThai === 0 && new Date() >= new Date(sprint.ngayBatDau) && new Date() <= new Date(sprint.ngayKetThuc))
   );
+
+  // Quyền quản lý Task (Giao việc, chỉnh sửa)
+  // Cho phép Admin, PM dự án, hoặc người tạo Task
+  // Và Sprint phải ở trạng thái New (0) hoặc InProgress (1)
+  const canManageTask = (task: CongViecDto) => {
+    if (!sprint || sprint.trangThai === 2) return false; // Không cho sửa khi đã hoàn thành
+    
+    // Admin hoặc PM dự án có quyền quản lý mọi task
+    if (isAdmin || isProjectPM) return true;
+    
+    // Người tạo task có quyền quản lý task của mình
+    if (currentUser?.id === task.createdBy) return true;
+
+    return false;
+  };
 
   const handleUpdateSprintStatus = async (status: number) => {
     if (!sprint) return;
@@ -499,7 +517,7 @@ const SprintDetailPage: React.FC = () => {
 
             <div className="task-list">
               {tasks.filter(t => t.trangThai === col.id).map(task => (
-                <div key={task.id} className="task-card">
+                <div key={task.id} className="task-card" onClick={() => handleEditClick(task)}>
                   <div className="task-card-header">
                     <span className={`priority-tag ${getPriorityLabel(task.doUuTien).class}`}>
                       {getPriorityLabel(task.doUuTien).text}
@@ -512,7 +530,7 @@ const SprintDetailPage: React.FC = () => {
                     )}
                     <div className="task-card-actions">
                       <span className="task-id">#{task.id}</span>
-                      {isAdmin && (
+                      {canManageTask(task) && (
                         <div className="more-menu-container">
                           <button 
                             className="more-action-btn"
@@ -570,11 +588,9 @@ const SprintDetailPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Quick Approval Actions for Managers & Creators */}
+                  {/* Quick Approval Actions for Managers & Testers */}
                   {col.id === StatusEnum.Review && (
-                    isAdmin || 
-                    currentUser?.id === task.createdBy || 
-                    [ProjectRole.PM, ProjectRole.Tester, ProjectRole.QA].includes(projectMembers.find(m => m.id === currentUser?.id)?.vaiTro as any)
+                    isAdmin || isProjectPM || [ProjectRole.Tester, ProjectRole.QA].includes(userProjectMember?.vaiTro as any)
                   ) && isSprintActive && (
                     <div className="task-approval-actions">
                       <button
@@ -599,9 +615,9 @@ const SprintDetailPage: React.FC = () => {
                   <div className="task-card-footer">
                     <div className="assignee-wrapper">
                       <div
-                        className={`assignee ${isAdmin && isSprintActive ? 'editable' : ''}`}
+                        className={`assignee ${canManageTask(task) ? 'editable' : ''}`}
                         onClick={() => {
-                          if (isAdmin && isSprintActive) {
+                          if (canManageTask(task)) {
                             setActiveDropdownTaskId(activeDropdownTaskId === task.id ? null : task.id);
                           }
                         }}
@@ -749,8 +765,10 @@ const SprintDetailPage: React.FC = () => {
                 </div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>Hủy</button>
-                <button type="submit" className="btn-save">Lưu Thay đổi</button>
+                <button type="button" className="btn-cancel" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>Đóng</button>
+                {editingTask && canManageTask(editingTask) && (
+                  <button type="submit" className="btn-save">Lưu Thay đổi</button>
+                )}
               </div>
             </form>
 
