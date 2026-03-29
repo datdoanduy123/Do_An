@@ -229,7 +229,7 @@ namespace Apllication.Service
                                     || depStr.Trim() == "0" 
                                     || depStr.Trim() == "-") continue;
 
-                                CongViec predecessor = null;
+                                CongViec? predecessor = null;
                                 string sttOnly = new string(depStr.Where(char.IsDigit).ToArray());
 
                                 if (!string.IsNullOrEmpty(sttOnly) && (depStr.ToLower().Contains("task") || int.TryParse(depStr.Trim(), out _)))

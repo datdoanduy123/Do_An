@@ -5,6 +5,7 @@ import PermissionsPage from './pages/Management/PermissionsPage';
 import RolesPage from './pages/Management/RolesPage';
 import UsersPage from './pages/Management/UsersPage';
 import SkillsPage from './pages/Management/SkillsPage';
+import AiRulesPage from './pages/Management/AiRulesPage';
 import ProjectsPage from './pages/Projects/ProjectsPage';
 import ProjectDetailPage from './pages/Projects/ProjectDetailPage';
 import SprintDetailPage from './pages/Projects/SprintDetailPage';
@@ -52,6 +53,7 @@ function App() {
         <Route path="/management/roles" element={<ProtectedRoute requiredRole="quanly"><MainLayout><RolesPage /></MainLayout></ProtectedRoute>} />
         <Route path="/management/permissions" element={<ProtectedRoute requiredRole="quanly"><MainLayout><PermissionsPage /></MainLayout></ProtectedRoute>} />
         <Route path="/management/skills" element={<ProtectedRoute requiredRole="quanly"><MainLayout><SkillsPage /></MainLayout></ProtectedRoute>} />
+        <Route path="/management/ai-rules" element={<ProtectedRoute requiredRole="quanly"><MainLayout><AiRulesPage /></MainLayout></ProtectedRoute>} />
         <Route path="/management/permission-groups" element={<ProtectedRoute requiredRole="quanly"><MainLayout><div>Trang Quản lý Nhóm quyền</div></MainLayout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><MainLayout><div>Trang Cấu hình</div></MainLayout></ProtectedRoute>} />
       </Routes>

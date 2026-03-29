@@ -650,43 +650,140 @@
   color: white;
 }
 
-.add-member-overlay {
-  background: #fff;
-  padding: 20px;
+/* Add Member Panel Styles */
+.add-member-panel {
+  background: #ffffff;
+  padding: 24px;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   display: flex;
-  gap: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
   animation: slideDown 0.3s ease-out;
+  margin-bottom: 24px;
 }
 
-.user-select {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
+.add-member-panel .panel-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+}
+
+.add-member-panel .panel-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+
+.add-member-panel .panel-header p {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.add-member-panel .panel-body {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.input-group label .required {
+  color: #ef4444;
+}
+
+.user-select-group {
+  flex: 2;
+}
+
+.role-select-group {
+  flex: 1.5;
+}
+
+.modern-select {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
   outline: none;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: #1e293b;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  appearance: auto;
 }
 
-.confirm-add-btn {
-  background: #16a34a;
+.modern-select:focus,
+.modern-select:hover {
+  background-color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.panel-actions {
+  display: flex;
+  gap: 12px;
+  /* Push to right or bottom depending on layout */
+}
+
+.btn-cancel-modern {
+  background: white;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-modern:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
+
+.btn-submit-modern {
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   border: none;
-  padding: 0 20px;
-  border-radius: 10px;
+  padding: 12px 24px;
+  border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  transition: all 0.3s;
 }
 
-.cancel-add-btn {
-  background: #f8fafc;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-  padding: 0 20px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
+.btn-submit-modern:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+}
+
+.btn-submit-modern:disabled {
+  background: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .add-member-panel .panel-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .member-grid {

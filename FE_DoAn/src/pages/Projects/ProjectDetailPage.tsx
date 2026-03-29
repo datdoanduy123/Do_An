@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Calendar, 
-  Target, 
   Clock, 
   MoreVertical, 
   Plus,
@@ -24,7 +23,7 @@ import {
 } from 'lucide-react';
 
 import ProjectService, { ProjectRole } from '../../services/ProjectService';
-import type { DuAnDto, ThanhVienDuAnDto } from '../../services/ProjectService';
+import type { DuAnDto } from '../../services/ProjectService';
 import UserService from '../../services/UserService';
 import SprintService from '../../services/SprintService';
 import type { SprintDto } from '../../services/SprintService';
@@ -432,36 +431,54 @@ const ProjectDetailPage: React.FC = () => {
         </div>
 
         {showAddMember && (
-          <div className="add-member-overlay">
-            <select 
-              className="user-select" 
-              value={selectedUserId} 
-              onChange={(e) => setSelectedUserId(e.target.value)}
-            >
-              <option value="">Chọn nhân viên...</option>
-              {allAvailableUsers
-                .filter(u => !members.some(m => m.id === u.id))
-                .map(u => (
-                  <option key={u.id} value={u.id}>{u.hoTen} ({u.tenDangNhap})</option>
-                ))
-              }
-            </select>
-            <select
-              className="role-select"
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(Number(e.target.value) as ProjectRole)}
-            >
-              <option value={ProjectRole.Member}>Member</option>
-              <option value={ProjectRole.Developer}>Developer</option>
-              <option value={ProjectRole.Tester}>Tester</option>
-              <option value={ProjectRole.QA}>QA</option>
-              <option value={ProjectRole.PM}>PM</option>
-              <option value={ProjectRole.BA}>BA</option>
-            </select>
-            <button className="confirm-add-btn" onClick={handleAddMember} disabled={docLoading}>
-              {docLoading ? '...' : 'Xác nhận'}
-            </button>
-            <button className="cancel-add-btn" onClick={() => setShowAddMember(false)}>Hủy</button>
+          <div className="add-member-panel fade-in">
+            <div className="panel-header">
+              <h3>Chỉ định thành viên mới vào dự án</h3>
+              <p>Chọn nhân sự từ hệ thống và cấp quyền tương ứng để họ truy cập dự án.</p>
+            </div>
+            <div className="panel-body">
+              <div className="input-group user-select-group">
+                <label>Nhân viên tham gia <span className="required">*</span></label>
+                <select 
+                  className="modern-select" 
+                  value={selectedUserId} 
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                >
+                  <option value="">-- Vui lòng chọn nhân viên --</option>
+                  {allAvailableUsers
+                    .filter(u => !members.some(m => m.id === u.id))
+                    .map(u => (
+                      <option key={u.id} value={u.id}>{u.hoTen} ({u.tenDangNhap})</option>
+                    ))
+                  }
+                </select>
+              </div>
+              <div className="input-group role-select-group">
+                <label>Vai trò đảm nhiệm</label>
+                <select
+                  className="modern-select"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(Number(e.target.value) as ProjectRole)}
+                >
+                  <option value={ProjectRole.Member}>Member (Thành viên mảng)</option>
+                  <option value={ProjectRole.Developer}>Lập trình viên (Dev)</option>
+                  <option value={ProjectRole.Tester}>Kiểm thử viên (Tester)</option>
+                  <option value={ProjectRole.QA}>Đảm bảo chất lượng (QA)</option>
+                  <option value={ProjectRole.BA}>Nhà phân tích (BA)</option>
+                  <option value={ProjectRole.PM}>Quản lý dự án (PM)</option>
+                </select>
+              </div>
+              <div className="panel-actions">
+                <button className="btn-cancel-modern" onClick={() => setShowAddMember(false)}>Hủy</button>
+                <button 
+                  className="btn-submit-modern" 
+                  onClick={handleAddMember} 
+                  disabled={docLoading || !selectedUserId}
+                >
+                  {docLoading ? 'Đang thêm...' : 'Xác nhận Thêm'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

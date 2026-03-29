@@ -17,6 +17,22 @@ namespace Infrastructure.Repositories
             _context = context;
         }
 
+        public async Task<IEnumerable<QuyTacGiaoViecAI>> GetAllAsync()
+        {
+            return await _context.QuyTacGiaoViecAIs.ToListAsync();
+        }
+
+        public async Task<QuyTacGiaoViecAI?> GetByIdAsync(int id)
+        {
+            return await _context.QuyTacGiaoViecAIs.FindAsync(id);
+        }
+
+        public async Task<bool> UpdateAsync(QuyTacGiaoViecAI rule)
+        {
+            _context.QuyTacGiaoViecAIs.Update(rule);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
         public async Task<IEnumerable<QuyTacGiaoViecAI>> GetAllActiveRulesAsync()
         {
             return await _context.QuyTacGiaoViecAIs

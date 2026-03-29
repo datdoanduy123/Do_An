@@ -61,6 +61,7 @@ builder.Services.AddScoped<IKyNangService, KyNangService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IKanbanNotificationService, KanbanNotificationService>();
 builder.Services.AddScoped<IThongBaoService, ThongBaoService>();
+builder.Services.AddScoped<IQuyTacGiaoViecAIService, QuyTacGiaoViecAIService>();
 builder.Services.AddSignalR();
 
 // Dang ky Phan quyen Attribute

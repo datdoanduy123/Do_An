@@ -14,7 +14,8 @@ import {
   UserCheck,
   Key,
   Layers,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react';
 import AuthService from '../services/AuthService';
 import UserService from '../services/UserService';
@@ -185,6 +186,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         { path: '/management/permissions', label: 'Quyền', icon: <Key size={18} /> },
         { path: '/management/permission-groups', label: 'Nhóm quyền', icon: <Layers size={18} /> },
         { path: '/management/skills', label: 'Kỹ năng', icon: <Search size={18} /> },
+        { path: '/management/ai-rules', label: 'Quy tắc AI', icon: <Sparkles size={18} /> },
       ]
     });
   }
