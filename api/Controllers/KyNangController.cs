@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using api.Attributes;
 using Apllication.DTOs;
 using Apllication.IService;
@@ -7,6 +8,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class KyNangController : BaseController
     {
         private readonly IKyNangService _kyNangService;
@@ -16,6 +18,7 @@ namespace api.Controllers
             _kyNangService = kyNangService;
         }
 
+        [QuyenHan("SKILL_VIEW")]
         [HttpGet("danh-sach")]
         public async Task<IActionResult> LayDanhSach([FromQuery] KyNangQueryDto query)
         {
@@ -30,6 +33,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_VIEW")]
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
@@ -45,6 +49,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_CREATE")]
         [HttpPost("tao-ky-nang")]
         public async Task<IActionResult> TaoKyNang(TaoKyNangDto dto)
         {
@@ -59,6 +64,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_UPDATE")]
         [HttpPut("{id}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatKyNangDto dto)
         {
@@ -74,6 +80,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Xoa(int id)
         {

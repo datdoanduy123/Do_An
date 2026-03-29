@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using api.Attributes;
 using Apllication.DTOs.Sprint;
 using Apllication.IService;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +10,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class SprintController : BaseController
     {
         private readonly ISprintService _sprintService;
@@ -17,6 +20,7 @@ namespace api.Controllers
             _sprintService = sprintService;
         }
 
+        [QuyenHan("SPRINT_VIEW")]
         [HttpGet("du-an/{projectId}")]
         public async Task<IActionResult> LayTheoDuAn(int projectId)
         {
@@ -31,6 +35,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SPRINT_VIEW")]
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
@@ -46,6 +51,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SPRINT_CREATE")]
         [HttpPost("tao-sprint")]
         public async Task<IActionResult> TaoSprint([FromBody] TaoSprintDto dto)
         {
@@ -60,6 +66,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SPRINT_UPDATE")]
         [HttpPut("{id}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatSprintDto dto)
         {
@@ -75,6 +82,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SPRINT_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Xoa(int id)
         {

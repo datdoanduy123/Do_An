@@ -184,7 +184,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         { path: '/management/permissions', label: 'Quyền', icon: <Key size={18} /> },
         { path: '/management/permission-groups', label: 'Nhóm quyền', icon: <Layers size={18} /> },
         { path: '/management/skills', label: 'Kỹ năng', icon: <Search size={18} /> },
-        { path: '/management/task-approval', label: 'Duyệt công việc', icon: <CheckCircle2 size={18} /> },
       ]
     });
   }

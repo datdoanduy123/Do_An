@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using api.Attributes;
 using Apllication.DTOs.DuAn;
 using Apllication.IService;
 using Domain.Entities;
@@ -9,6 +11,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class DuAnController : BaseController
     {
         private readonly IDuAnService _duAnService;
@@ -18,6 +21,7 @@ namespace api.Controllers
             _duAnService = duAnService;
         }
 
+        [QuyenHan("PROJECT_VIEW")]
         [HttpGet("danh-sach")]
         public async Task<IActionResult> LayDanhSach()
         {
@@ -32,6 +36,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PROJECT_VIEW")]
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
@@ -47,6 +52,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PROJECT_CREATE")]
         [HttpPost("tao-du-an")]
         public async Task<IActionResult> TaoDuAn([FromBody] TaoDuAnDto dto)
         {
@@ -61,6 +67,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PROJECT_UPDATE")]
         [HttpPut("{id}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatDuAnDto dto)
         {
@@ -76,6 +83,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PROJECT_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Xoa(int id)
         {
@@ -91,6 +99,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PROJECT_VIEW")]
         [HttpGet("{id}/members")]
         public async Task<IActionResult> LayThanhVien(int id)
         {
@@ -105,6 +114,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PROJECT_UPDATE")]
         [HttpPost("{id}/members/{userId}")]
         public async Task<IActionResult> ThemThanhVien(int id, int userId)
         {
@@ -120,6 +130,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PROJECT_UPDATE")]
         [HttpDelete("{id}/members/{userId}")]
         public async Task<IActionResult> XoaThanhVien(int id, int userId)
         {
@@ -135,6 +146,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PROJECT_VIEW")]
         [HttpGet("{id}/skill-coverage")]
         public async Task<IActionResult> LayDoPhuKyNang(int id)
         {

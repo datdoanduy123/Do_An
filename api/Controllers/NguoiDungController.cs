@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using api.Attributes;
 using Apllication.DTOs;
 using Apllication.IService;
@@ -7,6 +8,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class NguoiDungController : BaseController
     {
         private readonly INguoiDungService _nguoiDungService;
@@ -31,7 +33,7 @@ namespace api.Controllers
             }
         }
 
-        // [QuyenHan("USER_VIEW")] // Gia su can quyen de xem
+        [QuyenHan("USER_VIEW")]
         [HttpGet("danh-sach")]
         public async Task<IActionResult> LayDanhSach([FromQuery] NguoiDungQueryDto query)
         {
@@ -61,7 +63,7 @@ namespace api.Controllers
             }
         }
 
-        [QuyenHan("XEM_USER")]
+        [QuyenHan("USER_VIEW")]
         [HttpGet("{id:int}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
@@ -77,7 +79,7 @@ namespace api.Controllers
             }
         }
 
-        // [QuyenHan("USER_UPDATE")]
+        [QuyenHan("USER_UPDATE")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatNguoiDungDto dto)
         {
@@ -93,7 +95,7 @@ namespace api.Controllers
             }
         }
 
-        // [QuyenHan("USER_DELETE")]
+        [QuyenHan("USER_DELETE")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Xoa(int id)
         {
@@ -109,6 +111,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("USER_UPDATE")]
         [HttpPost("gan-kynang")]
         public async Task<IActionResult> GanKyNang([FromBody] GanKyNangDto dto)
         {
@@ -124,6 +127,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("USER_UPDATE")]
         [HttpPost("go-kynang")]
         public async Task<IActionResult> GoKyNang([FromBody] GanKyNangDto dto)
         {

@@ -10,7 +10,6 @@ import ProjectDetailPage from './pages/Projects/ProjectDetailPage';
 import SprintDetailPage from './pages/Projects/SprintDetailPage';
 import ProfilePage from './pages/Management/ProfilePage';
 import MyTasksPage from './pages/Tasks/MyTasksPage';
-import TaskApprovalPage from './pages/Tasks/TaskApprovalPage';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -49,7 +48,6 @@ function App() {
         <Route path="/members" element={<ProtectedRoute><MainLayout><div>Trang Thành viên</div></MainLayout></ProtectedRoute>} />
         
         {/* Các trang quản trị yêu cầu quyền Quản lý */}
-        <Route path="/management/task-approval" element={<ProtectedRoute requiredRole="quanly"><MainLayout><TaskApprovalPage /></MainLayout></ProtectedRoute>} />
         <Route path="/management/users" element={<ProtectedRoute requiredRole="quanly"><MainLayout><UsersPage /></MainLayout></ProtectedRoute>} />
         <Route path="/management/roles" element={<ProtectedRoute requiredRole="quanly"><MainLayout><RolesPage /></MainLayout></ProtectedRoute>} />
         <Route path="/management/permissions" element={<ProtectedRoute requiredRole="quanly"><MainLayout><PermissionsPage /></MainLayout></ProtectedRoute>} />

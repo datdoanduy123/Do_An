@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using api.Attributes;
 using Apllication.IService;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -7,6 +9,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class NhatKyCongViecController : BaseController
     {
         private readonly INhatKyCongViecService _taskLogService;
@@ -16,6 +19,7 @@ namespace api.Controllers
             _taskLogService = taskLogService;
         }
 
+        [QuyenHan("TASK_VIEW")]
         [HttpGet("cong-viec/{taskId}")]
         public async Task<IActionResult> GetByTask(int taskId)
         {

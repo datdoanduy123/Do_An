@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using api.Attributes;
 using Apllication.IService;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +11,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class TaiLieuDuAnController : BaseController
     {
         private readonly ITaiLieuDuAnService _taiLieuService;
@@ -18,6 +21,7 @@ namespace api.Controllers
             _taiLieuService = taiLieuService;
         }
 
+        [QuyenHan("DOC_UPLOAD")]
         [HttpPost("upload/{duAnId}")]
         public async Task<IActionResult> Upload(int duAnId, IFormFile file)
         {
@@ -40,6 +44,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("DOC_VIEW")]
         [HttpGet("du-an/{projectId}")]
         public async Task<IActionResult> LayTheoDuAn(int projectId)
         {
@@ -54,6 +59,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("DOC_UPLOAD")]
         [HttpPost("{id}/xu-ly-ai")]
         public async Task<IActionResult> XuLyAi(int id)
         {

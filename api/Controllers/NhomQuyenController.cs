@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using api.Attributes;
 using Apllication.DTOs;
 using Apllication.IService;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +8,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class NhomQuyenController : BaseController
     {
         private readonly INhomQuyenService _nhomQuyenService;
@@ -15,6 +18,7 @@ namespace api.Controllers
             _nhomQuyenService = nhomQuyenService;
         }
 
+        [QuyenHan("PERMGROUP_CREATE")]
         [HttpPost("tao-nhomquyen")]
         public async Task<IActionResult> TaoNhomQuyen([FromBody] TaoNhomQuyenDto taoNhomDto)
         {
@@ -29,6 +33,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PERMGROUP_VIEW")]
         [HttpGet("danh-sach")]
         public async Task<IActionResult> LayDanhSach([FromQuery] NhomQuyenQueryDto query)
         {
@@ -43,6 +48,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PERMGROUP_VIEW")]
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
@@ -58,6 +64,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PERMGROUP_UPDATE")]
         [HttpPut("{id}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatNhomQuyenDto dto)
         {
@@ -73,6 +80,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PERMGROUP_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Xoa(int id)
         {

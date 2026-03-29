@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using api.Attributes;
 using Apllication.DTOs.CongViec;
 using Apllication.IService;
 using Domain.Enums;
@@ -9,6 +11,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class CongViecController : BaseController
     {
         private readonly ICongViecService _congViecService;
@@ -20,6 +23,7 @@ namespace api.Controllers
             _aiService = aiService;
         }
 
+        [QuyenHan("TASK_VIEW")]
         [HttpGet("du-an/{projectId}")]
         public async Task<IActionResult> LayTheoDuAn(int projectId)
         {
@@ -34,6 +38,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_VIEW")]
         [HttpGet("my-tasks")]
         public async Task<IActionResult> LayCongViecCuaToi()
         {
@@ -48,6 +53,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_VIEW")]
         [HttpGet("pending-reviews")]
         public async Task<IActionResult> LayCongViecChoDuyet()
         {
@@ -62,6 +68,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_VIEW")]
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
@@ -77,6 +84,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_CREATE")]
         [HttpPost("tao-cong-viec")]
         public async Task<IActionResult> TaoCongViec([FromBody] TaoCongViecDto dto)
         {
@@ -91,6 +99,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_UPDATE")]
         [HttpPut("{id}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatCongViecDto dto)
         {
@@ -105,6 +114,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Xoa(int id)
         {
@@ -120,6 +130,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_UPDATE")]
         [HttpPatch("{id}/cap-nhat-trang-thai")]
         public async Task<IActionResult> CapNhatTrangThai(int id, [FromQuery] TrangThaiCongViec status)
         {
@@ -135,6 +146,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_UPDATE")]
         [HttpPut("{id}/cap-nhat-tien-do")]
         public async Task<IActionResult> CapNhatTienDo(int id, [FromBody] CapNhatTienDoDto dto)
         {
@@ -153,6 +165,7 @@ namespace api.Controllers
         /// <summary>
         /// API thực hiện giao việc thủ công cho nhân viên.
         /// </summary>
+        [QuyenHan("TASK_ASSIGN")]
         [HttpPost("giao-viec-thu-cong")]
         public async Task<IActionResult> GiaoViecThuCong([FromBody] GiaoViecThuCongDto dto)
         {
@@ -168,6 +181,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_ASSIGN")]
         [HttpGet("{id}/goi-y-ai")]
         public async Task<IActionResult> GetGoiYAI(int id)
         {
@@ -182,6 +196,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("TASK_ASSIGN")]
         [HttpPost("auto-assign-project/{projectId}")]
         public async Task<IActionResult> AutoAssignProject(int projectId)
         {

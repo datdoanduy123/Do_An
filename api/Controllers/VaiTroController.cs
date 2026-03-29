@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using api.Attributes;
 using Apllication.DTOs;
 using Apllication.IService;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +8,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class VaiTroController : BaseController
     {
         private readonly IVaiTroService _vaiTroService;
@@ -15,6 +18,7 @@ namespace api.Controllers
             _vaiTroService = vaiTroService;
         }
 
+        [QuyenHan("ROLE_CREATE")]
         [HttpPost("tao-vaitro")]
         public async Task<IActionResult> TaoVaiTro([FromBody] TaoVaiTroDto taoVaiTroDto)
         {
@@ -29,6 +33,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_ASSIGN")]
         [HttpPost("gan-vaitro")]
         public async Task<IActionResult> GanVaiTro([FromBody] GanVaiTroDto ganVaiTroDto)
         {
@@ -44,6 +49,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_UPDATE")]
         [HttpPost("gan-quyen-cho-vaitro")]
         public async Task<IActionResult> GanQuyenChoVaiTro([FromBody] GanQuyenChoVaiTroDto ganQuyenDto)
         {
@@ -59,6 +65,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_VIEW")]
         [HttpGet("danh-sach")]
         public async Task<IActionResult> LayDanhSach([FromQuery] VaiTroQueryDto query)
         {
@@ -73,6 +80,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_VIEW")]
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
@@ -88,6 +96,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_UPDATE")]
         [HttpPut("{id}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatVaiTroDto dto)
         {
@@ -103,6 +112,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Xoa(int id)
         {
@@ -118,6 +128,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_ASSIGN")]
         [HttpPost("go-vaitro")]
         public async Task<IActionResult> GoVaiTro([FromBody] GanVaiTroDto dto)
         {
@@ -133,6 +144,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_UPDATE")]
         [HttpPost("go-quyen")]
         public async Task<IActionResult> GoQuyen([FromBody] GanQuyenChoVaiTroDto dto)
         {
@@ -148,6 +160,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("ROLE_VIEW")]
         [HttpGet("{id}/quyens")]
         public async Task<IActionResult> LayDanhSachQuyen(int id)
         {

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using api.Attributes;
 using Apllication.DTOs;
 using Apllication.IService;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +8,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class QuyenController : BaseController
     {
         private readonly IQuyenService _quyenService;
@@ -15,6 +18,7 @@ namespace api.Controllers
             _quyenService = quyenService;
         }
 
+        [QuyenHan("PERM_CREATE")]
         [HttpPost("tao-quyen")]
         public async Task<IActionResult> TaoQuyen([FromBody] TaoQuyenDto taoQuyenDto)
         {
@@ -29,6 +33,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PERM_VIEW")]
         [HttpGet("danh-sach")]
         public async Task<IActionResult> LayDanhSach([FromQuery] QuyenQueryDto query)
         {
@@ -43,6 +48,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PERM_VIEW")]
         [HttpGet("{id}")]
         public async Task<IActionResult> ChiTiet(int id)
         {
@@ -58,6 +64,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PERM_UPDATE")]
         [HttpPut("{id}")]
         public async Task<IActionResult> CapNhat(int id, [FromBody] CapNhatQuyenDto dto)
         {
@@ -73,6 +80,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("PERM_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Xoa(int id)
         {
