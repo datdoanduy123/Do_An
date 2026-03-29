@@ -19,6 +19,7 @@ export interface NguoiDungDto {
   email: string;
   dienThoai: string;
   vaiTros: string[];
+  quyens?: string[];
   kyNangs: UserSkillDto[];
   createdAt: string;
 }

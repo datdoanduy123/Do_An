@@ -27,8 +27,9 @@ namespace Apllication.Service
                 return null;
             }
 
-            // Lay danh sach vai tro cua nguoi dung
+            // Lay danh sach vai tro va quyen cua nguoi dung
             var vaiTros = await _nguoiDungRepo.LayDanhSachMaVaiTroCuaNguoiDungAsync(nguoiDung.Id);
+            var quyens = await _nguoiDungRepo.LayDanhSachQuyenCuaNguoiDungAsync(nguoiDung.Id);
 
             // Tao Token JWT
             var token = _tokenService.TaoToken(nguoiDung, vaiTros);
@@ -43,7 +44,8 @@ namespace Apllication.Service
                     Email = nguoiDung.Email,
                     DienThoai = nguoiDung.DienThoai,
                     CreatedAt = nguoiDung.CreatedAt,
-                    VaiTros = vaiTros
+                    VaiTros = vaiTros,
+                    Quyens = quyens
                 },
                 Token = token
             };

@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Briefcase, 
-  Users, 
-  Settings, 
-  LogOut, 
-  Bell, 
+import {
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  Settings,
+  LogOut,
+  Bell,
   Search,
   Menu,
   ShieldCheck,
@@ -65,10 +65,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const initSignalR = async (userId: number) => {
       await SignalRService.startConnection();
       await SignalRService.joinUser(userId);
-      
+
       // Lắng nghe sự kiện cập nhật bảng Kanban (toàn dự án)
       SignalRService.on('TaskUpdated', () => {
-         // Cập nhật ngầm (silent) nếu đang ở trang dự án
+        // Cập nhật ngầm (silent) nếu đang ở trang dự án
       });
 
       // Lắng nghe sự kiện thông báo cá nhân (đẩy vào Bell Icon)
@@ -132,7 +132,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const markAsRead = async (notifId: number) => {
     try {
       await NotificationService.markRead(notifId);
-      setNotifications((prev: Notification[]) => prev.map(n => 
+      setNotifications((prev: Notification[]) => prev.map(n =>
         n.id === notifId ? { ...n, isRead: true } : n
       ));
       setUnreadCount((prev: number) => Math.max(0, prev - 1));
@@ -151,12 +151,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   const menuItems: MenuItem[] = [];
-  
+
   // Chỉ hiển thị menu Quản lý nếu là Quản lý hoặc Admin
   const checkIsAdmin = (roles: string[]) => {
+    if (!roles || !Array.isArray(roles)) return false;
     return roles.some(r => {
-      const normalized = r.toLowerCase().replace(/\s+/g, '');
-      return normalized === 'quanly' || normalized === 'admin' || normalized === 'quảnlý';
+      const normalized = String(r).toUpperCase().trim().replace(/\s+/g, '');
+      return normalized === 'QUANLY' || normalized === 'ADMIN' || normalized === 'QUẢNLÝ' || normalized === 'QUAN_LY';
     });
   };
 
@@ -173,10 +174,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { path: '/my-tasks', icon: <CheckCircle2 size={20} />, label: 'Công việc của tôi' },
     { path: '/members', icon: <Users size={20} />, label: 'Thành viên' }
   );
-  
+
   if (isAdmin) {
-    menuItems.push({ 
-      label: 'Quản lý', 
+    menuItems.push({
+      label: 'Quản lý',
       icon: <ShieldCheck size={20} />,
       subItems: [
         { path: '/management/users', label: 'Người dùng', icon: <Users size={18} /> },
@@ -213,21 +214,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             if (hasSubItems) {
               return (
                 <div key={idx} className="nested-menu-container">
-                  <div 
-                    className={`nav-item clickable ${isOpen ? 'expanded' : ''}`} 
+                  <div
+                    className={`nav-item clickable ${isOpen ? 'expanded' : ''}`}
                     onClick={() => toggleSubMenu('management')}
                   >
                     {item.icon}
                     <span className="nav-label">{item.label}</span>
                     <ChevronDown size={16} className={`chevron-icon ${isOpen ? 'rotate' : ''}`} />
                   </div>
-                  
+
                   {isOpen && isSidebarOpen && (
                     <div className="sub-menu">
                       {item.subItems?.map((sub, sIdx) => (
-                        <Link 
-                          key={sIdx} 
-                          to={sub.path} 
+                        <Link
+                          key={sIdx}
+                          to={sub.path}
                           className={`sub-nav-item ${location.pathname === sub.path ? 'active' : ''}`}
                         >
                           {sub.icon}
@@ -241,9 +242,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             }
 
             return (
-              <Link 
-                key={idx} 
-                to={item.path!} 
+              <Link
+                key={idx}
+                to={item.path!}
                 className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
               >
                 {item.icon}
@@ -275,7 +276,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
           <div className="header-right">
             <div className="notification-wrapper">
-              <button 
+              <button
                 className="icon-btn notification-btn"
                 onClick={() => {
                   setShowNotifications(!showNotifications);
@@ -286,41 +287,41 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 {unreadCount > 0 && <div className="notification-badge-count">{unreadCount}</div>}
               </button>
 
-                {showNotifications && (
-                  <div className="notification-dropdown">
-                    <div className="dropdown-header">
-                      <h3>Thông báo</h3>
-                      <div className="header-actions">
-                        <button className="text-btn" onClick={markAllAsRead}>Đã đọc hết</button>
-                        <button className="text-btn" onClick={clearAllNotifications}>Xóa tất cả</button>
-                      </div>
-                    </div>
-                    <div className="dropdown-content">
-                      {notifications.length > 0 ? (
-                        notifications.map((notif) => (
-                          <div 
-                            key={notif.id} 
-                            className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}
-                            onClick={() => !notif.isRead && markAsRead(notif.id)}
-                          >
-                            <div className="notif-icon"><Bell size={16} /></div>
-                            <div className="notif-info">
-                              <p className="notif-message">{notif.message}</p>
-                              <span className="notif-time">
-                                {new Date(notif.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="empty-notif">Không có thông báo mới</div>
-                      )}
+              {showNotifications && (
+                <div className="notification-dropdown">
+                  <div className="dropdown-header">
+                    <h3>Thông báo</h3>
+                    <div className="header-actions">
+                      <button className="text-btn" onClick={markAllAsRead}>Đã đọc hết</button>
+                      <button className="text-btn" onClick={clearAllNotifications}>Xóa tất cả</button>
                     </div>
                   </div>
-                )}
+                  <div className="dropdown-content">
+                    {notifications.length > 0 ? (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}
+                          onClick={() => !notif.isRead && markAsRead(notif.id)}
+                        >
+                          <div className="notif-icon"><Bell size={16} /></div>
+                          <div className="notif-info">
+                            <p className="notif-message">{notif.message}</p>
+                            <span className="notif-time">
+                              {new Date(notif.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="empty-notif">Không có thông báo mới</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <div 
-              className="user-profile clickable" 
+            <div
+              className="user-profile clickable"
               onClick={() => navigate('/profile')}
               title="Xem thông tin cá nhân"
             >

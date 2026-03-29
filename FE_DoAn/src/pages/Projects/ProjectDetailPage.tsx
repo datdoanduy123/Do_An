@@ -46,6 +46,7 @@ const ProjectDetailPage: React.FC = () => {
   const [docLoading, setDocLoading] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
   const [allAvailableUsers, setAllAvailableUsers] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -53,7 +54,6 @@ const ProjectDetailPage: React.FC = () => {
   const [showCreateSprintModal, setShowCreateSprintModal] = useState(false);
   const [newSprintData, setNewSprintData] = useState({
     tenSprint: '',
-    mucTieuStoryPoints: 0,
     ngayBatDau: '',
     ngayKetThuc: ''
   });
@@ -70,18 +70,20 @@ const ProjectDetailPage: React.FC = () => {
       try {
         setLoading(true);
         setDashboardLoading(true);
-        const [projData, sprintsData, docsData, membersData, usersData] = await Promise.all([
+        const [projData, sprintsData, docsData, membersData, usersData, profileData] = await Promise.all([
           ProjectService.getProjectById(Number(id)),
           SprintService.getByProjectId(Number(id)),
           DocumentService.getByProject(Number(id)),
           ProjectService.getMembers(Number(id)),
-          UserService.getUsers({ pageSize: 100 })
+          UserService.getUsers({ pageSize: 100 }),
+          UserService.getProfile()
         ]);
         setProject(projData);
         setSprints(sprintsData || []);
         setDocuments(docsData || []);
         setMembers(membersData || []);
         setAllAvailableUsers(usersData.items || []);
+        setCurrentUser(profileData);
       } catch (error) {
         console.error('Error fetching project details:', error);
       } finally {
@@ -189,7 +191,6 @@ const ProjectDetailPage: React.FC = () => {
       await SprintService.create({
         duAnId: Number(id),
         tenSprint: newSprintData.tenSprint,
-        mucTieuStoryPoints: newSprintData.mucTieuStoryPoints || 0,
         ngayBatDau: newSprintData.ngayBatDau || new Date().toISOString(),
         ngayKetThuc: newSprintData.ngayKetThuc || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
       });
@@ -198,7 +199,7 @@ const ProjectDetailPage: React.FC = () => {
       setSprints(updatedSprints);
       
       setShowCreateSprintModal(false);
-      setNewSprintData({ tenSprint: '', mucTieuStoryPoints: 0, ngayBatDau: '', ngayKetThuc: '' });
+      setNewSprintData({ tenSprint: '', ngayBatDau: '', ngayKetThuc: '' });
     } catch (error) {
       console.error('Create sprint failed:', error);
       alert('Tạo Sprint thất bại.');
@@ -214,7 +215,6 @@ const ProjectDetailPage: React.FC = () => {
       setIsEditingSprint(true);
       await SprintService.update(editSprintData.id, {
         tenSprint: editSprintData.tenSprint,
-        mucTieuStoryPoints: editSprintData.mucTieuStoryPoints || 0,
         ngayBatDau: editSprintData.ngayBatDau || new Date().toISOString(),
         ngayKetThuc: editSprintData.ngayKetThuc || new Date().toISOString(),
         trangThai: editSprintData.trangThai
@@ -244,6 +244,12 @@ const ProjectDetailPage: React.FC = () => {
 
   if (loading || dashboardLoading) return <div className="loading-state">Đang tải thông tin dự án...</div>;
   if (!project) return <div className="error-state">Không tìm thấy dự án.</div>;
+
+  const isAdmin = currentUser?.vaiTros?.includes('QUAN_LY') || false;
+  const canManageMembers = currentUser?.quyens?.includes('PROJECT_UPDATE') || isAdmin;
+  const canManageSprints = currentUser?.quyens?.includes('SPRINT_CREATE') || currentUser?.quyens?.includes('SPRINT_UPDATE') || isAdmin;
+  const canUploadDocs = currentUser?.quyens?.includes('DOC_CREATE') || isAdmin;
+  const canProcessAI = currentUser?.quyens?.includes('TASK_CREATE') || isAdmin;
 
 
 
@@ -294,10 +300,12 @@ const ProjectDetailPage: React.FC = () => {
             <TrendingUp size={22} className="title-icon" />
             <h2>Danh sách Sprints</h2>
           </div>
-          <button className="add-sprint-btn" onClick={() => setShowCreateSprintModal(true)}>
-            <Plus size={18} />
-            <span>Tạo Sprint mới</span>
-          </button>
+          {canManageSprints && (
+            <button className="add-sprint-btn" onClick={() => setShowCreateSprintModal(true)}>
+              <Plus size={18} />
+              <span>Tạo Sprint mới</span>
+            </button>
+          )}
         </div>
 
         {sprints.length > 0 ? (
@@ -320,10 +328,7 @@ const ProjectDetailPage: React.FC = () => {
                       <Calendar size={14} />
                       <span>{new Date(sprint.ngayBatDau).toLocaleDateString('vi-VN')} - {new Date(sprint.ngayKetThuc).toLocaleDateString('vi-VN')}</span>
                     </div>
-                    <div className="meta-item">
-                      <Target size={14} />
-                      <span>{sprint.mucTieuStoryPoints} Story Points</span>
-                    </div>
+
                   </div>
                 </div>
 
@@ -342,27 +347,29 @@ const ProjectDetailPage: React.FC = () => {
                     <span>Chi tiết</span>
                     <ChevronRight size={16} />
                   </button>
-                  <div className="sprint-menu-wrapper" style={{ position: 'relative' }}>
-                    <button 
-                      className="icon-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveSprintMenuId(activeSprintMenuId === sprint.id ? null : sprint.id);
-                      }}
-                    >
-                      <MoreVertical size={18} />
-                    </button>
-                    {activeSprintMenuId === sprint.id && (
-                      <div className="sprint-dropdown-menu fade-in">
-                        <button className="menu-item" onClick={(e) => { e.stopPropagation(); setShowEditSprintModal(true); setEditSprintData(sprint); setActiveSprintMenuId(null); }}>
-                           <span>Chỉnh sửa Sprint</span>
-                        </button>
-                        <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); handleDeleteSprint(sprint.id); setActiveSprintMenuId(null); }}>
-                           <span>Xóa Sprint</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {canManageSprints && (
+                    <div className="sprint-menu-wrapper" style={{ position: 'relative' }}>
+                      <button 
+                        className="icon-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveSprintMenuId(activeSprintMenuId === sprint.id ? null : sprint.id);
+                        }}
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                      {activeSprintMenuId === sprint.id && (
+                        <div className="sprint-dropdown-menu fade-in">
+                          <button className="menu-item" onClick={(e) => { e.stopPropagation(); setShowEditSprintModal(true); setEditSprintData(sprint); setActiveSprintMenuId(null); }}>
+                             <span>Chỉnh sửa Sprint</span>
+                          </button>
+                          <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); handleDeleteSprint(sprint.id); setActiveSprintMenuId(null); }}>
+                             <span>Xóa Sprint</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -385,13 +392,15 @@ const ProjectDetailPage: React.FC = () => {
             <UsersIcon size={22} className="title-icon members-icon" />
             <h2>Thành viên Dự án</h2>
           </div>
-          <button 
-            className="add-member-btn"
-            onClick={() => setShowAddMember(!showAddMember)}
-          >
-            <UserPlus size={18} />
-            <span>Thêm thành viên</span>
-          </button>
+          {canManageMembers && (
+            <button 
+              className="add-member-btn"
+              onClick={() => setShowAddMember(!showAddMember)}
+            >
+              <UserPlus size={18} />
+              <span>Thêm thành viên</span>
+            </button>
+          )}
         </div>
 
         {showAddMember && (
@@ -446,12 +455,14 @@ const ProjectDetailPage: React.FC = () => {
                   <div className="member-role-tag">{member.vaiTro || 'Member'}</div>
                 </div>
               </div>
-              <button 
-                className="remove-member-btn"
-                onClick={() => handleRemoveMember(member.id)}
-              >
-                <Trash2 size={16} />
-              </button>
+              {canManageMembers && (
+                <button 
+                  className="remove-member-btn"
+                  onClick={() => handleRemoveMember(member.id)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           ))}
           {members.length === 0 && (
@@ -467,20 +478,22 @@ const ProjectDetailPage: React.FC = () => {
             <Sparkles size={22} className="ai-icon-title" />
             <h2>Trợ lý AI & Đặc tả Dự án</h2>
           </div>
-          <div className="upload-wrapper">
-            <input
-              type="file"
-              id="doc-upload"
-              hidden
-              onChange={handleFileUpload}
-              accept=".doc,.docx"
-              disabled={docLoading}
-            />
-            <label htmlFor="doc-upload" className={`upload-btn-premium ${docLoading ? 'loading' : ''}`}>
-              {docLoading ? <Loader2 className="spin" size={18} /> : <Upload size={18} />}
-              <span>{docLoading ? 'Đang tải lên...' : 'Tải lên đặc tả (.docx)'}</span>
-            </label>
-          </div>
+          {canUploadDocs && (
+            <div className="upload-wrapper">
+              <input
+                type="file"
+                id="doc-upload"
+                hidden
+                onChange={handleFileUpload}
+                accept=".doc,.docx"
+                disabled={docLoading}
+              />
+              <label htmlFor="doc-upload" className={`upload-btn-premium ${docLoading ? 'loading' : ''}`}>
+                {docLoading ? <Loader2 className="spin" size={18} /> : <Upload size={18} />}
+                <span>{docLoading ? 'Đang tải lên...' : 'Tải lên đặc tả (.docx)'}</span>
+              </label>
+            </div>
+          )}
         </div>
 
         <div className="ai-content-box">
@@ -505,7 +518,7 @@ const ProjectDetailPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="doc-card-actions">
-                  {!doc.isProcessed ? (
+                  {canProcessAI && !doc.isProcessed ? (
                     <button
                       className="btn-activate-ai"
                       onClick={() => handleProcessAI(doc.id)}
@@ -514,12 +527,12 @@ const ProjectDetailPage: React.FC = () => {
                       <Play size={16} fill="currentColor" />
                       <span>Kích hoạt AI</span>
                     </button>
-                  ) : (
+                  ) : doc.isProcessed ? (
                     <button className="btn-view-report">
                       <TrendingUp size={16} />
                       <span>Xem kết quả</span>
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -560,16 +573,7 @@ const ProjectDetailPage: React.FC = () => {
                   required
                 />
               </div>
-              <div className="form-group">
-                <label>Mục tiêu Story Points</label>
-                <input 
-                  type="number" 
-                  min={0}
-                  value={newSprintData.mucTieuStoryPoints}
-                  onChange={e => setNewSprintData({...newSprintData, mucTieuStoryPoints: parseInt(e.target.value) || 0})}
-                  placeholder="VD: 40"
-                />
-              </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label>Ngày bắt đầu</label>
@@ -619,15 +623,7 @@ const ProjectDetailPage: React.FC = () => {
                   required
                 />
               </div>
-              <div className="form-group">
-                <label>Mục tiêu Story Points</label>
-                <input 
-                  type="number" 
-                  min={0}
-                  value={editSprintData.mucTieuStoryPoints}
-                  onChange={e => setEditSprintData({...editSprintData, mucTieuStoryPoints: parseInt(e.target.value) || 0})}
-                />
-              </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label>Ngày bắt đầu</label>

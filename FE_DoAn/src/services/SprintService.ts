@@ -1,7 +1,5 @@
-import axios from 'axios';
+import api from './api';
 import type { SprintDto, TaoSprintDto, CapNhatSprintDto } from './SprintTypes';
-
-const API_URL = 'http://localhost:5095/api';
 
 /**
  * Service xử lý các thao tác liên quan đến Sprint.
@@ -11,7 +9,7 @@ class SprintService {
    * Lấy danh sách sprint theo ID dự án.
    */
   async getByProjectId(projectId: number): Promise<SprintDto[]> {
-    const response = await axios.get(`${API_URL}/Sprint/du-an/${projectId}`);
+    const response = await api.get(`/Sprint/du-an/${projectId}`);
     return response.data.data;
   }
 
@@ -19,7 +17,7 @@ class SprintService {
    * Lấy chi tiết sprint.
    */
   async getById(id: number): Promise<SprintDto> {
-    const response = await axios.get(`${API_URL}/Sprint/${id}`);
+    const response = await api.get(`/Sprint/${id}`);
     return response.data.data;
   }
 
@@ -27,7 +25,7 @@ class SprintService {
    * Tạo sprint mới.
    */
   async create(data: TaoSprintDto): Promise<any> {
-    const response = await axios.post(`${API_URL}/Sprint/tao-sprint`, data);
+    const response = await api.post(`/Sprint/tao-sprint`, data);
     return response.data;
   }
 
@@ -35,7 +33,7 @@ class SprintService {
    * Cập nhật sprint.
    */
   async update(id: number, data: CapNhatSprintDto): Promise<any> {
-    const response = await axios.put(`${API_URL}/Sprint/${id}`, data);
+    const response = await api.put(`/Sprint/${id}`, data);
     return response.data;
   }
 
@@ -43,7 +41,7 @@ class SprintService {
    * Xóa sprint.
    */
   async delete(id: number): Promise<boolean> {
-    const response = await axios.delete(`${API_URL}/Sprint/${id}`);
+    const response = await api.delete(`/Sprint/${id}`);
     return response.data.statusCode === 200;
   }
 }

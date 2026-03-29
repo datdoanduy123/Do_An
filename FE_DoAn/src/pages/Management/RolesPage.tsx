@@ -12,12 +12,15 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Key,
+  ShieldAlert
 } from 'lucide-react';
 import RoleService, { 
   type VaiTroDto
 } from '../../services/RoleService';
 import type { PaginatedResult } from '../../services/PermissionTypes';
+import PermissionService, { type QuyenDto } from '../../services/PermissionService';
 import './Roles.css';
 
 interface Toast {
@@ -48,6 +51,13 @@ const RolesPage: React.FC = () => {
 
   // States for Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // States for Assign Permissions Modal
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [assigningRole, setAssigningRole] = useState<VaiTroDto | null>(null);
+  const [allPermissions, setAllPermissions] = useState<QuyenDto[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<number[]>([]);
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -147,6 +157,65 @@ const RolesPage: React.FC = () => {
     }
   };
 
+  const openAssignModal = async (role: VaiTroDto) => {
+    setAssigningRole(role);
+    setIsAssignModalOpen(true);
+    setIsLoadingPermissions(true);
+    
+    try {
+      const [allPermsResponse, rolePerms] = await Promise.all([
+        PermissionService.getPermissions({ pageSize: 1000 }),
+        RoleService.getPermissionsByRole(role.id)
+      ]);
+      setAllPermissions(allPermsResponse.items || []);
+      setRolePermissions((rolePerms || []).map((p: any) => p.id));
+    } catch (error) {
+      showToast('Lỗi tải danh sách quyền', 'error');
+    } finally {
+      setIsLoadingPermissions(false);
+    }
+  };
+
+  const closeAssignModal = () => {
+    setIsAssignModalOpen(false);
+    setAssigningRole(null);
+  };
+
+  const togglePermission = async (quyenId: number, isChecked: boolean) => {
+    if (!assigningRole?.id) return;
+    
+    if (isChecked) {
+      setRolePermissions(prev => [...prev, quyenId]);
+    } else {
+      setRolePermissions(prev => prev.filter(id => id !== quyenId));
+    }
+
+    try {
+      if (isChecked) {
+        await RoleService.assignPermission(assigningRole.id, quyenId);
+      } else {
+        await RoleService.removePermission(assigningRole.id, quyenId);
+      }
+      showToast('Đã cập nhật quyền thành công!');
+    } catch (error: any) {
+      if (isChecked) {
+        setRolePermissions(prev => prev.filter(id => id !== quyenId));
+      } else {
+        setRolePermissions(prev => [...prev, quyenId]);
+      }
+      showToast(error?.response?.data?.message || 'Lỗi cập nhật quyền', 'error');
+    }
+  };
+
+  const groupedPermissions: Record<string, QuyenDto[]> = {};
+  allPermissions.forEach(p => {
+    const groupName = p.tenNhomQuyen || 'Quyền Hệ Thống';
+    if (!groupedPermissions[groupName]) {
+      groupedPermissions[groupName] = [];
+    }
+    groupedPermissions[groupName].push(p);
+  });
+
   return (
     <div className="roles-container">
       {/* Header section with search and add button */}
@@ -198,6 +267,9 @@ const RolesPage: React.FC = () => {
                     <td>{item.moTa || <span style={{ color: '#cbd5e1' }}>Không có mô tả</span>}</td>
                     <td>
                       <div className="action-buttons">
+                        <button className="action-btn assign" title="Phân quyền" onClick={() => openAssignModal(item)}>
+                          <Key size={16} />
+                        </button>
                         <button className="action-btn view" title="Xem" onClick={() => openModal('view', item)}>
                           <Eye size={16} />
                         </button>
@@ -353,6 +425,65 @@ const RolesPage: React.FC = () => {
                 <button className="btn-secondary" onClick={() => setIsConfirmOpen(false)}>Hủy bỏ</button>
                 <button className="btn-danger" onClick={handleConfirmDelete}>Xác nhận xóa</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Permissions Modal */}
+      {isAssignModalOpen && assigningRole && (
+        <div className="modal-overlay">
+          <div className="modal-content permissions-modal">
+            <div className="modal-header">
+              <div className="modal-title-wrap">
+                <h3>Phân quyền: <span className="role-highlight">{assigningRole.tenVaiTro}</span></h3>
+                {assigningRole.maVaiTro === 'QUAN_LY' && (
+                  <div className="warning-badge">
+                    <ShieldAlert size={14} /> 
+                    <span>Cảnh báo: Vai trò Quản lý rất nhạy cảm</span>
+                  </div>
+                )}
+              </div>
+              <button className="close-btn" onClick={closeAssignModal}><X size={20} /></button>
+            </div>
+            
+            <div className="modal-body permissions-body">
+              {isLoadingPermissions ? (
+                <div style={{ padding: '40px', textAlign: 'center' }}>Đang tải cấu trúc quyền...</div>
+              ) : (
+                <div className="permissions-grid">
+                  {Object.keys(groupedPermissions).map(groupName => (
+                    <div key={groupName} className="permission-group-card">
+                      <h4 className="group-title">{groupName}</h4>
+                      <div className="permission-list">
+                        {groupedPermissions[groupName].map(p => {
+                          const isChecked = rolePermissions.includes(p.id);
+                          return (
+                            <label key={p.id} className="permission-item">
+                              <div className="switch-container">
+                                <input 
+                                  type="checkbox" 
+                                  checked={isChecked}
+                                  onChange={(e) => togglePermission(p.id, e.target.checked)}
+                                />
+                                <span className="slider round"></span>
+                              </div>
+                              <div className="permission-info">
+                                <span className="perm-name">{p.tenQuyen}</span>
+                                <span className="perm-code">{p.maQuyen}</span>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <span style={{flex: 1, fontSize: '13px', color: '#64748b'}}>* Thay đổi sẽ được lưu tự động (Real-time).</span>
+              <button type="button" className="btn-primary" onClick={closeAssignModal}>Hoàn tất</button>
             </div>
           </div>
         </div>

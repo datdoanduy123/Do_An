@@ -14,6 +14,8 @@ import {
 import ProjectService from '../../services/ProjectService';
 import type { DuAnDto, TrangThaiDuAn, TaoDuAnDto } from '../../services/ProjectService';
 import { TrangThaiDuAn as TrangThaiEnum } from '../../services/ProjectService';
+import UserService from '../../services/UserService';
+import type { NguoiDungDto } from '../../services/UserService';
 import './Projects.css';
 
 /**
@@ -26,7 +28,9 @@ const ProjectsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+
   // State cho Modal thêm dự án
+  const [hasCreatePermission, setHasCreatePermission] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<TaoDuAnDto>({
@@ -48,8 +52,18 @@ const ProjectsPage: React.FC = () => {
     }
   };
 
+  const fetchUser = async () => {
+    try {
+      const profile = await UserService.getProfile();
+      setHasCreatePermission(profile.quyens?.includes('PROJECT_CREATE') || profile.vaiTros?.includes('QUAN_LY') || false);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
+    fetchUser();
   }, []);
 
   const getStatusLabel = (status: TrangThaiDuAn) => {
@@ -105,10 +119,14 @@ const ProjectsPage: React.FC = () => {
           <h1>Danh sách Dự án</h1>
           <p>Quản lý và theo dõi tiến độ các dự án của bạn.</p>
         </div>
-        <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} />
-          <span>Thêm dự án mới</span>
-        </button>
+        {hasCreatePermission && (
+          <div className="header-actions">
+            <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
+              <Plus size={18} />
+              <span>Thêm dự án mới</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Toolbar Section */}

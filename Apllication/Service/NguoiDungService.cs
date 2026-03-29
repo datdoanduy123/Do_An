@@ -34,6 +34,8 @@ namespace Apllication.Service
             var user = await _nguoiDungRepo.LayTheoIdAsync(id);
             if (user == null) return null;
 
+            var quyens = await _nguoiDungRepo.LayDanhSachQuyenCuaNguoiDungAsync(id);
+
             return new NguoiDungDto
             {
                 Id = user.Id,
@@ -42,7 +44,8 @@ namespace Apllication.Service
                 Email = user.Email,
                 DienThoai = user.DienThoai,
                 CreatedAt = user.CreatedAt,
-                VaiTros = user.NguoiDungVaiTros.Select(uv => uv.VaiTro.TenVaiTro).ToList(),
+                VaiTros = user.NguoiDungVaiTros.Select(uv => uv.VaiTro.MaVaiTro).ToList(), // Thống nhất dùng MaVaiTro
+                Quyens = quyens,
                 KyNangs = user.KyNangNguoiDungs.Select(kn => new UserSkillDto
                 {
                     KyNangId = kn.KyNangId,

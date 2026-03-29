@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from './api';
 import type { 
   KyNangDto, 
   TaoKyNangDto, 
@@ -6,8 +6,6 @@ import type {
   SkillQuery 
 } from './SkillTypes';
 import type { PaginatedResult } from './PermissionTypes';
-
-const API_URL = 'http://localhost:5095/api';
 
 /**
  * Service xử lý các thao tác liên quan đến Kỹ năng.
@@ -17,7 +15,7 @@ class SkillService {
    * Lấy danh sách kỹ năng.
    */
   async getSkills(query: SkillQuery = {}): Promise<PaginatedResult<KyNangDto>> {
-    const response = await axios.get(`${API_URL}/KyNang/danh-sach`, { params: query });
+    const response = await api.get(`/KyNang/danh-sach`, { params: query });
     return response.data.data;
   }
 
@@ -25,7 +23,7 @@ class SkillService {
    * Lấy chi tiết kỹ năng.
    */
   async getSkillById(id: number): Promise<KyNangDto> {
-    const response = await axios.get(`${API_URL}/KyNang/${id}`);
+    const response = await api.get(`/KyNang/${id}`);
     return response.data.data;
   }
 
@@ -33,7 +31,7 @@ class SkillService {
    * Tạo kỹ năng mới.
    */
   async createSkill(data: TaoKyNangDto): Promise<any> {
-    const response = await axios.post(`${API_URL}/KyNang/tao-ky-nang`, data);
+    const response = await api.post(`/KyNang/tao-ky-nang`, data);
     return response.data;
   }
 
@@ -41,7 +39,7 @@ class SkillService {
    * Cập nhật kỹ năng.
    */
   async updateSkill(id: number, data: CapNhatKyNangDto): Promise<any> {
-    const response = await axios.put(`${API_URL}/KyNang/${id}`, data);
+    const response = await api.put(`/KyNang/${id}`, data);
     return response.data;
   }
 
@@ -49,7 +47,7 @@ class SkillService {
    * Xóa kỹ năng.
    */
   async deleteSkill(id: number): Promise<boolean> {
-    const response = await axios.delete(`${API_URL}/KyNang/${id}`);
+    const response = await api.delete(`/KyNang/${id}`);
     return response.data.statusCode === 200;
   }
 }

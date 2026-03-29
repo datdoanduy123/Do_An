@@ -30,11 +30,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
       try {
         const profile = await UserService.getProfile();
         const checkRole = (roles: string[], target: string) => {
-          const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '');
-          const normalizedTarget = normalize(target);
+          if (!roles || !Array.isArray(roles)) return false;
+          const normalizedTarget = String(target).toUpperCase().trim().replace(/\s+/g, '');
           return roles.some(r => {
-            const normalizedR = normalize(r);
-            return normalizedR === normalizedTarget || normalizedR === 'admin' || normalizedR === 'quảnlý';
+            const normalizedR = String(r).toUpperCase().trim().replace(/\s+/g, '');
+            return normalizedR === normalizedTarget || 
+                   normalizedR === 'ADMIN' || 
+                   normalizedR === 'QUẢNLÝ' || 
+                   normalizedR === 'QUAN_LY' ||
+                   normalizedR === 'QUANLY';
           });
         };
         const hasRole = checkRole(profile.vaiTros, requiredRole);
