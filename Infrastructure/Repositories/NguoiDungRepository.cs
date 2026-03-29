@@ -146,6 +146,8 @@ namespace Infrastructure.Repositories
                 .ThenInclude(uv => uv.VaiTro)
                 .Include(u => u.KyNangNguoiDungs)
                 .ThenInclude(un => un.KyNang)
+                .ThenInclude(kn => kn!.CongNghe)
+                .ThenInclude(cn => cn.NhomKyNang)
                 .FirstOrDefaultAsync(u => u.Id == id && u.IsActive);
         }
 

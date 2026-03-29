@@ -4,5 +4,6 @@ namespace Apllication.DTOs
     {
         public string TenKyNang { get; set; } = string.Empty;
         public string? MoTa { get; set; }
+        public int CongNgheId { get; set; }
     }
 }

@@ -37,11 +37,19 @@ const SkillsPage: React.FC = () => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  // States for Hierarchy
+  const [nhoms, setNhoms] = useState<any[]>([]);
+  const [allCongNghes, setAllCongNghes] = useState<any[]>([]);
+  const [selectedNhomId, setSelectedNhomId] = useState<number | null>(null);
+
   // States for Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedItem, setSelectedItem] = useState<Partial<KyNangDto>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  // Computed
+  const filteredCongNghes = allCongNghes.filter(c => c.nhomKyNangId === selectedNhomId);
 
   // States for Custom Confirm
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -52,7 +60,25 @@ const SkillsPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    fetchHierarchyData();
   }, [pageIndex, pageSize]);
+
+  const fetchHierarchyData = async () => {
+    try {
+      const h = await SkillService.getHierarchy();
+      setNhoms(h);
+      // Flatten techs for easier filtering
+      const techs: any[] = [];
+      h.forEach(n => {
+        if (n.congNghes) {
+          n.congNghes.forEach(c => techs.push(c));
+        }
+      });
+      setAllCongNghes(techs);
+    } catch (error) {
+      console.error('Failed to load hierarchy', error);
+    }
+  };
 
   const fetchData = async (kw = keyword) => {
     setLoading(true);
@@ -87,6 +113,15 @@ const SkillsPage: React.FC = () => {
   const openModal = (mode: 'create' | 'edit' | 'view', item: Partial<KyNangDto> = {}) => {
     setModalMode(mode);
     setSelectedItem(item);
+    
+    // Set parent group if editing
+    if (item.congNgheId) {
+      const tech = allCongNghes.find(c => c.id === item.congNgheId);
+      if (tech) setSelectedNhomId(tech.nhomKyNangId);
+    } else {
+      setSelectedNhomId(null);
+    }
+    
     setIsModalOpen(true);
   };
 
@@ -179,7 +214,8 @@ const SkillsPage: React.FC = () => {
             <thead>
               <tr>
                 <th style={{ width: '60px' }}>STT</th>
-                <th>Tên kỹ năng</th>
+                <th>Kỹ năng</th>
+                <th>Lĩnh vực / Công nghệ</th>
                 <th>Mô tả</th>
                 <th style={{ textAlign: 'right', width: '150px' }}>Thao tác</th>
               </tr>
@@ -195,6 +231,12 @@ const SkillsPage: React.FC = () => {
                           <Zap size={16} />
                         </div>
                         <span style={{ fontWeight: 600 }}>{item.tenKyNang}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span className="badge-group">{item.tenNhomKyNang || 'Chưa phân nhóm'}</span>
+                        <span className="badge-tech">{item.tenCongNghe || 'Chưa rõ công nghệ'}</span>
                       </div>
                     </td>
                     <td style={{ color: '#64748b', fontSize: '0.9rem' }}>
@@ -296,25 +338,57 @@ const SkillsPage: React.FC = () => {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Lĩnh vực (Cấp 1)</label>
+                    <select 
+                      className="form-control"
+                      disabled={modalMode === 'view'}
+                      value={selectedNhomId || ''}
+                      onChange={(e) => {
+                        const id = Number(e.target.value);
+                        setSelectedNhomId(id);
+                        // Reset tech when group changes
+                        setSelectedItem({...selectedItem, congNgheId: 0});
+                      }}
+                    >
+                      <option value="">-- Chọn lĩnh vực --</option>
+                      {nhoms.map(n => <option key={n.id} value={n.id}>{n.tenNhom}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Công nghệ (Cấp 2)</label>
+                    <select 
+                      className="form-control"
+                      disabled={modalMode === 'view' || !selectedNhomId}
+                      value={selectedItem.congNgheId || ''}
+                      onChange={(e) => setSelectedItem({...selectedItem, congNgheId: Number(e.target.value)})}
+                    >
+                      <option value="">-- Chọn công nghệ --</option>
+                      {filteredCongNghes.map(c => <option key={c.id} value={c.id}>{c.tenCongNghe}</option>)}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="form-group">
-                  <label>Tên kỹ năng</label>
+                  <label>Kỹ năng chi tiết (Cấp 3)</label>
                   <input 
                     type="text" 
                     required 
                     disabled={modalMode === 'view'}
                     value={selectedItem.tenKyNang || ''}
                     onChange={(e) => setSelectedItem({...selectedItem, tenKyNang: e.target.value})}
-                    placeholder="Ví dụ: Backend, Frontend, UI/UX..."
+                    placeholder="Ví dụ: Entity Framework, React Hook..."
                   />
                 </div>
                 <div className="form-group">
                   <label>Mô tả kỹ năng</label>
                   <textarea 
-                    rows={4}
+                    rows={3}
                     disabled={modalMode === 'view'}
                     value={selectedItem.moTa || ''}
                     onChange={(e) => setSelectedItem({...selectedItem, moTa: e.target.value})}
-                    placeholder="Mô tả ngắn gọn về kỹ năng này..."
+                    placeholder="Mô tả năng lực cần có..."
                   />
                 </div>
               </div>

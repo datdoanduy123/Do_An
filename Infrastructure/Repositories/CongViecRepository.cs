@@ -26,6 +26,8 @@ namespace Infrastructure.Repositories
                     .ThenInclude(d => d.DependsOnTask)
                 .Include(c => c.YeuCauCongViecs)
                 .ThenInclude(y => y.KyNang)
+                    .ThenInclude(k => k!.CongNghe)
+                        .ThenInclude(cn => cn.NhomKyNang)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 

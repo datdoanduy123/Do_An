@@ -14,6 +14,9 @@ namespace Domain.Entities
 
         public string? MoTa { get; set; }
 
+        public int CongNgheId { get; set; }
+        public CongNghe CongNghe { get; set; } = null!;
+
         // Mối quan hệ: Một kỹ năng có thể được sở hữu bởi nhiều nhân viên
         public ICollection<KyNangNguoiDung> KyNangNguoiDungs { get; set; } = new List<KyNangNguoiDung>();
 

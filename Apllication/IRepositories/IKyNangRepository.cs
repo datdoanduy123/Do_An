@@ -15,5 +15,14 @@ namespace Apllication.IRepositories
         Task UpdateAsync(KyNang kyNang);
         Task DeleteAsync(KyNang kyNang);
         Task SaveChangesAsync();
+
+        // Các phương thức cho Phân cấp
+        Task<IEnumerable<NhomKyNang>> GetAllNhomKyNangAsync();
+        Task<IEnumerable<CongNghe>> GetCongNgheByNhomAsync(int nhomId);
+        Task<IEnumerable<NhomKyNang>> GetHierarchyAsync();
+        Task AddNhomAsync(NhomKyNang nhom);
+        Task AddCongNgheAsync(CongNghe cn);
+        Task<NhomKyNang?> GetNhomByIdAsync(int id);
+        Task<CongNghe?> GetCongNgheByIdAsync(int id);
     }
 }

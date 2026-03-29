@@ -386,14 +386,43 @@ namespace Apllication.Service
                 foreach (var req in reqs)
                 {
                     double taskRequirement = req.MucDoYeuCau; // Mức yêu cầu (1-5)
-                    var userSkill = userSkills.FirstOrDefault(s => s.KyNangId == req.KyNangId);
-                    double userLevel = userSkill?.Level ?? 0; // Level của user, 0 nếu không có kỹ năng
+                    double effectiveLevel = 0;
 
-                    // Hiệu (T[i] - U[i]): Nếu User vượt yêu cầu (userLevel > taskRequirement)
+                    // 1. Kiểm tra khớp chính xác kỹ năng (Direct Match)
+                    var directSkill = userSkills.FirstOrDefault(s => s.KyNangId == req.KyNangId);
+                    if (directSkill != null)
+                    {
+                        effectiveLevel = directSkill.Level;
+                    }
+                    else if (req.KyNang?.CongNgheId > 0)
+                    {
+                        // 2. Không khớp chính xác -> Kiểm tra cùng Công nghệ (Tech Similarity - 50% hiệu quả)
+                        var sameTechSkills = userSkills.Where(s => s.KyNang?.CongNgheId == req.KyNang.CongNgheId);
+                        if (sameTechSkills.Any())
+                        {
+                            double maxLevelInTech = sameTechSkills.Max(s => (double)s.Level);
+                            effectiveLevel = maxLevelInTech * 0.5; // Giảm 50% vì không phải kỹ năng đích
+                        }
+                        else if (req.KyNang.CongNghe?.NhomKyNangId > 0)
+                        {
+                            // 3. Không cùng công nghệ -> Kiểm tra cùng Nhóm/Lĩnh vực (Domain Similarity - 20% hiệu quả)
+                            var sameGroupSkills = userSkills.Where(s => s.KyNang?.CongNghe?.NhomKyNangId == req.KyNang.CongNghe.NhomKyNangId);
+                            if (sameGroupSkills.Any())
+                            {
+                                double maxLevelInGroup = sameGroupSkills.Max(s => (double)s.Level);
+                                effectiveLevel = maxLevelInGroup * 0.2; // Giảm 80% vì chỉ chung lĩnh vực rộng
+                            }
+                        }
+                    }
+
+                    // Hiệu (T[i] - U[i]): Nếu User vượt yêu cầu (effectiveLevel > taskRequirement)
                     // thì hiệu = 0 (tốt hoàn toàn), không bị phạt vì quá giỏi.
-                    double diff = Math.Max(0, taskRequirement - userLevel);
+                    double diff = Math.Max(0, taskRequirement - effectiveLevel);
                     sumSquaredDiff += diff * diff;
                 }
+
+                double euclideanDistance = Math.Sqrt(sumSquaredDiff);
+
                 // Áp dụng trọng số kỹ năng
                 double weightedEuclideanDistance = euclideanDistance * skillWeight;
 

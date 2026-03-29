@@ -25,6 +25,8 @@ namespace Infrastructure.Persistence
         public DbSet<CongViec> CongViecs { get; set; }
         public DbSet<DuAnNguoiDung> DuAnNguoiDungs { get; set; }
         public DbSet<NhatKyCongViec> NhatKyCongViecs { get; set; }
+        public DbSet<NhomKyNang> NhomKyNangs { get; set; }
+        public DbSet<CongNghe> CongNghes { get; set; }
         public DbSet<KyNang> KyNangs { get; set; }
         public DbSet<KyNangNguoiDung> KyNangNguoiDungs { get; set; }
         public DbSet<YeuCauCongViec> YeuCauCongViecs { get; set; }
