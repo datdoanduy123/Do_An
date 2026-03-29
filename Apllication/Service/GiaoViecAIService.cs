@@ -132,7 +132,9 @@ namespace Apllication.Service
 
             if (!sortedTasks.Any()) return true;
 
-            var currentSprint = await GetOrCreateActiveSprintAsync(duAnId);
+            var rules = await _ruleRepo.GetAllActiveRulesAsync();
+
+            var currentSprint = await GetOrCreateActiveSprintAsync(duAnId, rules);
 
             // Lấy thông tin dự án để lấy PM (người tạo) cho fallback
             var duAn = await _duAnRepo.GetByIdAsync(duAnId);
@@ -157,7 +159,7 @@ namespace Apllication.Service
                 if (task == null) continue;
 
                 // Dùng thuật toán KNN để tìm người phù hợp nhất
-                var bestUserId = KnnTimNguoiPhuHop(task, cachedUsers, taskCountPerUser, allTasksInProject);
+                var bestUserId = KnnTimNguoiPhuHop(task, cachedUsers, taskCountPerUser, allTasksInProject, rules);
 
                 if (bestUserId.HasValue)
                 {
@@ -268,6 +270,9 @@ namespace Apllication.Service
                     DateTime currentPointer = new DateTime[] { sprint.NgayBatDau, DateTime.UtcNow.Date }.Max();
                     currentPointer = SkipWeekends(currentPointer);
 
+                    // Lấy số giờ làm việc mỗi ngày từ quy tắc (mặc định 8)
+                    int workingHoursPerDay = (int)GetRuleValue(rules, "WORKING_HOURS_PER_DAY", 8);
+
                     foreach (var tDto in sortedTasks)
                     {
                         var task = await _congViecRepo.GetByIdAsync(tDto.Id);
@@ -305,8 +310,8 @@ namespace Apllication.Service
 
                         while (hrs > 0)
                         {
-                            if (hrs <= 8) hrs = 0;
-                            else { hrs -= 8; eP = SkipWeekends(eP.AddDays(1)); }
+                            if (hrs <= workingHoursPerDay) hrs = 0;
+                            else { hrs -= workingHoursPerDay; eP = SkipWeekends(eP.AddDays(1)); }
                         }
 
                         task.NgayKetThucDuKien = eP;
@@ -337,8 +342,15 @@ namespace Apllication.Service
             CongViec task,
             Dictionary<int, User> cachedUsers,
             Dictionary<int, int> taskCountPerUser,
-            List<CongViec> allTasksInProject)
+            List<CongViec> allTasksInProject,
+            IEnumerable<QuyTacGiaoViecAI> rules)
         {
+            // Lấy các tham số cấu hình AI
+            double skillWeight = GetRuleValue(rules, "SKILL_MATCH_WEIGHT", 1.0);
+            double workloadWeight = GetRuleValue(rules, "WORKLOAD_BALANCE_WEIGHT", 0.5);
+            double pmPenalty = GetRuleValue(rules, "PM_TASK_PENALTY", 10.0);
+            double minAcceptableScore = GetRuleValue(rules, "MINIMUM_ACCEPABLE_SCORE", 0.3);
+
             // Lấy danh sách kỹ năng yêu cầu của Task
             var reqs = task.YeuCauCongViecs ?? new List<YeuCauCongViec>();
 
@@ -348,7 +360,7 @@ namespace Apllication.Service
             // Nếu task không có yêu cầu kỹ năng cụ thể → Fallback về người ít việc nhất
             if (!allSkillIds.Any())
             {
-                return TimNguoiItViecNhat(cachedUsers, taskCountPerUser, allTasksInProject);
+                return TimNguoiItViecNhat(cachedUsers, taskCountPerUser, allTasksInProject, rules);
             }
 
             // Tính trung bình số task đã được gán để tính penalty chia đều
@@ -361,11 +373,8 @@ namespace Apllication.Service
             foreach (var kvp in cachedUsers)
             {
                 var user = kvp.Value;
-
-                // Bỏ qua QUAN_LY và ADMIN (không tham gia làm việc trực tiếp)
-                if (user.NguoiDungVaiTros != null &&
-                    user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN"))
-                    continue;
+                bool isPmOrAdmin = user.NguoiDungVaiTros != null &&
+                                   user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN");
 
                 var userSkills = user.KyNangNguoiDungs ?? new List<KyNangNguoiDung>();
 
@@ -385,14 +394,18 @@ namespace Apllication.Service
                     double diff = Math.Max(0, taskRequirement - userLevel);
                     sumSquaredDiff += diff * diff;
                 }
-                double euclideanDistance = Math.Sqrt(sumSquaredDiff);
+                // Áp dụng trọng số kỹ năng
+                double weightedEuclideanDistance = euclideanDistance * skillWeight;
 
                 // ---- Penalty chia đều: Nếu user đã nhiều task hơn TB → cộng thêm khoảng cách ----
-                // Hệ số penalty = 0.5 nghĩa là: mỗi task dư thêm làm khoảng cách tăng thêm 0.5
+                // Áp dụng trọng số cân bằng công việc
                 int userTaskCount = taskCountPerUser.GetValueOrDefault(user.Id, 0);
-                double balancePenalty = Math.Max(0, userTaskCount - avgTaskPerUser) * 0.5;
+                double balancePenalty = Math.Max(0, userTaskCount - avgTaskPerUser) * workloadWeight;
 
-                double totalDistance = euclideanDistance + balancePenalty;
+                // ---- Penalty cho Quản lý: Phạt điểm nặng để rớt xuống cuối danh sách ----
+                double rolePenalty = isPmOrAdmin ? pmPenalty : 0;
+
+                double totalDistance = weightedEuclideanDistance + balancePenalty + rolePenalty;
 
                 // Chọn người có khoảng cách tổng nhỏ nhất
                 if (totalDistance < bestDistance)
@@ -403,12 +416,25 @@ namespace Apllication.Service
             }
 
             // Nếu khoảng cách tốt nhất vẫn quá lớn (không ai có kỹ năng phù hợp)
-            // ngưỡng: sqrt(reqs.Count * 25) = khi tất cả kỹ năng User đều = 0 và Task yêu cầu = 5
-            double maxAllowedDistance = Math.Sqrt(reqs.Count * 25.0);
-            if (bestUserId.HasValue && bestDistance >= maxAllowedDistance)
+            // ngưỡng cơ bản: sqrt(reqs.Count * 25)
+            double baseMaxDistance = Math.Sqrt(reqs.Count * 25.0);
+            
+            // Tính toán Max Distance thực tế có xét thêm trọng số kỹ năng
+            double maxAllowedDistanceForScore = baseMaxDistance * skillWeight;
+
+            // Nếu không ai xử lý được (hoặc chỉ có PM bị phạt rất nặng) và điểm số không đạt sàn
+            if (bestUserId.HasValue)
             {
-                // Không ai đủ kỹ năng → Fallback PM
-                return null;
+                // Quy đổi ngược từ bestDistance sang Score (0-1) để so sánh với điểm sàn
+                // (Loại bỏ PM penalty và Balance penalty khi tính score để đánh giá đúng năng lực)
+                // Lưu ý: Ở đây ta ước tính đơn giản là distance cơ bản
+                double score = maxAllowedDistanceForScore > 0 ? Math.Max(0, 1 - (bestDistance / maxAllowedDistanceForScore)) : 0;
+                
+                if (score < minAcceptableScore)
+                {
+                    // Không đạt điểm sàn -> trả về null để Fallback kích hoạt
+                    return null;
+                }
             }
 
             return bestUserId;
@@ -420,22 +446,26 @@ namespace Apllication.Service
         private int? TimNguoiItViecNhat(
             Dictionary<int, User> cachedUsers,
             Dictionary<int, int> taskCountPerUser,
-            List<CongViec> allTasksInProject)
+            List<CongViec> allTasksInProject,
+            IEnumerable<QuyTacGiaoViecAI> rules)
         {
+            double pmPenalty = GetRuleValue(rules, "PM_TASK_PENALTY", 10.0);
+            
             int? bestUserId = null;
-            int minTaskCount = int.MaxValue;
+            double minVotedCount = double.MaxValue;
 
             foreach (var kvp in cachedUsers)
             {
                 var user = kvp.Value;
-                if (user.NguoiDungVaiTros != null &&
-                    user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN"))
-                    continue;
+                bool isPmOrAdmin = user.NguoiDungVaiTros != null &&
+                                   user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN");
 
                 int count = taskCountPerUser.GetValueOrDefault(user.Id, 0);
-                if (count < minTaskCount)
+                double votedCount = count + (isPmOrAdmin ? pmPenalty : 0);
+
+                if (votedCount < minVotedCount)
                 {
-                    minTaskCount = count;
+                    minVotedCount = votedCount;
                     bestUserId = user.Id;
                 }
             }
@@ -463,22 +493,27 @@ namespace Apllication.Service
 
         public async Task<Sprint> GetOrCreateSprintByModuleNameAsync(int duAnId, string moduleName)
         {
+            var rules = await _ruleRepo.GetAllActiveRulesAsync();
+            int sprintDays = (int)GetRuleValue(rules, "DEFAULT_SPRINT_DAYS", 14);
+
             var sprints = await _sprintRepo.GetByProjectIdAsync(duAnId);
             var existing = sprints.FirstOrDefault(s => s.TenSprint == moduleName);
             if (existing != null) return existing;
             var duAn = await _duAnRepo.GetByIdAsync(duAnId);
             DateTime start = sprints.Any() ? sprints.Max(s => s.NgayKetThuc) : (duAn?.NgayBatDau ?? DateTime.UtcNow);
-            return await _sprintRepo.AddAsync(new Sprint { DuAnId = duAnId, TenSprint = moduleName, NgayBatDau = start, NgayKetThuc = start.AddDays(14), TrangThai = TrangThaiSprint.New });
+            return await _sprintRepo.AddAsync(new Sprint { DuAnId = duAnId, TenSprint = moduleName, NgayBatDau = start, NgayKetThuc = start.AddDays(sprintDays), TrangThai = TrangThaiSprint.New });
         }
 
-        private async Task<Sprint> GetOrCreateActiveSprintAsync(int duAnId)
+        private async Task<Sprint> GetOrCreateActiveSprintAsync(int duAnId, IEnumerable<QuyTacGiaoViecAI> rules)
         {
+            int sprintDays = (int)GetRuleValue(rules, "DEFAULT_SPRINT_DAYS", 14);
+
             var sprints = await _sprintRepo.GetByProjectIdAsync(duAnId);
             var active = sprints.FirstOrDefault(s => s.TrangThai == TrangThaiSprint.InProgress) ?? sprints.FirstOrDefault(s => s.TrangThai == TrangThaiSprint.New);
             if (active != null) return active;
             var duAn = await _duAnRepo.GetByIdAsync(duAnId);
             DateTime start = duAn?.NgayBatDau ?? DateTime.UtcNow;
-            return await _sprintRepo.AddAsync(new Sprint { DuAnId = duAnId, TenSprint = "Sprint 1", NgayBatDau = start, NgayKetThuc = start.AddDays(14), TrangThai = TrangThaiSprint.New });
+            return await _sprintRepo.AddAsync(new Sprint { DuAnId = duAnId, TenSprint = "Sprint 1", NgayBatDau = start, NgayKetThuc = start.AddDays(sprintDays), TrangThai = TrangThaiSprint.New });
         }
     }
 }
