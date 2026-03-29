@@ -379,10 +379,20 @@
   border: 1px solid #bae6fd;
 }
 
+.sprint-status-banner.in-progress-status {
+  background-color: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #e0e7ff;
+}
+
 .sprint-status-banner.finished {
   background-color: #f1f5f9;
   color: #475569;
   border: 1px solid #e2e8f0;
+}
+
+.ml-auto {
+  margin-left: auto;
 }
 
 .btn-start-sprint {
@@ -402,7 +412,7 @@
 
 .btn-start-sprint:hover {
   background-color: #0c4a6e;
-  transform: scale(1.05);
+  transform: translateY(-1px);
 }
 
 .btn-finish-sprint-inline {

@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   Link,
   X,
+  Activity,
+  TrendingUp,
   MessageSquare,
   Send
 } from 'lucide-react';
@@ -80,6 +82,8 @@ const SprintDetailPage: React.FC = () => {
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  // State loading cho nút Kích hoạt Sprint
+  const [isActivating, setIsActivating] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -323,10 +327,7 @@ const SprintDetailPage: React.FC = () => {
   const userProjectMember = projectMembers.find(m => m.id === currentUser?.id);
   const isProjectPM = userProjectMember?.vaiTro === ProjectRole.PM;
 
-  const isSprintActive = !!sprint && (
-    sprint.trangThai === 1 ||
-    (sprint.trangThai === 0 && new Date() >= new Date(sprint.ngayBatDau) && new Date() <= new Date(sprint.ngayKetThuc))
-  );
+  const isSprintActive = !!sprint && sprint.trangThai !== 2;
 
   // Quyền quản lý Task (Giao việc, chỉnh sửa)
   // Cho phép Admin, PM dự án, hoặc người tạo Task
@@ -359,6 +360,30 @@ const SprintDetailPage: React.FC = () => {
       console.error('Update status failed', e);
     }
   }
+
+  /**
+   * Kích hoạt Sprint bằng API mới POST /Sprint/{id}/kich-hoat.
+   * Tự động: đặt NgayBatDau = hôm nay, NgayKetThuc = hôm nay + 14 ngày.
+   * Hỗ trợ nhiều Sprint kích hoạt song song (nhiều team).
+   */
+  const handleKichHoatSprint = async () => {
+    if (!sprint || isActivating) return;
+    try {
+      setIsActivating(true);
+      const result = await SprintService.startSprint(sprint.id);
+      if (result?.statusCode === 200) {
+        showToast('Sprint đã được kích hoạt! Đang bắt đầu 2 tuần làm việc.');
+        fetchData(); // Reload dữ liệu sprint từ server
+      } else {
+        showToast(result?.message || 'Không thể kích hoạt Sprint.', 'error');
+      }
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Kích hoạt Sprint thất bại.';
+      showToast(msg, 'error');
+    } finally {
+      setIsActivating(false);
+    }
+  };
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -468,22 +493,37 @@ const SprintDetailPage: React.FC = () => {
   return (
     <div className="sprint-detail-container">
       {/* Sprint Status Warning Banner */}
-      {!isSprintActive && (
+      {sprint.trangThai !== 1 && (
         <div className={`sprint-status-banner ${sprint.trangThai === 2 ? 'finished' : 'new'}`}>
           <AlertCircle size={18} />
           <span>
-            {sprint.trangThai === 0 ? 'Sprint này chưa được bắt đầu (hoặc ngoài khung thời gian). Quản lý cần nhấn "Bắt đầu Sprint".' : 'Sprint này đã kết thúc. Bạn không thể thay đổi tiến độ công việc.'}
+            {sprint.trangThai === 0 
+              ? 'Đây là bản nháp Sprint. Bạn vẫn có thể quản lý task, hoặc nhấn "Kích hoạt" để bắt đầu theo dõi tiến độ chính thức.' 
+              : 'Sprint này đã kết thúc. Bạn không thể thay đổi tiến độ công việc.'}
           </span>
-          {isAdmin && sprint.trangThai === 0 && (
-            <button className="btn-start-sprint" onClick={() => handleUpdateSprintStatus(1)}>
-              <Play size={14} fill="currentColor" /> Kích hoạt ngay
+          {(isAdmin || isProjectPM) && sprint.trangThai === 0 && (
+            <button
+              className="btn-start-sprint"
+              onClick={handleKichHoatSprint}
+              disabled={isActivating}
+            >
+              {isActivating
+                ? <>⏳ Đang xử lý...</>
+                : <><Play size={14} fill="currentColor" /> Kích hoạt ngay</>
+              }
             </button>
           )}
-          {isAdmin && sprint.trangThai === 1 && (
-            <button className="btn-finish-sprint" onClick={() => handleUpdateSprintStatus(2)}>
-              <CheckSquare size={14} /> Hoàn thành Sprint
-            </button>
-          )}
+        </div>
+      )}
+
+      {/* Banner Sprint đang chạy - Admin/PM có thể chốt kết quả */}
+      {(isAdmin || isProjectPM) && sprint.trangThai === 1 && (
+        <div className="sprint-status-banner in-progress-status">
+          <Activity size={18} />
+          <span>Sprint đang chạy. Có thể chốt kết quả khi hoàn thành tất cả task.</span>
+          <button className="btn-finish-sprint-inline ml-auto" style={{ background: '#10b981' }} onClick={() => handleUpdateSprintStatus(2)}>
+            <CheckSquare size={14} /> Hoàn thành Sprint
+          </button>
         </div>
       )}
 
@@ -541,7 +581,7 @@ const SprintDetailPage: React.FC = () => {
 
       {/* Main View Area */}
       {viewMode === 'kanban' ? (
-        <div className={`kanban-board ${!isSprintActive ? 'read-only' : ''}`}>
+        <div className={`kanban-board ${sprint.trangThai === 2 ? 'read-only' : ''}`}>
           {columns.map(col => (
             <div key={col.id} className="kanban-column">
               <div className="column-header" style={{ borderTopColor: col.color }}>

@@ -82,6 +82,28 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SPRINT_UPDATE")]
+        [HttpPost("{id}/kich-hoat")]
+        public async Task<IActionResult> KichHoatSprint(int id)
+        {
+            try
+            {
+                // Gọi service kích hoạt Sprint, truyền userId của PM đang đăng nhập
+                var result = await _sprintService.KichHoatSprintAsync(id, CurrentUserId);
+                if (result == null) return ErrorResponse(404, "Không tìm thấy Sprint.");
+                return SuccessResponse(result, "Kích hoạt Sprint thành công. Sprint đang chạy.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Lỗi nghiệp vụ (Sprint đã chạy / đã kết thúc)
+                return ErrorResponse(400, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(500, ex.Message);
+            }
+        }
+
         [QuyenHan("SPRINT_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Xoa(int id)

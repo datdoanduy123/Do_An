@@ -38,6 +38,15 @@ class SprintService {
   }
 
   /**
+   * Kích hoạt Sprint (New → InProgress).
+   * PM bấm nút này để bắt đầu Sprint. Hỗ trợ nhiều Sprint song song.
+   */
+  async startSprint(id: number): Promise<any> {
+    const response = await api.post(`/Sprint/${id}/kich-hoat`);
+    return response.data;
+  }
+
+  /**
    * Xóa sprint.
    */
   async delete(id: number): Promise<boolean> {

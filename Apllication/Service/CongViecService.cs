@@ -204,16 +204,14 @@ namespace Apllication.Service
                 }
             }
 
-            // Ràng buộc nghiệp vụ: Chỉ cho phép cập nhật trạng thái nếu Sprint đang InProgress (hoặc không thuộc Sprint nào)
+            // Ràng buộc nghiệp vụ: Chỉ cho phép cập nhật trạng thái nếu Sprint chưa bị khóa (Finished)
             if (cv.SprintId.HasValue && cv.Sprint != null)
             {
-                var now = DateTime.UtcNow;
-                bool isWorkable = cv.Sprint.TrangThai == TrangThaiSprint.InProgress || 
-                                 (cv.Sprint.TrangThai == TrangThaiSprint.New && now >= cv.Sprint.NgayBatDau && now <= cv.Sprint.NgayKetThuc);
-                
-                if (!isWorkable && status != TrangThaiCongViec.Todo && status != TrangThaiCongViec.Cancelled)
+                if (cv.Sprint.TrangThai == TrangThaiSprint.Finished && 
+                    status != TrangThaiCongViec.Todo && 
+                    status != TrangThaiCongViec.Cancelled)
                 {
-                    return false; 
+                    throw new Exception("Không thể thay đổi trạng thái công việc trong một Sprint đã kết thúc.");
                 }
             }
  
