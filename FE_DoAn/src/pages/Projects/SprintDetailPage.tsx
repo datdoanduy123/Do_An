@@ -74,6 +74,10 @@ const SprintDetailPage: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const [isSendingComment, setIsSendingComment] = useState(false);
 
+  // New states for Tester View
+  const [viewMode, setViewMode] = useState<'kanban' | 'tester'>('kanban');
+  const [selectedTestTaskId, setSelectedTestTaskId] = useState<number | null>(null);
+
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -108,6 +112,12 @@ const SprintDetailPage: React.FC = () => {
 
         const members = await ProjectService.getMembers(sprintData.duAnId);
         setProjectMembers(members);
+
+        // Auto-switch view for Tester/QA
+        const isUserTester = members.some(m => m.id === currentUser?.id && (m.vaiTro === ProjectRole.Tester || m.vaiTro === ProjectRole.QA));
+        if (isUserTester && viewMode === 'kanban') {
+          setViewMode('tester');
+        }
       }
     } catch (error) {
       console.error('Error fetching sprint details:', error);
@@ -146,6 +156,15 @@ const SprintDetailPage: React.FC = () => {
       SignalRService.off('TaskUpdated');
     };
   }, [id, sprint?.duAnId]);
+
+  useEffect(() => {
+    if (viewMode === 'tester' && tasks.length > 0 && !selectedTestTaskId) {
+      const firstReviewTask = tasks.find(t => t.trangThai === StatusEnum.Review);
+      if (firstReviewTask) {
+        setSelectedTestTaskId(firstReviewTask.id);
+      }
+    }
+  }, [viewMode, tasks, selectedTestTaskId]);
 
   useEffect(() => {
     if (sprint?.duAnId) {
@@ -485,6 +504,24 @@ const SprintDetailPage: React.FC = () => {
         </div>
 
         <div className="header-right">
+          {(isAdmin || isProjectPM || [ProjectRole.Tester, ProjectRole.QA].includes(userProjectMember?.vaiTro as any)) && (
+            <div className="view-mode-toggle">
+              <button 
+                className={`toggle-btn ${viewMode === 'kanban' ? 'active' : ''}`}
+                onClick={() => setViewMode('kanban')}
+                title="Bảng Kanban"
+              >
+                <CheckSquare size={18} />
+              </button>
+              <button 
+                className={`toggle-btn ${viewMode === 'tester' ? 'active' : ''}`}
+                onClick={() => setViewMode('tester')}
+                title="Màn hình Kiểm thử"
+              >
+                <Play size={18} />
+              </button>
+            </div>
+          )}
           {isAdmin && sprint && (sprint.trangThai === 1 || (sprint.trangThai === 0 && tasks.length > 0 && tasks.every(t => t.trangThai === StatusEnum.Done))) && (
             <button className="btn-finish-sprint-inline" onClick={() => handleUpdateSprintStatus(2)}>
               <CheckSquare size={18} />
@@ -502,183 +539,332 @@ const SprintDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Kanban Board */}
-      <div className={`kanban-board ${!isSprintActive ? 'read-only' : ''}`}>
-        {columns.map(col => (
-          <div key={col.id} className="kanban-column">
-            <div className="column-header" style={{ borderTopColor: col.color }}>
-              <div className="title-group">
-                {col.icon}
-                <h3>{col.title}</h3>
-                <span className="count">{tasks.filter(t => t.trangThai === col.id).length}</span>
+      {/* Main View Area */}
+      {viewMode === 'kanban' ? (
+        <div className={`kanban-board ${!isSprintActive ? 'read-only' : ''}`}>
+          {columns.map(col => (
+            <div key={col.id} className="kanban-column">
+              <div className="column-header" style={{ borderTopColor: col.color }}>
+                <div className="title-group">
+                  {col.icon}
+                  <h3>{col.title}</h3>
+                  <span className="count">{tasks.filter(t => t.trangThai === col.id).length}</span>
+                </div>
+                <button className="more-btn"><MoreHorizontal size={18} /></button>
               </div>
-              <button className="more-btn"><MoreHorizontal size={18} /></button>
-            </div>
 
-            <div className="task-list">
-              {tasks.filter(t => t.trangThai === col.id).map(task => (
-                <div key={task.id} className="task-card" onClick={() => handleEditClick(task)}>
-                  <div className="task-card-header">
-                    <span className={`priority-tag ${getPriorityLabel(task.doUuTien).class}`}>
-                      {getPriorityLabel(task.doUuTien).text}
-                    </span>
-                    {task.soLanBiTuChoi > 0 && (
-                      <div className={`rejection-badge ${task.soLanBiTuChoi >= 3 ? 'urgent' : ''}`} title={`Bị từ chối ${task.soLanBiTuChoi} lần`}>
-                        <AlertTriangle size={12} />
-                        <span>{task.soLanBiTuChoi} lần</span>
-                      </div>
-                    )}
-                    <div className="task-card-actions">
-                      <span className="task-id">#{task.id}</span>
-                      {canManageTask(task) && (
-                        <div className="more-menu-container">
-                          <button 
-                            className="more-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id);
-                            }}
-                          >
-                            <MoreVertical size={14} />
-                          </button>
-                          {activeMenuTaskId === task.id && (
-                            <div className="task-dropdown-menu fade-in">
-                              <button onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}>
-                                <Edit size={12} /> Sửa
-                              </button>
-                              
-                              <div className="menu-divider"></div>
-                              <div className="menu-label">Di chuyển sang:</div>
-                              {allSprints.filter(s => s.id !== Number(id) && s.trangThai !== 2).map(s => (
-                                <button 
-                                  key={s.id} 
-                                  className="move-btn"
-                                  onClick={(e) => { e.stopPropagation(); handleMoveToSprint(task.id, s.id); }}
-                                >
-                                  <Play size={12} /> {s.tenSprint}
-                                </button>
-                              ))}
-
-                              <div className="menu-divider"></div>
-                              <button 
-                                className="delete-btn" 
-                                onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
-                              >
-                                <Trash2 size={12} /> Xóa
-                              </button>
-                            </div>
-                          )}
+              <div className="task-list">
+                {tasks.filter(t => t.trangThai === col.id).map(task => (
+                  <div key={task.id} className="task-card" onClick={() => handleEditClick(task)}>
+                    <div className="task-card-header">
+                      <span className={`priority-tag ${getPriorityLabel(task.doUuTien).class}`}>
+                        {getPriorityLabel(task.doUuTien).text}
+                      </span>
+                      {task.soLanBiTuChoi > 0 && (
+                        <div className={`rejection-badge ${task.soLanBiTuChoi >= 3 ? 'urgent' : ''}`} title={`Bị từ chối ${task.soLanBiTuChoi} lần`}>
+                          <AlertTriangle size={12} />
+                          <span>{task.soLanBiTuChoi} lần</span>
                         </div>
                       )}
-                    </div>
-                  </div>
+                      <div className="task-card-actions">
+                        <span className="task-id">#{task.id}</span>
+                        {canManageTask(task) && (
+                          <div className="more-menu-container">
+                            <button 
+                              className="more-action-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id);
+                              }}
+                            >
+                              <MoreVertical size={14} />
+                            </button>
+                            {activeMenuTaskId === task.id && (
+                              <div className="task-dropdown-menu fade-in">
+                                <button onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}>
+                                  <Edit size={12} /> Sửa
+                                </button>
+                                
+                                <div className="menu-divider"></div>
+                                <div className="menu-label">Di chuyển sang:</div>
+                                {allSprints.filter(s => s.id !== Number(id) && s.trangThai !== 2).map(s => (
+                                  <button 
+                                    key={s.id} 
+                                    className="move-btn"
+                                    onClick={(e) => { e.stopPropagation(); handleMoveToSprint(task.id, s.id); }}
+                                  >
+                                    <Play size={12} /> {s.tenSprint}
+                                  </button>
+                                ))}
 
-                  <h4 className="task-title">{task.tieuDe}</h4>
-
-                  {task.dependencies && task.dependencies.length > 0 && (
-                    <div className="task-card-dependencies">
-                      <Link size={12} />
-                      <div className="dep-list">
-                        {task.dependencies.map(dep => (
-                          <span key={dep.dependsOnTaskId} title={dep.dependsOnTaskTitle} className="dep-tag">
-                            #{dep.dependsOnTaskId}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quick Approval Actions for Managers & Testers */}
-                  {col.id === StatusEnum.Review && (
-                    isAdmin || isProjectPM || [ProjectRole.Tester, ProjectRole.QA].includes(userProjectMember?.vaiTro as any)
-                  ) && isSprintActive && (
-                    <div className="task-approval-actions">
-                      <button
-                        className="btn-reject-small"
-                        onClick={() => handleTaskAction(task.id, false)}
-                        title="Từ chối"
-                      >
-                        <XCircle size={14} />
-                        Từ chối
-                      </button>
-                      <button
-                        className="btn-approve-small"
-                        onClick={() => handleTaskAction(task.id, true)}
-                        title="Duyệt"
-                      >
-                        <CheckCircle size={14} />
-                        Duyệt
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="task-card-footer">
-                    <div className="assignee-wrapper">
-                      <div
-                        className={`assignee ${canManageTask(task) ? 'editable' : ''}`}
-                        onClick={() => {
-                          if (canManageTask(task)) {
-                            setActiveDropdownTaskId(activeDropdownTaskId === task.id ? null : task.id);
-                          }
-                        }}
-                      >
-                        {task.assigneeName ? (
-                          <div className="avatar">
-                            {task.assigneeName.charAt(0)}
-                          </div>
-                        ) : (
-                          <div className="avatar empty" title="Chưa giao">
-                            <Sparkles size={14} color="#94a3b8" />
+                                <div className="menu-divider"></div>
+                                <button 
+                                  className="delete-btn" 
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
+                                >
+                                  <Trash2 size={12} /> Xóa
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
-                        <span>{task.assigneeName || 'Chưa giao'}</span>
                       </div>
+                    </div>
 
-                      {/* Assignee Selection Dropdown */}
-                      {activeDropdownTaskId === task.id && (
-                        <div className="assignee-dropdown fade-in">
-                          <div className="dropdown-search">
-                            <Search size={14} color="#94a3b8" />
-                            <input type="text" placeholder="Tìm thành viên..." onClick={e => e.stopPropagation()} />
-                          </div>
-                          <div className="dropdown-list">
-                            <div className="dropdown-item clear-assign" onClick={(e) => { e.stopPropagation(); handleManualAssign(task.id, null); }}>
-                              <div className="avatar empty"><XCircle size={14} /></div>
-                              <span>Gỡ phân công</span>
-                            </div>
-                            <div className="dropdown-divider"></div>
-                            {projectMembers.map(member => (
-                              <div
-                                key={member.id}
-                                className={`dropdown-item ${task.assigneeId === member.id ? 'selected' : ''}`}
-                                onClick={(e) => { e.stopPropagation(); handleManualAssign(task.id, member.id); }}
-                              >
-                                <div className="avatar">{member.hoTen.charAt(0)}</div>
-                                <div className="member-info">
-                                  <span className="name">{member.hoTen}</span>
-                                  <span className="email">{member.email}</span>
-                                </div>
-                                {task.assigneeId === member.id && <CheckCircle2 size={16} color="#10b981" className="ml-auto" />}
-                              </div>
-                            ))}
-                          </div>
+                    <h4 className="task-title">{task.tieuDe}</h4>
+
+                    {task.dependencies && task.dependencies.length > 0 && (
+                      <div className="task-card-dependencies">
+                        <Link size={12} />
+                        <div className="dep-list">
+                          {task.dependencies.map(dep => (
+                            <span key={dep.dependsOnTaskId} title={dep.dependsOnTaskTitle} className="dep-tag">
+                              #{dep.dependsOnTaskId}
+                            </span>
+                          ))}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
-                    <div className="task-metrics">
-                      <div className="task-hours" title="Thời gian ước tính">
-                        <Clock size={12} />
-                        <span>{task.thoiGianUocTinh}h</span>
+                    {/* Quick Approval Actions for Managers & Testers */}
+                    {col.id === StatusEnum.Review && (
+                      isAdmin || isProjectPM || [ProjectRole.Tester, ProjectRole.QA].includes(userProjectMember?.vaiTro as any)
+                    ) && isSprintActive && (
+                      <div className="task-approval-actions">
+                        <button
+                          className="btn-reject-small"
+                          onClick={() => handleTaskAction(task.id, false)}
+                          title="Từ chối"
+                        >
+                          <XCircle size={14} />
+                          Từ chối
+                        </button>
+                        <button
+                          className="btn-approve-small"
+                          onClick={() => handleTaskAction(task.id, true)}
+                          title="Duyệt"
+                        >
+                          <CheckCircle size={14} />
+                          Duyệt
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="task-card-footer">
+                      <div className="assignee-wrapper">
+                        <div
+                          className={`assignee ${canManageTask(task) ? 'editable' : ''}`}
+                          onClick={() => {
+                            if (canManageTask(task)) {
+                              setActiveDropdownTaskId(activeDropdownTaskId === task.id ? null : task.id);
+                            }
+                          }}
+                        >
+                          {task.assigneeName ? (
+                            <div className="avatar">
+                              {task.assigneeName.charAt(0)}
+                            </div>
+                          ) : (
+                            <div className="avatar empty" title="Chưa giao">
+                              <Sparkles size={14} color="#94a3b8" />
+                            </div>
+                          )}
+                          <span>{task.assigneeName || 'Chưa giao'}</span>
+                        </div>
+
+                        {/* Assignee Selection Dropdown */}
+                        {activeDropdownTaskId === task.id && (
+                          <div className="assignee-dropdown fade-in">
+                            <div className="dropdown-search">
+                              <Search size={14} color="#94a3b8" />
+                              <input type="text" placeholder="Tìm thành viên..." onClick={e => e.stopPropagation()} />
+                            </div>
+                            <div className="dropdown-list">
+                              <div className="dropdown-item clear-assign" onClick={(e) => { e.stopPropagation(); handleManualAssign(task.id, null); }}>
+                                <div className="avatar empty"><XCircle size={14} /></div>
+                                <span>Gỡ phân công</span>
+                              </div>
+                              <div className="dropdown-divider"></div>
+                              {projectMembers.map(member => (
+                                <div
+                                  key={member.id}
+                                  className={`dropdown-item ${task.assigneeId === member.id ? 'selected' : ''}`}
+                                  onClick={(e) => { e.stopPropagation(); handleManualAssign(task.id, member.id); }}
+                                >
+                                  <div className="avatar">{member.hoTen.charAt(0)}</div>
+                                  <div className="member-info">
+                                    <span className="name">{member.hoTen}</span>
+                                    <span className="email">{member.email}</span>
+                                  </div>
+                                  {task.assigneeId === member.id && <CheckCircle2 size={16} color="#10b981" className="ml-auto" />}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="task-metrics">
+                        <div className="task-hours" title="Thời gian ước tính">
+                          <Clock size={12} />
+                          <span>{task.thoiGianUocTinh}h</span>
+                        </div>
                       </div>
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="tester-view-container fade-in">
+          <div className="tester-sidebar">
+            <div className="sidebar-header">
+              <h3>Công việc cần Test</h3>
+              <span className="count-badge">{tasks.filter(t => t.trangThai === StatusEnum.Review).length}</span>
+            </div>
+            <div className="tester-task-list">
+              {tasks.filter(t => t.trangThai === StatusEnum.Review).map(task => (
+                <div 
+                  key={task.id} 
+                  className={`tester-task-card ${selectedTestTaskId === task.id ? 'active' : ''}`}
+                  onClick={() => setSelectedTestTaskId(task.id)}
+                >
+                  <div className="card-top">
+                    <span className="task-id">#{task.id}</span>
+                    <span className={`priority-dot ${getPriorityLabel(task.doUuTien).class}`}></span>
+                  </div>
+                  <h4 className="task-title">{task.tieuDe}</h4>
+                  <div className="card-bottom">
+                    <div className="assignee">
+                      <div className="avatar micro">{task.assigneeName?.charAt(0) || '?'}</div>
+                      <span>{task.assigneeName}</span>
+                    </div>
+                    {task.soLanBiTuChoi > 0 && <span className="rejection-count">{task.soLanBiTuChoi} lần từ chối</span>}
                   </div>
                 </div>
               ))}
+              {tasks.filter(t => t.trangThai === StatusEnum.Review).length === 0 && (
+                <div className="empty-state">
+                  <CheckCircle size={32} />
+                  <p>Tuyệt vời! Không còn công việc nào cần test trong Sprint này.</p>
+                </div>
+              )}
             </div>
           </div>
-        ))}
-      </div>
+          
+          <div className="tester-main-content">
+            {selectedTestTaskId ? (
+              (() => {
+                const task = tasks.find(t => t.id === selectedTestTaskId);
+                if (!task) return null;
+                return (
+                  <div className="tester-detail-panel fade-in">
+                    <div className="detail-header">
+                      <div className="title-area">
+                        <div className="id-badge">#{task.id}</div>
+                        <h2>{task.tieuDe}</h2>
+                      </div>
+                      <div className="action-area">
+                        <button className="btn-reject-large" onClick={() => handleTaskAction(task.id, false)}>
+                          <XCircle size={20} /> Từ chối
+                        </button>
+                        <button className="btn-approve-large" onClick={() => handleTaskAction(task.id, true)}>
+                          <CheckCircle size={20} /> Phê duyệt
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="detail-body">
+                      <div className="info-section">
+                        <div className="info-group">
+                          <label>Người thực hiện</label>
+                          <div className="value-box">
+                            <div className="avatar small">{task.assigneeName?.charAt(0)}</div>
+                            <span>{task.assigneeName}</span>
+                          </div>
+                        </div>
+                        <div className="info-group">
+                          <label>Độ ưu tiên</label>
+                          <span className={`priority-badge ${getPriorityLabel(task.doUuTien).class}`}>
+                            {getPriorityLabel(task.doUuTien).text}
+                          </span>
+                        </div>
+                        <div className="info-group">
+                          <label>Ước tính</label>
+                          <div className="value-box"><Clock size={14} /> {task.thoiGianUocTinh}h</div>
+                        </div>
+                      </div>
+
+                      <div className="description-section">
+                        <label>Mô tả công việc</label>
+                        <div className="description-box">
+                          {task.moTa || <span className="no-data">Không có mô tả chi tiết.</span>}
+                        </div>
+                      </div>
+
+                      <div className="discussion-section">
+                        <div className="section-header">
+                          <MessageSquare size={18} />
+                          <h3>Trao đổi & Phản hồi</h3>
+                        </div>
+                        <div className="tester-comment-area">
+                          <div className="comment-list">
+                            {!task.traoLois || task.traoLois.length === 0 ? (
+                              <div className="empty-comments">Chưa có thảo luận nào.</div>
+                            ) : (
+                              task.traoLois.map(c => (
+                                <div key={c.id} className={`comment-item ${c.loai === 1 ? 'rejection-reason' : ''}`}>
+                                  <div className="comment-header">
+                                    <span className="author">{c.tenNguoiTao}</span>
+                                    <span className="time">{new Date(c.createdAt).toLocaleString('vi-VN')}</span>
+                                    {c.loai === 1 && <span className="type-tag">Lý do từ chối</span>}
+                                  </div>
+                                  <div className="comment-body">{c.noiDung}</div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                          <form className="comment-input-area" onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!newComment.trim()) return;
+                            try {
+                              setIsSendingComment(true);
+                              const comment = await TaskService.addComment(task.id, { noiDung: newComment, loai: 0 });
+                              setTasks(prev => prev.map(t => t.id === task.id ? { ...t, traoLois: [...(t.traoLois || []), comment] } : t));
+                              setNewComment('');
+                            } catch (e) {
+                              showToast('Không thể gửi bình luận.', 'error');
+                            } finally {
+                              setIsSendingComment(false);
+                            }
+                          }}>
+                            <textarea 
+                              placeholder="Nhập nội dung phản hồi..." 
+                              value={newComment}
+                              onChange={e => setNewComment(e.target.value)}
+                              disabled={isSendingComment}
+                            />
+                            <button type="submit" disabled={isSendingComment || !newComment.trim()}>
+                              <Send size={16} />
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="tester-no-selection">
+                <Search size={48} />
+                <p>Chọn một công việc từ danh sách bên trái để bắt đầu kiểm thử.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {showEditTaskModal && (
         <div className="sprint-modal-overlay" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>

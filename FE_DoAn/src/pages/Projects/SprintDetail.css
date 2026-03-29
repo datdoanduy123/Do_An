@@ -903,3 +903,417 @@
     background: #cbd5e1;
     cursor: not-allowed;
 }
+
+/* ==========================================================================
+   VIEW MODE TOGGLE (Header)
+   ========================================================================== */
+.view-mode-toggle {
+    display: flex;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 8px;
+    margin-right: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.toggle-btn.active {
+    background: white;
+    color: #3b82f6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* ==========================================================================
+   TESTER VIEW LAYOUT
+   ========================================================================== */
+.tester-view-container {
+    display: flex;
+    height: calc(100vh - 180px);
+    gap: 20px;
+    padding: 0 10px;
+}
+
+.tester-sidebar {
+    width: 320px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.count-badge {
+    background: #eff6ff;
+    color: #3b82f6;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.tester-task-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tester-task-card {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tester-task-card:hover {
+    border-color: #3b82f6;
+    background: #f1f5f9;
+    transform: translateY(-2px);
+}
+
+.tester-task-card.active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.tester-task-card .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.tester-task-card .task-id {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.tester-task-card .task-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 10px 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.tester-task-card .card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tester-task-card .assignee {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.avatar.micro {
+    width: 18px;
+    height: 18px;
+    font-size: 0.6rem;
+}
+
+.rejection-count {
+    font-size: 0.7rem;
+    color: #ef4444;
+    font-weight: 600;
+    background: #fef2f2;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Tester Main Content */
+.tester-main-content {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.tester-detail-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.tester-detail-panel .detail-header {
+    padding: 24px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
+}
+
+.detail-header .title-area h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 8px 0 0 0;
+}
+
+.detail-header .id-badge {
+    display: inline-block;
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.tester-detail-panel .action-area {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-approve-large, .btn-reject-large {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-approve-large {
+    background: #10b981;
+    color: white;
+}
+
+.btn-approve-large:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.btn-reject-large {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-reject-large:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.tester-detail-panel .detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.info-section {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+}
+
+.info-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.info-group .value-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #334155;
+}
+
+.tester-view-container .description-section label {
+    display: block;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 10px;
+}
+
+.description-box {
+    padding: 16px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    color: #334155;
+    line-height: 1.6;
+}
+
+.description-box .no-data {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Discussion in Tester View */
+.tester-view-container .discussion-section .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.tester-view-container .discussion-section .section-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.tester-comment-area {
+    display: flex;
+    flex-direction: column;
+    height: 350px;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    background: #fafafa;
+}
+
+.tester-comment-area .comment-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tester-comment-area .comment-input-area {
+    padding: 12px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    gap: 10px;
+    background: white;
+}
+
+.tester-comment-area .comment-input-area textarea {
+    flex: 1;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px;
+    resize: none;
+    height: 40px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.tester-comment-area .comment-input-area textarea:focus {
+    border-color: #3b82f6;
+    outline: none;
+    height: 80px;
+}
+
+.tester-comment-area .comment-input-area button {
+    align-self: flex-end;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.tester-comment-area .comment-input-area button:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.tester-no-selection {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    padding: 40px;
+    text-align: center;
+}
+
+.tester-no-selection p {
+    margin-top: 16px;
+    font-size: 1.1rem;
+}
+
+.tester-view-container .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: #94a3b8;
+}
+
+.tester-view-container .empty-state p {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
