@@ -102,5 +102,8 @@ namespace Domain.Entities
 
         // Quan hệ: Một công việc có thể có nhiều trao đổi, thảo luận
         public ICollection<TraoLoiCongViec> TraoLoiCongViecs { get; set; } = new List<TraoLoiCongViec>();
+
+        // Quan hệ: Một công việc có nhiều nhật ký ghi nhận tiến độ
+        public ICollection<NhatKyCongViec> NhatKyCongViecs { get; set; } = new List<NhatKyCongViec>();
     }
 }

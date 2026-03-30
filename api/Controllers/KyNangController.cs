@@ -96,6 +96,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_VIEW")]
         [HttpGet("hierarchy")]
         public async Task<IActionResult> GetHierarchy()
         {
@@ -110,6 +111,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_VIEW")]
         [HttpGet("nhom-danh-sach")]
         public async Task<IActionResult> GetNhomKyNangs()
         {
@@ -124,6 +126,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_VIEW")]
         [HttpGet("cong-nghe-theo-nhom/{nhomId}")]
         public async Task<IActionResult> GetCongNgheByNhom(int nhomId)
         {
@@ -138,6 +141,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_CREATE")]
         [HttpPost("tao-nhom")]
         public async Task<IActionResult> TaoNhom(TaoNhomKyNangDto dto)
         {
@@ -152,6 +156,7 @@ namespace api.Controllers
             }
         }
 
+        [QuyenHan("SKILL_CREATE")]
         [HttpPost("tao-cong-nghe")]
         public async Task<IActionResult> TaoCongNghe(TaoCongNgheDto dto)
         {

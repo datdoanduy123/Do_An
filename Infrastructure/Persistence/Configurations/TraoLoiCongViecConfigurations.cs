@@ -16,7 +16,7 @@ namespace Infrastructure.Persistence.Configurations
 
             // Quan hệ với Công việc (Task)
             builder.HasOne(x => x.CongViec)
-                .WithMany() // Một Task có nhiều trao đổi
+                .WithMany(x => x.TraoLoiCongViecs) // Đồng bộ với thuộc tính ICollection trong CongViec
                 .HasForeignKey(x => x.CongViecId)
                 .OnDelete(DeleteBehavior.Cascade);
 

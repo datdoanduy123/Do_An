@@ -349,6 +349,7 @@ namespace Apllication.Service
             double skillWeight = GetRuleValue(rules, "SKILL_MATCH_WEIGHT", 1.0);
             double workloadWeight = GetRuleValue(rules, "WORKLOAD_BALANCE_WEIGHT", 0.5);
             double pmPenalty = GetRuleValue(rules, "PM_TASK_PENALTY", 10.0);
+            double rejectionPenalty = GetRuleValue(rules, "REJECTION_PENALTY", 5.0); // Penalty cho mỗi lần từng bị từ chối
             double minAcceptableScore = GetRuleValue(rules, "MINIMUM_ACCEPABLE_SCORE", 0.3);
 
             // Lấy danh sách kỹ năng yêu cầu của Task
@@ -434,7 +435,21 @@ namespace Apllication.Service
                 // ---- Penalty cho Quản lý: Phạt điểm nặng để rớt xuống cuối danh sách ----
                 double rolePenalty = isPmOrAdmin ? pmPenalty : 0;
 
-                double totalDistance = weightedEuclideanDistance + balancePenalty + rolePenalty;
+                // ---- AI BRAIN UPGRADE: Penalty cho lịch sử từ chối (Rejection History) ----
+                // Nếu User này đã từng làm task này và bị từ chối, AI sẽ nhớ và phạt điểm
+                double taskSpecificRejectionPenalty = 0;
+                if (task.TraoLoiCongViecs != null && task.TraoLoiCongViecs.Any(c => c.Loai == 1))
+                {
+                    // Kiểm tra xem User này có bản ghi nhật ký nào trong task này không
+                    // Nếu có nhật ký + task bị từ chối -> Phạt điểm để AI ưu tiên người mới
+                    bool wasPreviouslyAssigned = task.NhatKyCongViecs?.Any(log => log.NguoiCapNhatId == user.Id) ?? false;
+                    if (wasPreviouslyAssigned)
+                    {
+                        taskSpecificRejectionPenalty = rejectionPenalty * task.SoLanBiTuChoi;
+                    }
+                }
+
+                double totalDistance = weightedEuclideanDistance + balancePenalty + rolePenalty + taskSpecificRejectionPenalty;
 
                 // Chọn người có khoảng cách tổng nhỏ nhất
                 if (totalDistance < bestDistance)

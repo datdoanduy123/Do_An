@@ -28,6 +28,8 @@ namespace Infrastructure.Repositories
                 .ThenInclude(y => y.KyNang)
                     .ThenInclude(k => k!.CongNghe)
                         .ThenInclude(cn => cn.NhomKyNang)
+                .Include(c => c.TraoLoiCongViecs)
+                .Include(c => c.NhatKyCongViecs)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
@@ -95,6 +97,8 @@ namespace Infrastructure.Repositories
                             .ThenInclude(cn => cn!.NhomKyNang)
                 .Include(c => c.Dependencies)
                     .ThenInclude(d => d.DependsOnTask)
+                .Include(c => c.TraoLoiCongViecs)
+                .Include(c => c.NhatKyCongViecs)
                 .AsQueryable();
 
             if (query.DuAnId.HasValue)
