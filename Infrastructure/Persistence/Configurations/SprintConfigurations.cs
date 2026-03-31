@@ -12,6 +12,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(x => x.Id);
 
             builder.Property(x => x.TenSprint).IsRequired().HasMaxLength(100);
+            builder.Property(x => x.MoTa).HasMaxLength(500);
             builder.Property(x => x.TrangThai).HasConversion<string>().HasMaxLength(50);
 
             // Một Sprint có nhiều Công việc

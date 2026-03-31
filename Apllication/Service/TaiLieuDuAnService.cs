@@ -82,6 +82,7 @@ namespace Apllication.Service
                     var doc = new NPOI.XWPF.UserModel.XWPFDocument(stream);
                     var tables = doc.Tables;
                     var moduleMapping = new Dictionary<string, string>();
+                    var moduleDescMapping = new Dictionary<string, string>();
 
                     // LƯỢT 1: Tìm và nạp Quy định Module (Bảng 1)
                     foreach (var table in tables)
@@ -92,6 +93,7 @@ namespace Apllication.Service
 
                         int mCodeIdx = headers.FindIndex(h => h == "module" || h.Contains("mã module"));
                         int mNameIdx = headers.FindIndex(h => h.Contains("tên module") || h.Contains("ý nghĩa"));
+                        int mDescIdx = headers.FindIndex(h => h.Contains("mô tả") || h.Contains("description") || h.Contains("chi tiết"));
 
                         if (mCodeIdx >= 0 && mNameIdx >= 0 && mCodeIdx != mNameIdx)
                         {
@@ -100,10 +102,20 @@ namespace Apllication.Service
                                 var row = table.GetRow(i);
                                 var cells = row.GetTableCells();
                                 if (cells.Count <= Math.Max(mCodeIdx, mNameIdx)) continue;
+                                
                                 string code = cells[mCodeIdx].GetText();
                                 string name = cells[mNameIdx].GetText().Trim();
+                                string desc = (mDescIdx >= 0 && mDescIdx < cells.Count) ? cells[mDescIdx].GetText().Trim() : "";
+                                
                                 if (!string.IsNullOrEmpty(code))
-                                    moduleMapping[NormalizeModuleCode(code)] = name;
+                                {
+                                    string normalizedCode = NormalizeModuleCode(code);
+                                    moduleMapping[normalizedCode] = name;
+                                    if (!string.IsNullOrEmpty(desc))
+                                    {
+                                        moduleDescMapping[normalizedCode] = desc;
+                                    }
+                                }
                             }
                         }
                     }
@@ -174,10 +186,12 @@ namespace Apllication.Service
                                     string normalizedCurrent = NormalizeModuleCode(currentModuleName);
                                     string fullSprintName = moduleMapping.ContainsKey(normalizedCurrent) 
                                         ? moduleMapping[normalizedCurrent] : currentModuleName;
-
+                                    string? sprintDesc = moduleDescMapping.ContainsKey(normalizedCurrent)
+                                        ? moduleDescMapping[normalizedCurrent] : null;
+ 
                                     if (!sprintCache.TryGetValue(fullSprintName, out int sId))
                                     {
-                                        var Sprints = await _giaoViecAiService.GetOrCreateSprintByModuleNameAsync(taiLieu.DuAnId, fullSprintName);
+                                        var Sprints = await _giaoViecAiService.GetOrCreateSprintByModuleNameAsync(taiLieu.DuAnId, fullSprintName, sprintDesc);
                                         sId = Sprints.Id;
                                         sprintCache[fullSprintName] = sId;
                                     }

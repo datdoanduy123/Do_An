@@ -378,21 +378,18 @@ namespace Apllication.Service
 
                 var userSkills = user.KyNangNguoiDungs ?? new List<KyNangNguoiDung>();
 
-                // ---- Tính khoảng cách Euclidean theo từng chiều kỹ năng ----
-                // Vector Task:  T[i] = mức độ yêu cầu kỹ năng i (1-5)
-                // Vector User:  U[i] = level kỹ năng i của User (0 nếu user không có kỹ năng đó)
-                // distance = sqrt( Σ (T[i] - U[i])^2 )
-                double sumSquaredDiff = 0;
+                // ---- Tính khoảng cách theo chiều năng lực (Dựa trên Số năm kinh nghiệm) ----
+                // AI sẽ ưu tiên người có nhiều kinh nghiệm nhất cho kỹ năng yêu cầu.
+                double skillDistanceTotal = 0;
                 foreach (var req in reqs)
                 {
-                    double taskRequirement = req.MucDoYeuCau; // Mức yêu cầu (1-5)
-                    double effectiveLevel = 0;
+                    double userExperience = 0;
 
                     // 1. Kiểm tra khớp chính xác kỹ năng (Direct Match)
                     var directSkill = userSkills.FirstOrDefault(s => s.KyNangId == req.KyNangId);
                     if (directSkill != null)
                     {
-                        effectiveLevel = directSkill.Level;
+                        userExperience = directSkill.SoNamKinhNghiem;
                     }
                     else if (req.KyNang?.CongNgheId > 0)
                     {
@@ -400,8 +397,7 @@ namespace Apllication.Service
                         var sameTechSkills = userSkills.Where(s => s.KyNang?.CongNgheId == req.KyNang.CongNgheId);
                         if (sameTechSkills.Any())
                         {
-                            double maxLevelInTech = sameTechSkills.Max(s => (double)s.Level);
-                            effectiveLevel = maxLevelInTech * 0.5; // Giảm 50% vì không phải kỹ năng đích
+                            userExperience = sameTechSkills.Max(s => (double)s.SoNamKinhNghiem) * 0.5;
                         }
                         else if (req.KyNang.CongNghe?.NhomKyNangId > 0)
                         {
@@ -409,21 +405,18 @@ namespace Apllication.Service
                             var sameGroupSkills = userSkills.Where(s => s.KyNang?.CongNghe?.NhomKyNangId == req.KyNang.CongNghe.NhomKyNangId);
                             if (sameGroupSkills.Any())
                             {
-                                double maxLevelInGroup = sameGroupSkills.Max(s => (double)s.Level);
-                                effectiveLevel = maxLevelInGroup * 0.2; // Giảm 80% vì chỉ chung lĩnh vực rộng
+                                userExperience = sameGroupSkills.Max(s => (double)s.SoNamKinhNghiem) * 0.2;
                             }
                         }
                     }
 
-                    // Hiệu (T[i] - U[i]): Nếu User vượt yêu cầu (effectiveLevel > taskRequirement)
-                    // thì hiệu = 0 (tốt hoàn toàn), không bị phạt vì quá giỏi.
-                    double diff = Math.Max(0, taskRequirement - effectiveLevel);
-                    sumSquaredDiff += diff * diff;
+                    // Tính điểm phạt: Nếu user ít kinh nghiệm hơn thì distance càng lớn.
+                    // Sử dụng mốc 5 năm làm trần (ceiling) để tính khoảng cách chuẩn hóa.
+                    double diff = Math.Max(0, 5.0 - userExperience); 
+                    skillDistanceTotal += diff * diff;
                 }
 
-                double euclideanDistance = Math.Sqrt(sumSquaredDiff);
-
-                // Áp dụng trọng số kỹ năng
+                double euclideanDistance = Math.Sqrt(skillDistanceTotal);
                 double weightedEuclideanDistance = euclideanDistance * skillWeight;
 
                 // ---- Penalty chia đều: Nếu user đã nhiều task hơn TB → cộng thêm khoảng cách ----
@@ -520,17 +513,35 @@ namespace Apllication.Service
             return defaultValue;
         }
 
-        public async Task<Sprint> GetOrCreateSprintByModuleNameAsync(int duAnId, string moduleName)
+        public async Task<Sprint> GetOrCreateSprintByModuleNameAsync(int duAnId, string moduleName, string? description = null)
         {
             var rules = await _ruleRepo.GetAllActiveRulesAsync();
             int sprintDays = (int)GetRuleValue(rules, "DEFAULT_SPRINT_DAYS", 14);
 
             var sprints = await _sprintRepo.GetByProjectIdAsync(duAnId);
             var existing = sprints.FirstOrDefault(s => s.TenSprint == moduleName);
-            if (existing != null) return existing;
+            if (existing != null) 
+            {
+                if (string.IsNullOrEmpty(existing.MoTa) && !string.IsNullOrEmpty(description))
+                {
+                    existing.MoTa = description;
+                    await _sprintRepo.UpdateAsync(existing);
+                }
+                return existing;
+            }
+ 
             var duAn = await _duAnRepo.GetByIdAsync(duAnId);
             DateTime start = sprints.Any() ? sprints.Max(s => s.NgayKetThuc) : (duAn?.NgayBatDau ?? DateTime.UtcNow);
-            return await _sprintRepo.AddAsync(new Sprint { DuAnId = duAnId, TenSprint = moduleName, NgayBatDau = start, NgayKetThuc = start.AddDays(sprintDays), TrangThai = TrangThaiSprint.New });
+            
+            return await _sprintRepo.AddAsync(new Sprint 
+            { 
+                DuAnId = duAnId, 
+                TenSprint = moduleName, 
+                MoTa = description,
+                NgayBatDau = start, 
+                NgayKetThuc = start.AddDays(sprintDays), 
+                TrangThai = TrangThaiSprint.New 
+            });
         }
 
         private async Task<Sprint> GetOrCreateActiveSprintAsync(int duAnId, IEnumerable<QuyTacGiaoViecAI> rules)

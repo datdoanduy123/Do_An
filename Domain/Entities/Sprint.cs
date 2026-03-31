@@ -16,6 +16,7 @@ namespace Domain.Entities
         public DuAn? DuAn { get; set; }
 
         public string TenSprint { get; set; } = string.Empty;
+        public string? MoTa { get; set; }
 
         public DateTime NgayBatDau { get; set; }
 

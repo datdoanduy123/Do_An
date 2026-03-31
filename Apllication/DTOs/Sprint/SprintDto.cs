@@ -8,6 +8,7 @@ namespace Apllication.DTOs.Sprint
         public int Id { get; set; }
         public int DuAnId { get; set; }
         public string TenSprint { get; set; } = string.Empty;
+        public string? MoTa { get; set; }
         public DateTime NgayBatDau { get; set; }
         public DateTime NgayKetThuc { get; set; }
         public TrangThaiSprint TrangThai { get; set; }
@@ -18,6 +19,7 @@ namespace Apllication.DTOs.Sprint
     {
         public int DuAnId { get; set; }
         public string TenSprint { get; set; } = string.Empty;
+        public string? MoTa { get; set; }
         public DateTime NgayBatDau { get; set; }
         public DateTime NgayKetThuc { get; set; }
     }
@@ -25,6 +27,7 @@ namespace Apllication.DTOs.Sprint
     public class CapNhatSprintDto
     {
         public string TenSprint { get; set; } = string.Empty;
+        public string? MoTa { get; set; }
         public DateTime NgayBatDau { get; set; }
         public DateTime NgayKetThuc { get; set; }
         public TrangThaiSprint TrangThai { get; set; }

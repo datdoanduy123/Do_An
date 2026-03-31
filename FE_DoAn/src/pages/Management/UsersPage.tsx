@@ -56,15 +56,13 @@ const SkillCard: React.FC<{
       {userSkill ? (
         <div className="skill-card-actions">
           <div className="skill-stats">
-            <span className="stat-lvl">Lvl: {userSkill.level}</span>
-            <span className="stat-exp">Exp: {userSkill.soNamKinhNghiem}y</span>
+            <span className="stat-exp">Kinh nghiệm: {userSkill.soNamKinhNghiem} năm</span>
           </div>
           <div style={{ display: 'flex', gap: '4px' }}>
             <button 
               className="skill-icon-btn edit" 
               onClick={() => onEdit({
                 kyNangId: skill.id,
-                level: userSkill.level,
                 soNamKinhNghiem: userSkill.soNamKinhNghiem
               })}
             >
@@ -78,7 +76,7 @@ const SkillCard: React.FC<{
       ) : (
         <button 
           className="skill-add-btn"
-          onClick={() => onEdit({ kyNangId: skill.id, level: 1, soNamKinhNghiem: 0 })}
+          onClick={() => onEdit({ kyNangId: skill.id, soNamKinhNghiem: 0 })}
         >
           <Plus size={14} /> Gán
         </button>
@@ -118,7 +116,6 @@ const UsersPage: React.FC = () => {
   const [skillLoading, setSkillLoading] = useState(false);
   const [editingSkill, setEditingSkill] = useState<{
     kyNangId: number;
-    level: number;
     soNamKinhNghiem: number;
   } | null>(null);
 
@@ -293,14 +290,14 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  const handleUpdateSkill = async (kyNangId: number, level: number, years: number) => {
+  const handleUpdateSkill = async (kyNangId: number, years: number) => {
     if (!targetUser) return;
     
     try {
       await UserService.assignSkill({
         nguoiDungId: targetUser.id,
         kyNangId: kyNangId,
-        level: level,
+        level: 3, // Mặc định level 3 vì AI đã bỏ qua trường này
         soNamKinhNghiem: years
       });
       
@@ -754,29 +751,22 @@ const UsersPage: React.FC = () => {
                         </h5>
                         <div className="panel-form">
                           <div className="form-item">
-                            <label>Cấp độ (1-5)</label>
-                            <div className="level-picker">
-                              {[1,2,3,4,5].map(lv => (
-                                <button 
-                                  key={lv}
-                                  className={`lv-btn ${editingSkill.level === lv ? 'active' : ''}`}
-                                  onClick={() => setEditingSkill({...editingSkill, level: lv})}
-                                >{lv}</button>
-                              ))}
+                            <label>Số năm kinh nghiệm thực tế</label>
+                            <div className="exp-input-wrapper">
+                              <input 
+                                type="number" 
+                                className="panel-input"
+                                min="0"
+                                max="50"
+                                value={editingSkill.soNamKinhNghiem}
+                                onChange={(e) => setEditingSkill({...editingSkill, soNamKinhNghiem: parseInt(e.target.value) || 0})}
+                              />
+                              <span className="unit">năm</span>
                             </div>
-                          </div>
-                          <div className="form-item">
-                            <label>Số năm kinh nghiệm</label>
-                            <input 
-                              type="number" 
-                              className="panel-input"
-                              value={editingSkill.soNamKinhNghiem}
-                              onChange={(e) => setEditingSkill({...editingSkill, soNamKinhNghiem: parseInt(e.target.value) || 0})}
-                            />
                           </div>
                         </div>
                         <div className="panel-footer">
-                          <button className="btn-save-mini" onClick={() => handleUpdateSkill(editingSkill.kyNangId, editingSkill.level, editingSkill.soNamKinhNghiem)}>
+                          <button className="btn-save-mini" onClick={() => handleUpdateSkill(editingSkill.kyNangId, editingSkill.soNamKinhNghiem)}>
                             Lưu cấu hình
                           </button>
                         </div>
