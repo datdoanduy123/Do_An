@@ -544,16 +544,51 @@ namespace Apllication.Service
             });
         }
 
+        /// <summary>
+        /// Lấy Sprint đang hoạt động (InProgress) của dự án để gán task vào.
+        /// Nếu chưa có sprint InProgress, tự động tìm sprint New đầu tiên và kích hoạt nó.
+        /// Nếu không có sprint nào, tạo Sprint 1 và kích hoạt luôn.
+        /// → Sprint KHÔNG cần PM bấm nút, tự động bắt đầu khi AI chạy giao việc.
+        /// </summary>
         private async Task<Sprint> GetOrCreateActiveSprintAsync(int duAnId, IEnumerable<QuyTacGiaoViecAI> rules)
         {
             int sprintDays = (int)GetRuleValue(rules, "DEFAULT_SPRINT_DAYS", 14);
 
             var sprints = await _sprintRepo.GetByProjectIdAsync(duAnId);
-            var active = sprints.FirstOrDefault(s => s.TrangThai == TrangThaiSprint.InProgress) ?? sprints.FirstOrDefault(s => s.TrangThai == TrangThaiSprint.New);
-            if (active != null) return active;
+
+            // Ưu tiên sprint đang chạy trước
+            var inProgress = sprints.FirstOrDefault(s => s.TrangThai == TrangThaiSprint.InProgress);
+            if (inProgress != null) return inProgress;
+
+            // Không có sprint InProgress → tìm sprint New đầu tiên (theo NgayBatDau + Id)
+            var firstNew = sprints
+                .Where(s => s.TrangThai == TrangThaiSprint.New)
+                .OrderBy(s => s.NgayBatDau)
+                .ThenBy(s => s.Id)
+                .FirstOrDefault();
+
+            if (firstNew != null)
+            {
+                // Tự động kích hoạt sprint đầu tiên, số ngày đọc từ cấu hình
+                firstNew.TrangThai = TrangThaiSprint.InProgress;
+                firstNew.NgayBatDau = DateTime.UtcNow.Date;
+                firstNew.NgayKetThuc = DateTime.UtcNow.Date.AddDays(sprintDays);
+                await _sprintRepo.UpdateAsync(firstNew);
+                return firstNew;
+            }
+
+            // Không có sprint nào → tạo mới Sprint 1 và kích hoạt luôn
             var duAn = await _duAnRepo.GetByIdAsync(duAnId);
-            DateTime start = duAn?.NgayBatDau ?? DateTime.UtcNow;
-            return await _sprintRepo.AddAsync(new Sprint { DuAnId = duAnId, TenSprint = "Sprint 1", NgayBatDau = start, NgayKetThuc = start.AddDays(sprintDays), TrangThai = TrangThaiSprint.New });
+            DateTime start = DateTime.UtcNow.Date;
+            var newSprint = new Sprint
+            {
+                DuAnId = duAnId,
+                TenSprint = "Sprint 1",
+                NgayBatDau = start,
+                NgayKetThuc = start.AddDays(sprintDays),
+                TrangThai = TrangThaiSprint.InProgress  // Tự động InProgress ngay khi tạo
+            };
+            return await _sprintRepo.AddAsync(newSprint);
         }
     }
 }

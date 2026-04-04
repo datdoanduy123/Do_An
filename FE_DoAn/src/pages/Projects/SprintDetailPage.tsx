@@ -21,7 +21,6 @@ import {
   Link,
   X,
   Activity,
-  TrendingUp,
   MessageSquare,
   Send
 } from 'lucide-react';
@@ -82,8 +81,6 @@ const SprintDetailPage: React.FC = () => {
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  // State loading cho nút Kích hoạt Sprint
-  const [isActivating, setIsActivating] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -361,30 +358,6 @@ const SprintDetailPage: React.FC = () => {
     }
   }
 
-  /**
-   * Kích hoạt Sprint bằng API mới POST /Sprint/{id}/kich-hoat.
-   * Tự động: đặt NgayBatDau = hôm nay, NgayKetThuc = hôm nay + 14 ngày.
-   * Hỗ trợ nhiều Sprint kích hoạt song song (nhiều team).
-   */
-  const handleKichHoatSprint = async () => {
-    if (!sprint || isActivating) return;
-    try {
-      setIsActivating(true);
-      const result = await SprintService.startSprint(sprint.id);
-      if (result?.statusCode === 200) {
-        showToast('Sprint đã được kích hoạt! Đang bắt đầu 2 tuần làm việc.');
-        fetchData(); // Reload dữ liệu sprint từ server
-      } else {
-        showToast(result?.message || 'Không thể kích hoạt Sprint.', 'error');
-      }
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || 'Kích hoạt Sprint thất bại.';
-      showToast(msg, 'error');
-    } finally {
-      setIsActivating(false);
-    }
-  };
-
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sprint || !newTaskData.tieuDe) return;
@@ -492,27 +465,11 @@ const SprintDetailPage: React.FC = () => {
 
   return (
     <div className="sprint-detail-container">
-      {/* Sprint Status Warning Banner */}
-      {sprint.trangThai !== 1 && (
-        <div className={`sprint-status-banner ${sprint.trangThai === 2 ? 'finished' : 'new'}`}>
+      {/* Sprint Status Warning Banner (Chỉ hiện khi đã kết thúc) */}
+      {sprint.trangThai === 2 && (
+        <div className="sprint-status-banner finished">
           <AlertCircle size={18} />
-          <span>
-            {sprint.trangThai === 0 
-              ? 'Đây là bản nháp Sprint. Bạn vẫn có thể quản lý task, hoặc nhấn "Kích hoạt" để bắt đầu theo dõi tiến độ chính thức.' 
-              : 'Sprint này đã kết thúc. Bạn không thể thay đổi tiến độ công việc.'}
-          </span>
-          {(isAdmin || isProjectPM) && sprint.trangThai === 0 && (
-            <button
-              className="btn-start-sprint"
-              onClick={handleKichHoatSprint}
-              disabled={isActivating}
-            >
-              {isActivating
-                ? <>⏳ Đang xử lý...</>
-                : <><Play size={14} fill="currentColor" /> Kích hoạt ngay</>
-              }
-            </button>
-          )}
+          <span>Sprint này đã kết thúc. Bạn không thể thay đổi tiến độ công việc.</span>
         </div>
       )}
 
@@ -913,124 +870,126 @@ const SprintDetailPage: React.FC = () => {
               <h2>Chỉnh sửa Công việc</h2>
               <button className="close-btn" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>✕</button>
             </div>
-            <form onSubmit={handleUpdateTask} className="sprint-modal-body">
-              <div className="form-group">
-                <label>Tiêu đề <span className="required">*</span></label>
-                <input 
-                  type="text" 
-                  value={newTaskData.tieuDe}
-                  onChange={e => setNewTaskData({...newTaskData, tieuDe: e.target.value})}
-                  placeholder="Nhập tiêu đề công việc"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Mô tả</label>
-                <textarea 
-                  value={newTaskData.moTa}
-                  onChange={e => setNewTaskData({...newTaskData, moTa: e.target.value})}
-                  placeholder="Mô tả chi tiết công việc..."
-                  rows={3}
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group" style={{ flex: 2 }}>
-                  <label>Người thực hiện</label>
-                  <select 
-                    value={newTaskData.assigneeId || ''}
-                    onChange={e => setNewTaskData({...newTaskData, assigneeId: e.target.value ? parseInt(e.target.value) : null})}
-                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
-                  >
-                    <option value="">-- Chưa giao --</option>
-                    {projectMembers.map(member => (
-                      <option key={member.id} value={member.id}>
-                        {member.hoTen}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label>Loại công việc</label>
-                  <select 
-                    value={newTaskData.loaiCongViec}
-                    onChange={e => setNewTaskData({...newTaskData, loaiCongViec: parseInt(e.target.value)})}
-                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
-                  >
-                    <option value={0}>Backend</option>
-                    <option value={1}>Frontend</option>
-                    <option value={2}>Fullstack</option>
-                    <option value={3}>Mobile</option>
-                    <option value={4}>DevOps</option>
-                    <option value={5}>Tester</option>
-                    <option value={6}>UI/UX</option>
-                    <option value={7}>BA</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-row">
+            <div className="sprint-modal-scroll-area">
+              <form onSubmit={handleUpdateTask} className="sprint-modal-body">
                 <div className="form-group">
-                  <label>Độ ưu tiên</label>
-                  <select 
-                    value={newTaskData.doUuTien}
-                    onChange={e => setNewTaskData({...newTaskData, doUuTien: parseInt(e.target.value)})}
-                    style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
-                  >
-                    <option value={0}>Thấp</option>
-                    <option value={1}>Vừa</option>
-                    <option value={2}>Cao</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Ước tính (giờ)</label>
+                  <label>Tiêu đề <span className="required">*</span></label>
                   <input 
-                    type="number" 
-                    value={newTaskData.thoiGianUocTinh}
-                    onChange={e => setNewTaskData({...newTaskData, thoiGianUocTinh: parseInt(e.target.value)})}
-                    min="0"
+                    type="text" 
+                    value={newTaskData.tieuDe}
+                    onChange={e => setNewTaskData({...newTaskData, tieuDe: e.target.value})}
+                    placeholder="Nhập tiêu đề công việc"
+                    required
                   />
                 </div>
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>Đóng</button>
-                {editingTask && canManageTask(editingTask) && (
-                  <button type="submit" className="btn-save">Lưu Thay đổi</button>
-                )}
-              </div>
-            </form>
-
-            {/* Comment Section in Detail Modal */}
-            {editingTask && (
-              <div className="task-discussion-section">
-                <h3><MessageSquare size={18} /> Thảo luận & Phản hồi</h3>
-                <div className="comment-list">
-                  {!editingTask.traoLois || editingTask.traoLois.length === 0 ? (
-                    <div className="empty-comments">Chưa có thảo luận nào cho công việc này.</div>
-                  ) : (
-                    editingTask.traoLois.map(c => (
-                      <div key={c.id} className={`comment-item ${c.loai === 1 ? 'rejection-reason' : ''}`}>
-                        <div className="comment-header">
-                          <span className="author">{c.tenNguoiTao}</span>
-                          <span className="time"><Clock size={12} /> {new Date(c.createdAt).toLocaleString('vi-VN')}</span>
-                          {c.loai === 1 && <span className="type-tag">Lý do từ chối</span>}
-                        </div>
-                        <div className="comment-body">{c.noiDung}</div>
-                      </div>
-                    ))
+                <div className="form-group">
+                  <label>Mô tả</label>
+                  <textarea 
+                    value={newTaskData.moTa}
+                    onChange={e => setNewTaskData({...newTaskData, moTa: e.target.value})}
+                    placeholder="Mô tả chi tiết công việc..."
+                    rows={3}
+                  />
+                </div>
+                <div className="form-row">
+                  <div className="form-group" style={{ flex: 2 }}>
+                    <label>Người thực hiện</label>
+                    <select 
+                      value={newTaskData.assigneeId || ''}
+                      onChange={e => setNewTaskData({...newTaskData, assigneeId: e.target.value ? parseInt(e.target.value) : null})}
+                      style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+                    >
+                      <option value="">-- Chưa giao --</option>
+                      {projectMembers.map(member => (
+                        <option key={member.id} value={member.id}>
+                          {member.hoTen}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label>Loại công việc</label>
+                    <select 
+                      value={newTaskData.loaiCongViec}
+                      onChange={e => setNewTaskData({...newTaskData, loaiCongViec: parseInt(e.target.value)})}
+                      style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+                    >
+                      <option value={0}>Backend</option>
+                      <option value={1}>Frontend</option>
+                      <option value={2}>Fullstack</option>
+                      <option value={3}>Mobile</option>
+                      <option value={4}>DevOps</option>
+                      <option value={5}>Tester</option>
+                      <option value={6}>UI/UX</option>
+                      <option value={7}>BA</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Độ ưu tiên</label>
+                    <select 
+                      value={newTaskData.doUuTien}
+                      onChange={e => setNewTaskData({...newTaskData, doUuTien: parseInt(e.target.value)})}
+                      style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+                    >
+                      <option value={0}>Thấp</option>
+                      <option value={1}>Vừa</option>
+                      <option value={2}>Cao</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Ước tính (giờ)</label>
+                    <input 
+                      type="number" 
+                      value={newTaskData.thoiGianUocTinh}
+                      onChange={e => setNewTaskData({...newTaskData, thoiGianUocTinh: parseInt(e.target.value)})}
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" className="btn-cancel" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>Đóng</button>
+                  {editingTask && canManageTask(editingTask) && (
+                    <button type="submit" className="btn-save">Lưu Thay đổi</button>
                   )}
                 </div>
-                <form className="comment-input-area" onSubmit={handleAddComment}>
-                  <textarea 
-                    placeholder="Nhập nội dung trao đổi..." 
-                    value={newComment}
-                    onChange={e => setNewComment(e.target.value)}
-                    disabled={isSendingComment}
-                  />
-                  <button type="submit" disabled={isSendingComment || !newComment.trim()}>
-                    <Send size={16} />
-                  </button>
-                </form>
-              </div>
-            )}
+              </form>
+
+              {/* Comment Section in Detail Modal */}
+              {editingTask && (
+                <div className="task-discussion-section">
+                  <h3><MessageSquare size={18} /> Thảo luận & Phản hồi</h3>
+                  <div className="comment-list">
+                    {!editingTask.traoLois || editingTask.traoLois.length === 0 ? (
+                      <div className="empty-comments">Chưa có thảo luận nào cho công việc này.</div>
+                    ) : (
+                      editingTask.traoLois.map(c => (
+                        <div key={c.id} className={`comment-item ${c.loai === 1 ? 'rejection-reason' : ''}`}>
+                          <div className="comment-header">
+                            <span className="author">{c.tenNguoiTao}</span>
+                            <span className="time"><Clock size={12} /> {new Date(c.createdAt).toLocaleString('vi-VN')}</span>
+                            {c.loai === 1 && <span className="type-tag">Lý do từ chối</span>}
+                          </div>
+                          <div className="comment-body">{c.noiDung}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <form className="comment-input-area" onSubmit={handleAddComment}>
+                    <textarea 
+                      placeholder="Nhập nội dung trao đổi..." 
+                      value={newComment}
+                      onChange={e => setNewComment(e.target.value)}
+                      disabled={isSendingComment}
+                    />
+                    <button type="submit" disabled={isSendingComment || !newComment.trim()}>
+                      <Send size={16} />
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

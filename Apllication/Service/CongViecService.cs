@@ -19,6 +19,8 @@ namespace Apllication.Service
         private readonly IKanbanNotificationService _notificationService;
         private readonly IDuAnRepository _projectRepository;
         private readonly ITraoLoiRepository _commentRepository;
+        // Inject ISprintService để gọi tự động mở Sprint kế tiếp khi Sprint hiện tại kết thúc
+        private readonly ISprintService _sprintService;
 
         public CongViecService(
             ICongViecRepository repository, 
@@ -27,7 +29,8 @@ namespace Apllication.Service
             ISprintRepository sprintRepository,
             IKanbanNotificationService notificationService,
             IDuAnRepository projectRepository,
-            ITraoLoiRepository commentRepository)
+            ITraoLoiRepository commentRepository,
+            ISprintService sprintService)
         {
             _repository = repository;
             _userRepository = userRepository;
@@ -36,6 +39,7 @@ namespace Apllication.Service
             _notificationService = notificationService;
             _projectRepository = projectRepository;
             _commentRepository = commentRepository;
+            _sprintService = sprintService;
         }
 
         public async Task<CongViecDto> GetByIdAsync(int id)
@@ -623,25 +627,25 @@ namespace Apllication.Service
 
         /// <summary>
         /// Fix #9: Kiểm tra và tự động hoàn thành Sprint nếu tất cả task đã Done.
+        /// Sau khi Sprint Finished, tự động kích hoạt Sprint tiếp theo theo luồng tuần tự.
         /// </summary>
         private async Task CheckAndCompleteSprintAsync(int sprintId)
         {
             var sprint = await _sprintRepository.GetByIdAsync(sprintId);
             if (sprint == null || sprint.TrangThai == TrangThaiSprint.Finished) return;
 
-            // Lấy danh sách task thuộc sprint này (dùng repository có sẵn filter dự án / query)
-            // Lưu ý: ICongViecRepository chỉ có GetByProjectIdAsync, chưa có GetBySprintIdAsync cụ thể
-            // nhưng CongViecRepository.LayDanhSachCongViecAsync có thể dùng query.
-            // Để đơn giản và chính xác, ta lọc trên sprint.CongViecs nếu repository đã Include sẵn.
-            // SprintRepository.GetByIdAsync thường Include CongViecs.
-            
+            // Lấy danh sách task thuộc sprint này và kiểm tra tất cả đã Done/Cancelled chưa
             if (sprint.CongViecs != null && sprint.CongViecs.Any())
             {
                 bool allDone = sprint.CongViecs.All(c => c.TrangThai == TrangThaiCongViec.Done || c.TrangThai == TrangThaiCongViec.Cancelled);
                 if (allDone)
                 {
+                    // Đánh dấu Sprint này là đã hoàn thành
                     sprint.TrangThai = TrangThaiSprint.Finished;
                     await _sprintRepository.UpdateAsync(sprint);
+
+                    // Tự động mở Sprint kế tiếp trong dự án (luồng tuần tự)
+                    await _sprintService.TuDongMoSprintTiepTheoAsync(sprintId);
                 }
             }
         }

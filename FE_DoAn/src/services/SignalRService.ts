@@ -8,8 +8,8 @@ class SignalRService {
   private readonly hubUrl: string;
 
   constructor() {
-    // API URL từ biến môi trường hoặc mặc định
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5095';
+    // API URL từ biến môi trường
+    const baseUrl = import.meta.env.VITE_API_URL;
     this.hubUrl = `${baseUrl}/hubs/kanban`;
   }
 

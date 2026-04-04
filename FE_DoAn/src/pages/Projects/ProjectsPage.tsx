@@ -9,7 +9,9 @@ import {
   LayoutGrid,
   List as ListIcon,
   Briefcase,
-  X
+  X,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import ProjectService from '../../services/ProjectService';
 import type { DuAnDto, TaoDuAnDto } from '../../services/ProjectService';
@@ -39,6 +41,11 @@ const ProjectsPage: React.FC = () => {
     ngayKetThuc: ''
   });
 
+  // State cho Menu dropdown và Edit
+  const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
+
   const fetchProjects = async () => {
     try {
       setLoading(true);
@@ -63,6 +70,15 @@ const ProjectsPage: React.FC = () => {
   useEffect(() => {
     fetchProjects();
     fetchUser();
+
+    // Đóng dropdown khi click ra ngoài
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.more-menu-container')) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const getStatusLabel = (project: DuAnDto) => {
@@ -81,27 +97,74 @@ const ProjectsPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateProject = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setFormData({
+      tenDuAn: '',
+      moTa: '',
+      ngayBatDau: new Date().toISOString().split('T')[0],
+      ngayKetThuc: ''
+    });
+    setIsEditMode(false);
+    setEditingProjectId(null);
+  };
+
+  const handleEditClick = (project: DuAnDto) => {
+    setFormData({
+      tenDuAn: project.tenDuAn,
+      moTa: project.moTa || '',
+      ngayBatDau: new Date(project.ngayBatDau).toISOString().split('T')[0],
+      ngayKetThuc: project.ngayKetThuc ? new Date(project.ngayKetThuc).toISOString().split('T')[0] : ''
+    });
+    setIsEditMode(true);
+    setEditingProjectId(project.id);
+    setIsModalOpen(true);
+    setActiveMenuId(null);
+  };
+
+  const handleDeleteProject = async (id: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa dự án này? Thao tác này không thể hoàn tác.')) return;
+    try {
+      const success = await ProjectService.deleteProject(id);
+      if (success) {
+        alert('Xóa dự án thành công!');
+        fetchProjects();
+      } else {
+        alert('Xóa dự án thất bại.');
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      alert('Lỗi hệ thống khi xóa dự án.');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsSubmitting(true);
-      const response = await ProjectService.createProject(formData);
-      if (response.statusCode === 200) {
-        alert('Tạo dự án thành công!');
-        setIsModalOpen(false);
-        setFormData({
-          tenDuAn: '',
-          moTa: '',
-          ngayBatDau: new Date().toISOString().split('T')[0],
-          ngayKetThuc: ''
+      let response;
+      
+      if (isEditMode && editingProjectId) {
+        // Cập nhật dự án
+        response = await ProjectService.updateProject(editingProjectId, {
+          ...formData,
+          trangThai: projects.find(p => p.id === editingProjectId)?.trangThai || TrangThaiEnum.Planning 
         });
+      } else {
+        // Tạo dự án mới
+        response = await ProjectService.createProject(formData);
+      }
+
+      if (response.statusCode === 200) {
+        alert(isEditMode ? 'Cập nhật dự án thành công!' : 'Tạo dự án thành công!');
+        setIsModalOpen(false);
+        resetForm();
         fetchProjects();
       } else {
         alert('Có lỗi xảy ra: ' + response.message);
       }
     } catch (error: any) {
-      console.error('Error creating project:', error);
-      alert('Lỗi hệ thống khi tạo dự án.');
+      console.error('Error submitting project:', error);
+      alert('Lỗi hệ thống khi lưu dự án.');
     } finally {
       setIsSubmitting(false);
     }
@@ -175,15 +238,37 @@ const ProjectsPage: React.FC = () => {
                 <div className="project-icon-box">
                   <Briefcase size={20} />
                 </div>
-                <button
-                  className="more-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Thêm logic more menu ở đây nếu cần
-                  }}
-                >
-                  <MoreVertical size={18} />
-                </button>
+                <div className="more-menu-container">
+                  <button
+                    className="more-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMenuId(activeMenuId === project.id ? null : project.id);
+                    }}
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+
+                  {activeMenuId === project.id && (
+                    <div className="project-dropdown-menu">
+                      <button 
+                        className="dropdown-item" 
+                        onClick={(e) => { e.stopPropagation(); handleEditClick(project); }}
+                      >
+                        <Edit size={16} />
+                        <span>Sửa dự án</span>
+                      </button>
+                      <div className="dropdown-divider"></div>
+                      <button 
+                        className="dropdown-item delete" 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id); }}
+                      >
+                        <Trash2 size={16} />
+                        <span>Xóa dự án</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="card-body">
@@ -231,13 +316,13 @@ const ProjectsPage: React.FC = () => {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>Tạo dự án mới</h2>
-              <button className="close-btn" onClick={() => setIsModalOpen(false)}>
+              <h2>{isEditMode ? 'Chỉnh sửa dự án' : 'Tạo dự án mới'}</h2>
+              <button className="close-btn" onClick={() => { setIsModalOpen(false); resetForm(); }}>
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateProject} className="modal-form">
+            <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-group">
                 <label>Tên dự án *</label>
                 <input
@@ -287,7 +372,7 @@ const ProjectsPage: React.FC = () => {
                 <button
                   type="button"
                   className="secondary-btn"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); resetForm(); }}
                   disabled={isSubmitting}
                 >
                   Hủy
@@ -297,7 +382,7 @@ const ProjectsPage: React.FC = () => {
                   className="primary-btn"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Đang lưu...' : 'Tạo dự án'}
+                  {isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Cập nhật dự án' : 'Tạo dự án')}
                 </button>
               </div>
             </form>

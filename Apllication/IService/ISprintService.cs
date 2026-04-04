@@ -14,9 +14,15 @@ namespace Apllication.IService
 
         /// <summary>
         /// Kích hoạt Sprint: Đổi trạng thái từ New → InProgress.
-        /// Cập nhật NgayBatDau = ngày hiện tại, NgayKetThuc = NgayBatDau + 14 ngày.
-        /// Hỗ trợ nhiều Sprint kích hoạt song song (nhiều team làm việc cùng lúc).
+        /// Cập nhật NgayBatDau = ngày hiện tại, NgayKetThuc = NgayBatDau + số ngày do QuyTacGiaoViecAI quy định.
+        /// Ràng buộc: Mỗi dự án chỉ được có DUY NHẤT 1 Sprint đang InProgress tại một thời điểm.
         /// </summary>
         Task<SprintDto?> KichHoatSprintAsync(int sprintId, int userId);
+
+        /// <summary>
+        /// Tự động mở Sprint tiếp theo (trạng thái New, NgayBatDau nhỏ nhất) trong cùng dự án
+        /// khi Sprint vừa hoàn thành (Finished). Được gọi nội bộ bởi CongViecService.
+        /// </summary>
+        Task TuDongMoSprintTiepTheoAsync(int completedSprintId);
     }
 }
