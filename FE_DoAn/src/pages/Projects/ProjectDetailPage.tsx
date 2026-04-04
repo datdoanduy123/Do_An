@@ -15,7 +15,6 @@ import {
   Trash2,
   Users as UsersIcon,
   Layers,
-  CheckCircle,
   Loader2,
   Shield,
   Activity,
@@ -30,6 +29,9 @@ import type { SprintDto } from '../../services/SprintService';
 import { TrangThaiSprint as TrangThaiEnum } from '../../services/SprintService';
 import DocumentService from '../../services/DocumentService';
 import type { TaiLieuDuAnDto } from '../../services/DocumentService';
+import Toast from '../../components/Common/Toast';
+import ConfirmModal from '../../components/Common/ConfirmModal';
+import { CheckCircle } from 'lucide-react';
 import './ProjectDetail.css';
 
 /**
@@ -78,6 +80,25 @@ const ProjectDetailPage: React.FC = () => {
   const [editSprintData, setEditSprintData] = useState<SprintDto | null>(null);
   const [isEditingSprint, setIsEditingSprint] = useState(false);
 
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  // Confirm Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{ 
+    isOpen: boolean; 
+    message: string; 
+    onConfirm: () => void;
+    title?: string;
+    type?: 'danger' | 'warning' | 'info'
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
@@ -119,34 +140,40 @@ const ProjectDetailPage: React.FC = () => {
       setDocuments(updatedDocs);
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Tải lên tài liệu thất bại.');
+      showToast('Tải lên tài liệu thất bại.', 'error');
     } finally {
       setDocLoading(false);
     }
   };
 
   const handleProcessAI = async (docId: number) => {
-    if (!window.confirm('AI sẽ phân tích tài liệu để tự động bóc tách công việc và gán nhân sự. Quá trình này có thể mất vài giây. Tiếp tục?')) return;
-
-    try {
-      setDocLoading(true);
-      const success = await DocumentService.processAI(docId);
-      if (success) {
-        alert('✨ Chúc mừng! Trợ lý AI đã bóc tách và phân bổ công việc thành công.');
-        // Refresh everything to show new tasks and sprints
-        const [sprintsData, docsData] = await Promise.all([
-          SprintService.getByProjectId(Number(id)),
-          DocumentService.getByProject(Number(id))
-        ]);
-        setSprints(sprintsData || []);
-        setDocuments(docsData || []);
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Kích hoạt Trợ lý AI',
+      message: 'AI sẽ phân tích tài liệu để tự động bóc tách công việc và gán nhân sự dựa trên kỹ năng. Quá trình này có thể mất vài giây. Tiếp tục?',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          setDocLoading(true);
+          const success = await DocumentService.processAI(docId);
+          if (success) {
+            showToast('✨ Chúc mừng! Trợ lý AI đã bóc tách và phân bổ công việc thành công.');
+            // Refresh everything to show new tasks and sprints
+            const [sprintsData, docsData] = await Promise.all([
+              SprintService.getByProjectId(Number(id)),
+              DocumentService.getByProject(Number(id))
+            ]);
+            setSprints(sprintsData || []);
+            setDocuments(docsData || []);
+          }
+        } catch (error) {
+          console.error('AI processing failed:', error);
+          showToast('Có lỗi xảy ra khi AI đang phân tích. Vui lòng kiểm tra lại định dạng tài liệu.', 'error');
+        } finally {
+          setDocLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('AI processing failed:', error);
-      alert('Có lỗi xảy ra khi AI đang phân tích. Vui lòng kiểm tra lại định dạng tài liệu.');
-    } finally {
-      setDocLoading(false);
-    }
+    });
   };
 
   const getSprintStatusLabel = (sprint: SprintDto) => {
@@ -172,7 +199,7 @@ const ProjectDetailPage: React.FC = () => {
       setSelectedRole(ProjectRole.Member);
     } catch (error) {
       console.error('Add member failed:', error);
-      alert('Thêm thành viên thất bại.');
+      showToast('Thêm thành viên thất bại.', 'error');
     } finally {
       setDocLoading(false);
     }
@@ -186,25 +213,33 @@ const ProjectDetailPage: React.FC = () => {
       setMembers(updatedMembers);
     } catch (error) {
       console.error('Update role failed:', error);
-      alert('Cập nhật chức danh thất bại.');
+      showToast('Cập nhật chức danh thất bại.', 'error');
     } finally {
       setDocLoading(false);
     }
   };
 
   const handleRemoveMember = async (userId: number) => {
-    if (!id || !window.confirm('Bạn có chắc chắn muốn xóa thành viên này khỏi dự án?')) return;
-    try {
-      setDocLoading(true);
-      await ProjectService.removeMember(Number(id), userId);
-      const updatedMembers = await ProjectService.getMembers(Number(id));
-      setMembers(updatedMembers);
-    } catch (error) {
-      console.error('Remove member failed:', error);
-      alert('Xóa thành viên thất bại.');
-    } finally {
-      setDocLoading(false);
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Xóa thành viên',
+      message: 'Bạn có chắc chắn muốn xóa thành viên này khỏi dự án? Thao tác này không thể hoàn tác.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          setDocLoading(true);
+          await ProjectService.removeMember(Number(id), userId);
+          const updatedMembers = await ProjectService.getMembers(Number(id));
+          setMembers(updatedMembers);
+          showToast('Đã xóa thành viên thành công.');
+        } catch (error) {
+          console.error('Remove member failed:', error);
+          showToast('Xóa thành viên thất bại.', 'error');
+        } finally {
+          setDocLoading(false);
+        }
+      }
+    });
   };
 
 
@@ -229,7 +264,7 @@ const ProjectDetailPage: React.FC = () => {
       setNewSprintData({ tenSprint: '', ngayBatDau: '', ngayKetThuc: '' });
     } catch (error) {
       console.error('Create sprint failed:', error);
-      alert('Tạo Sprint thất bại.');
+      showToast('Tạo Sprint thất bại.', 'error');
     } finally {
       setIsCreatingSprint(false);
     }
@@ -251,7 +286,7 @@ const ProjectDetailPage: React.FC = () => {
       setShowEditSprintModal(false);
     } catch (error) {
       console.error('Update sprint failed:', error);
-      alert('Cập nhật Sprint thất bại.');
+      showToast('Cập nhật Sprint thất bại.', 'error');
     } finally {
       setIsEditingSprint(false);
     }
@@ -259,14 +294,22 @@ const ProjectDetailPage: React.FC = () => {
 
 
   const handleDeleteSprint = async (sprintId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa Sprint này không? Các công việc (nếu có) có thể bị ảnh hưởng.')) return;
-    try {
-      await SprintService.delete(sprintId);
-      setSprints(sprints.filter(s => s.id !== sprintId));
-    } catch (error) {
-      console.error('Delete sprint failed:', error);
-      alert('Xóa Sprint thất bại.');
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Xóa Sprint',
+      message: 'Bạn có chắc chắn muốn xóa Sprint này không? Các công việc (nếu có) có thể bị ảnh hưởng.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await SprintService.delete(sprintId);
+          setSprints(sprints.filter(s => s.id !== sprintId));
+          showToast('Đã xóa Sprint thành công.');
+        } catch (error) {
+          console.error('Delete sprint failed:', error);
+          showToast('Xóa Sprint thất bại.', 'error');
+        }
+      }
+    });
   };
 
   if (loading || dashboardLoading) return <div className="loading-state">Đang tải thông tin dự án...</div>;
@@ -737,6 +780,24 @@ const ProjectDetailPage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        type={confirmConfig.type}
+        onConfirm={confirmConfig.onConfirm}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+      />
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );

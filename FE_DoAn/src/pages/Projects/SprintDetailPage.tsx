@@ -19,7 +19,6 @@ import {
   CheckSquare,
   AlertTriangle,
   Link,
-  X,
   Activity,
   MessageSquare,
   Send
@@ -34,6 +33,8 @@ import ProjectService, { ProjectRole } from '../../services/ProjectService';
 import RejectionModal from '../../components/Tasks/RejectionModal';
 import type { ThanhVienDuAnDto } from '../../services/ProjectTypes';
 import SignalRService from '../../services/SignalRService';
+import ConfirmModal from '../../components/Common/ConfirmModal';
+import Toast from '../../components/Common/Toast';
 import './SprintDetail.css';
 
 /**
@@ -82,9 +83,21 @@ const SprintDetailPage: React.FC = () => {
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Confirm Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{ 
+    isOpen: boolean; 
+    message: string; 
+    onConfirm: () => void;
+    title?: string;
+    type?: 'danger' | 'warning'
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+  });
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 5200);
   };
 
   useEffect(() => {
@@ -198,18 +211,25 @@ const SprintDetailPage: React.FC = () => {
   };
 
   const handleDeleteTask = async (taskId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa công việc này không?')) return;
-    try {
-      const result = await TaskService.delete(taskId);
-      if (result) {
-        setTasks(tasks.filter(t => t.id !== taskId));
-        setActiveMenuTaskId(null);
-        showToast('Đã xóa công việc thành công!');
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Xóa Công việc',
+      message: 'Bạn có chắc chắn muốn xóa công việc này không? Thao tác này không thể hoàn tác.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const result = await TaskService.delete(taskId);
+          if (result) {
+            setTasks(tasks.filter(t => t.id !== taskId));
+            setActiveMenuTaskId(null);
+            showToast('Đã xóa công việc thành công!');
+          }
+        } catch (error) {
+          console.error('Delete task failed:', error);
+          showToast('Xóa công việc thất bại.', 'error');
+        }
       }
-    } catch (error) {
-      console.error('Delete task failed:', error);
-      showToast('Xóa công việc thất bại.', 'error');
-    }
+    });
   };
 
   const handleEditClick = (task: CongViecDto) => {
@@ -442,7 +462,7 @@ const SprintDetailPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Manual assign failed:', error);
-      alert('Không thể cập nhật người thực hiện. Vui lòng thử lại.');
+      showToast('Không thể cập nhật người thực hiện. Vui lòng thử lại.', 'error');
     }
   };
 
@@ -1100,18 +1120,23 @@ const SprintDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Toast Notification V2 */}
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        type={confirmConfig.type}
+        onConfirm={confirmConfig.onConfirm}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+      />
+
+      {/* Toast Notification */}
       {toast && (
-        <div className={`toast-notification-v2 ${toast.type}`}>
-          <div className="toast-icon">
-            {toast.type === 'success' ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
-          </div>
-          <div className="toast-content">
-            <span className="toast-title">{toast.type === 'success' ? 'Thành công' : 'Cảnh báo'}</span>
-            <span className="toast-msg">{toast.message}</span>
-          </div>
-          <button className="toast-close" onClick={() => setToast(null)}><X size={16} /></button>
-        </div>
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );

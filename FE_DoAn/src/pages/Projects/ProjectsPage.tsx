@@ -17,6 +17,9 @@ import ProjectService from '../../services/ProjectService';
 import type { DuAnDto, TaoDuAnDto } from '../../services/ProjectService';
 import { TrangThaiDuAn as TrangThaiEnum } from '../../services/ProjectService';
 import UserService from '../../services/UserService';
+import Toast from '../../components/Common/Toast';
+import ConfirmModal from '../../components/Common/ConfirmModal';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import './Projects.css';
 
 /**
@@ -45,6 +48,25 @@ const ProjectsPage: React.FC = () => {
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
+
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  // Confirm Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{ 
+    isOpen: boolean; 
+    message: string; 
+    onConfirm: () => void;
+    title?: string;
+    type?: 'danger' | 'warning'
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+  });
 
   const fetchProjects = async () => {
     try {
@@ -122,19 +144,26 @@ const ProjectsPage: React.FC = () => {
   };
 
   const handleDeleteProject = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa dự án này? Thao tác này không thể hoàn tác.')) return;
-    try {
-      const success = await ProjectService.deleteProject(id);
-      if (success) {
-        alert('Xóa dự án thành công!');
-        fetchProjects();
-      } else {
-        alert('Xóa dự án thất bại.');
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Xóa dự án',
+      message: 'Bạn có chắc chắn muốn xóa dự án này? Thao tác này không thể hoàn tác.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const success = await ProjectService.deleteProject(id);
+          if (success) {
+            showToast('Xóa dự án thành công!');
+            fetchProjects();
+          } else {
+            showToast('Xóa dự án thất bại.', 'error');
+          }
+        } catch (error) {
+          console.error('Error deleting project:', error);
+          showToast('Lỗi hệ thống khi xóa dự án.', 'error');
+        }
       }
-    } catch (error) {
-      console.error('Error deleting project:', error);
-      alert('Lỗi hệ thống khi xóa dự án.');
-    }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,16 +184,16 @@ const ProjectsPage: React.FC = () => {
       }
 
       if (response.statusCode === 200) {
-        alert(isEditMode ? 'Cập nhật dự án thành công!' : 'Tạo dự án thành công!');
+        showToast(isEditMode ? 'Cập nhật dự án thành công!' : 'Tạo dự án thành công!');
         setIsModalOpen(false);
         resetForm();
         fetchProjects();
       } else {
-        alert('Có lỗi xảy ra: ' + response.message);
+        showToast('Có lỗi xảy ra: ' + response.message, 'error');
       }
     } catch (error: any) {
       console.error('Error submitting project:', error);
-      alert('Lỗi hệ thống khi lưu dự án.');
+      showToast('Lỗi hệ thống khi lưu dự án.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -388,6 +417,25 @@ const ProjectsPage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        type={confirmConfig.type}
+        onConfirm={confirmConfig.onConfirm}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+      />
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );

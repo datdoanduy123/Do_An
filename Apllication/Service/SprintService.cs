@@ -62,8 +62,15 @@ namespace Apllication.Service
             s.NgayBatDau = dto.NgayBatDau;
             s.NgayKetThuc = dto.NgayKetThuc;
             s.TrangThai = dto.TrangThai;
+            var success = await _repository.UpdateAsync(s);
 
-            return await _repository.UpdateAsync(s);
+            // Nếu Sprint vừa được đánh dấu là Finished (2), tự động kích hoạt Sprint kế tiếp
+            if (success && s.TrangThai == TrangThaiSprint.Finished)
+            {
+                await TuDongMoSprintTiepTheoAsync(id);
+            }
+
+            return success;
         }
 
         public async Task<bool> DeleteAsync(int id)
