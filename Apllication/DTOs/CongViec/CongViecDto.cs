@@ -16,6 +16,7 @@ namespace Apllication.DTOs.CongViec
         public int DuAnId { get; set; }
         public int? SprintId { get; set; }
         public TrangThaiSprint? SprintStatus { get; set; }
+        public string? TenSprint { get; set; }
         public string TieuDe { get; set; } = string.Empty;
         public string? MoTa { get; set; }
         public LoaiCongViec LoaiCongViec { get; set; }

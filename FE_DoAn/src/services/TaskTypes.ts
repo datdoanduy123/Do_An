@@ -39,6 +39,7 @@ export interface CongViecDto {
   duAnId: number;
   sprintId?: number;
   sprintStatus?: number;
+  tenSprint?: string;
   tieuDe: string;
   moTa?: string;
   loaiCongViec: LoaiCongViec;

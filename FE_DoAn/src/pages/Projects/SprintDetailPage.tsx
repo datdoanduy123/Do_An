@@ -650,7 +650,7 @@ const SprintDetailPage: React.FC = () => {
                       <div className="task-approval-actions">
                         <button
                           className="btn-reject-small"
-                          onClick={() => handleTaskAction(task.id, false)}
+                          onClick={(e) => { e.stopPropagation(); handleTaskAction(task.id, false); }}
                           title="Từ chối"
                         >
                           <XCircle size={14} />
@@ -658,7 +658,7 @@ const SprintDetailPage: React.FC = () => {
                         </button>
                         <button
                           className="btn-approve-small"
-                          onClick={() => handleTaskAction(task.id, true)}
+                          onClick={(e) => { e.stopPropagation(); handleTaskAction(task.id, true); }}
                           title="Duyệt"
                         >
                           <CheckCircle size={14} />
@@ -671,8 +671,9 @@ const SprintDetailPage: React.FC = () => {
                       <div className="assignee-wrapper">
                         <div
                           className={`assignee ${canManageTask(task) ? 'editable' : ''}`}
-                          onClick={() => {
+                          onClick={(e) => {
                             if (canManageTask(task)) {
+                              e.stopPropagation();
                               setActiveDropdownTaskId(activeDropdownTaskId === task.id ? null : task.id);
                             }
                           }}

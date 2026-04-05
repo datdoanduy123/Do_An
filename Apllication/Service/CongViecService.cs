@@ -603,6 +603,7 @@ namespace Apllication.Service
                 NgayKetThucDuKien = cv.NgayKetThucDuKien,
                 NgayBatDauThucTe = cv.NgayBatDauThucTe,
                 NgayKetThucThucTe = cv.NgayKetThucThucTe,
+                TenSprint = cv.Sprint?.TenSprint,
                 SprintStatus = cv.Sprint?.TrangThai,
                 NgayBatDauSprint = cv.Sprint?.NgayBatDau,
                 NgayKetThucSprint = cv.Sprint?.NgayKetThuc,
