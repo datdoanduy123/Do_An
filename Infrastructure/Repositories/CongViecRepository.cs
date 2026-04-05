@@ -50,6 +50,8 @@ namespace Infrastructure.Repositories
                 .Include(c => c.Assignee)
                 .Include(c => c.Dependencies)
                     .ThenInclude(d => d.DependsOnTask)
+                .Include(c => c.TraoLoiCongViecs)
+                    .ThenInclude(t => t.NguoiTao)
                 .ToListAsync();
         }
 

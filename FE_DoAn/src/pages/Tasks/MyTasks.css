@@ -921,3 +921,53 @@
     transform: translateX(0);
   }
 }
+
+/* Rejection Visual Styles */
+.task-rejection-badge {
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fee2e2;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.rejection-alert-box {
+  margin-top: 24px;
+  background: #fff1f2;
+  border-left: 4px solid #f43f5e;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e11d48;
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.alert-content p {
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.rejection-meta {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.rejection-meta strong {
+  color: #4b5563;
+}

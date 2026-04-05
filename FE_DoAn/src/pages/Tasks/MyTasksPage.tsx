@@ -287,6 +287,11 @@ const MyTasksPage: React.FC = () => {
                               <div className="task-text">
                                 <div className="title-row">
                                   <h4>{task.tieuDe}</h4>
+                                  {task.soLanBiTuChoi > 0 && (
+                                    <span className="task-rejection-badge" title={`Đã bị từ chối ${task.soLanBiTuChoi} lần`}>
+                                      Bị từ chối ({task.soLanBiTuChoi})
+                                    </span>
+                                  )}
                                   {task.sprintId && task.sprintStatus === 0 && !isWorkable && <span className="locked-badge"><Lock size={12} /> Sprint chưa bắt đầu</span>}
                                   {task.sprintId && task.sprintStatus === 2 && <span className="locked-badge"><Lock size={12} /> Sprint đã kết thúc</span>}
                                 </div>
@@ -353,15 +358,6 @@ const MyTasksPage: React.FC = () => {
                                     title="Cập nhật tiến độ"
                                   >
                                     Cập nhật
-                                  </button>
-                                )}
-                                {!isLocked && task.trangThai === 1 && (
-                                  <button
-                                    className="action-btn review"
-                                    onClick={() => handleOpenProgressModal(task, 2)}
-                                    title="Gửi duyệt"
-                                  >
-                                    Gửi duyệt
                                   </button>
                                 )}
                                 {task.trangThai === 2 && (
@@ -469,6 +465,30 @@ const MyTasksPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Phần hiển thị Lý do từ chối (Nếu có) */}
+                {(() => {
+                  const latestRejection = [...(selectedTask.traoLois || [])]
+                    .filter(c => c.loai === 1)
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                  
+                  if (!latestRejection) return null;
+
+                  return (
+                    <div className="rejection-alert-box">
+                      <div className="alert-header">
+                        <AlertCircle size={16} />
+                        <span>Lý do từ chối công việc</span>
+                      </div>
+                      <div className="alert-content">
+                        <p>{latestRejection.noiDung}</p>
+                        <div className="rejection-meta">
+                          Phản hồi bởi <strong>{latestRejection.tenNguoiTao}</strong> • {new Date(latestRejection.createdAt).toLocaleString('vi-VN')}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="task-form-side">

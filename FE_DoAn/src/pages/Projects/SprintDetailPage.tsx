@@ -76,9 +76,9 @@ const SprintDetailPage: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const [isSendingComment, setIsSendingComment] = useState(false);
 
-  // New states for Tester View
-  const [viewMode, setViewMode] = useState<'kanban' | 'tester'>('kanban');
-  const [selectedTestTaskId, setSelectedTestTaskId] = useState<number | null>(null);
+  // New states for Review/Approval View
+  const [viewMode, setViewMode] = useState<'kanban' | 'review'>('kanban');
+  const [selectedReviewTaskId, setSelectedReviewTaskId] = useState<number | null>(null);
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -127,10 +127,10 @@ const SprintDetailPage: React.FC = () => {
         const members = await ProjectService.getMembers(sprintData.duAnId);
         setProjectMembers(members);
 
-        // Auto-switch view for Tester/QA
-        const isUserTester = members.some(m => m.id === currentUser?.id && (m.vaiTro === ProjectRole.Tester || m.vaiTro === ProjectRole.QA));
-        if (isUserTester && viewMode === 'kanban') {
-          setViewMode('tester');
+        // Auto-switch view for PM/Admin or Tester/QA
+        const isReviewer = members.some(m => m.id === currentUser?.id && (m.vaiTro === ProjectRole.PM || m.vaiTro === ProjectRole.Tester || m.vaiTro === ProjectRole.QA)) || isAdmin;
+        if (isReviewer && viewMode === 'kanban' && allTasks.some(t => t.sprintId === Number(id) && t.trangThai === StatusEnum.Review)) {
+          setViewMode('review');
         }
       }
     } catch (error) {
@@ -172,13 +172,13 @@ const SprintDetailPage: React.FC = () => {
   }, [id, sprint?.duAnId]);
 
   useEffect(() => {
-    if (viewMode === 'tester' && tasks.length > 0 && !selectedTestTaskId) {
+    if (viewMode === 'review' && tasks.length > 0 && !selectedReviewTaskId) {
       const firstReviewTask = tasks.find(t => t.trangThai === StatusEnum.Review);
       if (firstReviewTask) {
-        setSelectedTestTaskId(firstReviewTask.id);
+        setSelectedReviewTaskId(firstReviewTask.id);
       }
     }
-  }, [viewMode, tasks, selectedTestTaskId]);
+  }, [viewMode, tasks, selectedReviewTaskId]);
 
   useEffect(() => {
     if (sprint?.duAnId) {
@@ -526,14 +526,14 @@ const SprintDetailPage: React.FC = () => {
               <button 
                 className={`toggle-btn ${viewMode === 'kanban' ? 'active' : ''}`}
                 onClick={() => setViewMode('kanban')}
-                title="Bảng Kanban"
+                title="Bảng Kanban (Dành cho Member)"
               >
                 <CheckSquare size={18} />
               </button>
               <button 
-                className={`toggle-btn ${viewMode === 'tester' ? 'active' : ''}`}
-                onClick={() => setViewMode('tester')}
-                title="Màn hình Kiểm thử"
+                className={`toggle-btn ${viewMode === 'review' ? 'active' : ''}`}
+                onClick={() => setViewMode('review')}
+                title="Màn hình Phê duyệt (Dành cho Quản lý)"
               >
                 <Play size={18} />
               </button>
@@ -643,7 +643,7 @@ const SprintDetailPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Quick Approval Actions for Managers & Testers */}
+                    {/* Quick Approval Actions for Managers & Reviewers */}
                     {col.id === StatusEnum.Review && (
                       isAdmin || isProjectPM || [ProjectRole.Tester, ProjectRole.QA].includes(userProjectMember?.vaiTro as any)
                     ) && isSprintActive && (
@@ -739,15 +739,15 @@ const SprintDetailPage: React.FC = () => {
         <div className="tester-view-container fade-in">
           <div className="tester-sidebar">
             <div className="sidebar-header">
-              <h3>Công việc cần Test</h3>
+              <h3>Công việc chờ duyệt</h3>
               <span className="count-badge">{tasks.filter(t => t.trangThai === StatusEnum.Review).length}</span>
             </div>
             <div className="tester-task-list">
               {tasks.filter(t => t.trangThai === StatusEnum.Review).map(task => (
                 <div 
                   key={task.id} 
-                  className={`tester-task-card ${selectedTestTaskId === task.id ? 'active' : ''}`}
-                  onClick={() => setSelectedTestTaskId(task.id)}
+                  className={`tester-task-card ${selectedReviewTaskId === task.id ? 'active' : ''}`}
+                  onClick={() => setSelectedReviewTaskId(task.id)}
                 >
                   <div className="card-top">
                     <span className="task-id">#{task.id}</span>
@@ -766,16 +766,16 @@ const SprintDetailPage: React.FC = () => {
               {tasks.filter(t => t.trangThai === StatusEnum.Review).length === 0 && (
                 <div className="empty-state">
                   <CheckCircle size={32} />
-                  <p>Tuyệt vời! Không còn công việc nào cần test trong Sprint này.</p>
+                  <p>Tuyệt vời! Không còn công việc nào đang chờ bạn phê duyệt.</p>
                 </div>
               )}
             </div>
           </div>
           
           <div className="tester-main-content">
-            {selectedTestTaskId ? (
+            {selectedReviewTaskId ? (
               (() => {
-                const task = tasks.find(t => t.id === selectedTestTaskId);
+                const task = tasks.find(t => t.id === selectedReviewTaskId);
                 if (!task) return null;
                 return (
                   <div className="tester-detail-panel fade-in">
@@ -877,7 +877,7 @@ const SprintDetailPage: React.FC = () => {
             ) : (
               <div className="tester-no-selection">
                 <Search size={48} />
-                <p>Chọn một công việc từ danh sách bên trái để bắt đầu kiểm thử.</p>
+                <p>Chọn một công việc từ danh sách bên trái để bắt đầu phê duyệt.</p>
               </div>
             )}
           </div>
