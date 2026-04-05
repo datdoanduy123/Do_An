@@ -21,6 +21,8 @@ namespace Infrastructure.Repositories
         {
             return await _context.Sprints
                 .Include(s => s.CongViecs)
+                    .ThenInclude(c => c.TraoLoiCongViecs)
+                        .ThenInclude(tl => tl.NguoiTao)
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
 
@@ -29,6 +31,8 @@ namespace Infrastructure.Repositories
             return await _context.Sprints
                 .Where(s => s.DuAnId == projectId)
                 .Include(s => s.CongViecs)
+                    .ThenInclude(c => c.TraoLoiCongViecs)
+                        .ThenInclude(tl => tl.NguoiTao)
                 .ToListAsync();
         }
  

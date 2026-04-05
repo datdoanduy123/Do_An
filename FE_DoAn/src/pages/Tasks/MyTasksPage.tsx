@@ -9,7 +9,9 @@ import {
   Flag,
   X,
   Lock,
-  Link
+  Link,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import TaskService from '../../services/TaskService';
 import UserService from '../../services/UserService';
@@ -46,6 +48,10 @@ const MyTasksPage: React.FC = () => {
     ghiChu: '',
     trangThai: 0
   });
+
+  // State Thảo luận
+  const [newComment, setNewComment] = useState('');
+  const [isSendingComment, setIsSendingComment] = useState(false);
   
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -96,6 +102,37 @@ const MyTasksPage: React.FC = () => {
       trangThai: targetStatus !== undefined ? targetStatus : task.trangThai
     });
     setShowProgressModal(true);
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTask || !newComment.trim() || isSendingComment) return;
+
+    try {
+      setIsSendingComment(true);
+      const comment = await TaskService.addComment(selectedTask.id, {
+        noiDung: newComment,
+        loai: 0 // Thảo luận thường
+      });
+
+      if (comment) {
+        // Cập nhật lại danh sách thảo luận của task trong state local
+        setTasks(prev => prev.map(t => 
+          t.id === selectedTask.id 
+            ? { ...t, traoLois: [...(t.traoLois || []), comment] } 
+            : t
+        ));
+        // Cập nhật selectedTask để UI Modal render lại
+        setSelectedTask(prev => prev ? { ...prev, traoLois: [...(prev.traoLois || []), comment] } : null);
+        setNewComment('');
+        showToast('Đã gửi phản hồi.');
+      }
+    } catch (error) {
+      console.error('Failed to send comment:', error);
+      showToast('Không thể gửi phản hồi.', 'error');
+    } finally {
+      setIsSendingComment(false);
+    }
   };
 
   const handleUpdateProgressSubmit = async () => {
@@ -520,6 +557,50 @@ const MyTasksPage: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="task-discussion-wrapper">
+                  <div className="discussion-header">
+                    <MessageSquare size={16} />
+                    <span>Thảo luận & Phản hồi</span>
+                  </div>
+                  
+                  <div className="discussion-container">
+                    <div className="comment-history">
+                      {!selectedTask.traoLois || selectedTask.traoLois.length === 0 ? (
+                        <div className="no-comments">Chưa có thảo luận nào cho công việc này.</div>
+                      ) : (
+                        [...(selectedTask.traoLois || [])]
+                          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                          .map(c => (
+                            <div key={c.id} className={`comment-bubble ${c.loai === 1 ? 'rejection' : ''} ${c.tenNguoiTao === currentUser?.hoTen ? 'mine' : ''}`}>
+                              <div className="bubble-header">
+                                <span className="sender">{c.tenNguoiTao}</span>
+                                <span className="time">{new Date(c.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <div className="bubble-text">{c.noiDung}</div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+
+                    <form className="comment-input-box" onSubmit={handleAddComment}>
+                      <textarea 
+                        placeholder="Nhập phản hồi của bạn..." 
+                        value={newComment}
+                        onChange={e => setNewComment(e.target.value)}
+                        disabled={isSendingComment}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddComment(e as any);
+                          }
+                        }}
+                      />
+                      <button type="submit" disabled={!newComment.trim() || isSendingComment} title="Gửi (Enter)">
+                        <Send size={18} />
+                      </button>
+                    </form>
+                  </div>
+                </div>
               </div>
             </div>
 
