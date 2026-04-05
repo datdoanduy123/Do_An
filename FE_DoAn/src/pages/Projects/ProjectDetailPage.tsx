@@ -18,7 +18,8 @@ import {
   Loader2,
   Shield,
   Activity,
-  Play
+  Play,
+  Search
 } from 'lucide-react';
 
 import ProjectService, { ProjectRole } from '../../services/ProjectService';
@@ -61,7 +62,8 @@ const ProjectDetailPage: React.FC = () => {
   const [docLoading, setDocLoading] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<ProjectRole>(ProjectRole.Member);
   const [allAvailableUsers, setAllAvailableUsers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -187,21 +189,49 @@ const ProjectDetailPage: React.FC = () => {
     return { text: 'Mới', class: 'status-new' };
   };
 
-  const handleAddMember = async () => {
-    if (!selectedUserId || !id) return;
+  const handleAddMembers = async () => {
+    if (selectedUserIds.length === 0 || !id) return;
     try {
       setDocLoading(true);
-      await ProjectService.addMember(Number(id), Number(selectedUserId), selectedRole);
+      
+      // Gọi API thêm từng người một cách song song
+      await Promise.all(
+        selectedUserIds.map(uid => 
+          ProjectService.addMember(Number(id), uid, selectedRole)
+        )
+      );
+
+      showToast(`Đã thêm thành công ${selectedUserIds.length} thành viên vào dự án.`);
+      
       const updatedMembers = await ProjectService.getMembers(Number(id));
       setMembers(updatedMembers);
+      
+      // Reset state
       setShowAddMember(false);
-      setSelectedUserId('');
+      setSelectedUserIds([]);
+      setUserSearchTerm('');
       setSelectedRole(ProjectRole.Member);
     } catch (error) {
-      console.error('Add member failed:', error);
-      showToast('Thêm thành viên thất bại.', 'error');
+      console.error('Add members failed:', error);
+      showToast('Có lỗi xảy ra khi thêm thành viên.', 'error');
     } finally {
       setDocLoading(false);
+    }
+  };
+
+  const toggleUserSelection = (userId: number) => {
+    setSelectedUserIds(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId) 
+        : [...prev, userId]
+    );
+  };
+
+  const handleSelectAll = (users: any[]) => {
+    if (selectedUserIds.length === users.length) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(users.map(u => u.id));
     }
   };
 
@@ -474,51 +504,111 @@ const ProjectDetailPage: React.FC = () => {
         </div>
 
         {showAddMember && (
-          <div className="add-member-panel fade-in">
-            <div className="panel-header">
-              <h3>Chỉ định thành viên mới vào dự án</h3>
-              <p>Chọn nhân sự từ hệ thống và cấp quyền tương ứng để họ truy cập dự án.</p>
-            </div>
-            <div className="panel-body">
-              <div className="input-group user-select-group">
-                <label>Nhân viên tham gia <span className="required">*</span></label>
-                <select 
-                  className="modern-select" 
-                  value={selectedUserId} 
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                >
-                  <option value="">-- Vui lòng chọn nhân viên --</option>
-                  {allAvailableUsers
-                    .filter(u => !members.some(m => m.id === u.id))
-                    .map(u => (
-                      <option key={u.id} value={u.id}>{u.hoTen} ({u.tenDangNhap})</option>
-                    ))
-                  }
-                </select>
+          <div className="add-member-panel-modern fade-in">
+            <div className="modern-panel-header">
+              <div className="header-text">
+                <h3>Thêm thành viên mới</h3>
+                <p>Tìm kiếm và chọn các nhân sự phù hợp để đưa vào dự án</p>
               </div>
-              <div className="input-group role-select-group">
-                <label>Vai trò đảm nhiệm</label>
+              <div className="search-box-modern">
+                <Search size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Tìm theo tên hoặc email..." 
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="user-selection-area">
+              <div className="selection-controls">
+                <label className="select-all-label">
+                  <input 
+                    type="checkbox" 
+                    checked={
+                      selectedUserIds.length > 0 && 
+                      selectedUserIds.length === allAvailableUsers.filter(u => 
+                        !members.some(m => m.id === u.id) &&
+                        (u.hoTen?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                         u.email?.toLowerCase().includes(userSearchTerm.toLowerCase()))
+                      ).length
+                    }
+                    onChange={() => handleSelectAll(
+                      allAvailableUsers.filter(u => 
+                        !members.some(m => m.id === u.id) &&
+                        (u.hoTen?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                         u.email?.toLowerCase().includes(userSearchTerm.toLowerCase()))
+                      )
+                    )}
+                  />
+                  <span>Chọn tất cả kết quả</span>
+                </label>
+                <span className="selection-count">Đã chọn: <strong>{selectedUserIds.length}</strong></span>
+              </div>
+
+              <div className="available-users-list">
+                {allAvailableUsers
+                  .filter(u => 
+                    !members.some(m => m.id === u.id) &&
+                    (u.hoTen?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                     u.email?.toLowerCase().includes(userSearchTerm.toLowerCase()))
+                  )
+                  .map(u => (
+                  <div 
+                    key={u.id} 
+                    className={`user-selection-item ${selectedUserIds.includes(u.id) ? 'selected' : ''}`}
+                    onClick={() => toggleUserSelection(u.id)}
+                  >
+                    <div className="checkbox-wrapper">
+                      <input 
+                        type="checkbox" 
+                        readOnly 
+                        checked={selectedUserIds.includes(u.id)} 
+                      />
+                    </div>
+                    <div className="user-mini-avatar">
+                      {u.hoTen?.charAt(0)}
+                    </div>
+                    <div className="user-main-info">
+                      <span className="u-name">{u.hoTen}</span>
+                      <span className="u-email">{u.email}</span>
+                    </div>
+                    <div className="user-skills-preview">
+                      {u.kyNang?.slice(0, 2).map((s: string, i: number) => (
+                        <span key={i} className="tiny-skill">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {allAvailableUsers.filter(u => !members.some(m => m.id === u.id)).length === 0 && (
+                  <div className="empty-search-state">Tất cả nhân sự hệ thống đều đã tham gia dự án.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="modern-panel-footer">
+              <div className="role-batch-selector">
+                <label>Vai trò chung:</label>
                 <select
-                  className="modern-select"
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(Number(e.target.value) as ProjectRole)}
                 >
-                  <option value={ProjectRole.Member}>Member (Thành viên mảng)</option>
-                  <option value={ProjectRole.Developer}>Lập trình viên (Dev)</option>
-                  <option value={ProjectRole.Tester}>Kiểm thử viên (Tester)</option>
-                  <option value={ProjectRole.QA}>Đảm bảo chất lượng (QA)</option>
-                  <option value={ProjectRole.BA}>Nhà phân tích (BA)</option>
-                  <option value={ProjectRole.PM}>Quản lý dự án (PM)</option>
+                  <option value={ProjectRole.Member}>Member</option>
+                  <option value={ProjectRole.Developer}>Developer</option>
+                  <option value={ProjectRole.Tester}>Tester</option>
+                  <option value={ProjectRole.QA}>QA</option>
+                  <option value={ProjectRole.BA}>BA</option>
                 </select>
               </div>
-              <div className="panel-actions">
-                <button className="btn-cancel-modern" onClick={() => setShowAddMember(false)}>Hủy</button>
+              <div className="footer-actions">
+                <button className="btn-close-modern" onClick={() => setShowAddMember(false)}>Đóng</button>
                 <button 
-                  className="btn-submit-modern" 
-                  onClick={handleAddMember} 
-                  disabled={docLoading || !selectedUserId}
+                  className="btn-add-batch" 
+                  onClick={handleAddMembers}
+                  disabled={selectedUserIds.length === 0 || docLoading}
                 >
-                  {docLoading ? 'Đang thêm...' : 'Xác nhận Thêm'}
+                  {docLoading ? 'Đang xử lý...' : `Thêm ${selectedUserIds.length} thành viên`}
                 </button>
               </div>
             </div>
