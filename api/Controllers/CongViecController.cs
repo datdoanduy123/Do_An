@@ -211,47 +211,5 @@ namespace api.Controllers
             }
         }
 
-        [HttpPatch("{id}/reject")]
-        public async Task<IActionResult> RejectTask(int id, [FromQuery] string reason)
-        {
-            try
-            {
-                var result = await _congViecService.RejectTaskWithReasonAsync(id, reason, CurrentUserId);
-                if (result) return SuccessResponse(null!, "Từ chối công việc thành công.");
-                return ErrorResponse(400, "Không thể từ chối công việc.");
-            }
-            catch (Exception ex)
-            {
-                return ErrorResponse(500, ex.Message);
-            }
-        }
-
-        [HttpPost("{id}/comments")]
-        public async Task<IActionResult> AddComment(int id, [FromBody] TaoTraoLoiDto dto)
-        {
-            try
-            {
-                var result = await _congViecService.AddCommentAsync(id, dto, CurrentUserId);
-                return SuccessResponse(result, "Thêm bình luận thành công.");
-            }
-            catch (Exception ex)
-            {
-                return ErrorResponse(500, ex.Message);
-            }
-        }
-
-        [HttpGet("{id}/comments")]
-        public async Task<IActionResult> GetComments(int id)
-        {
-            try
-            {
-                var result = await _congViecService.GetCommentsAsync(id);
-                return SuccessResponse(result, "Lấy danh sách bình luận thành công.");
-            }
-            catch (Exception ex)
-            {
-                return ErrorResponse(500, ex.Message);
-            }
-        }
     }
 }

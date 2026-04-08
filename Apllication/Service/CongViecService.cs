@@ -18,9 +18,9 @@ namespace Apllication.Service
         private readonly ISprintRepository _sprintRepository;
         private readonly IKanbanNotificationService _notificationService;
         private readonly IDuAnRepository _projectRepository;
-        private readonly ITraoLoiRepository _commentRepository;
         // Inject ISprintService để gọi tự động mở Sprint kế tiếp khi Sprint hiện tại kết thúc
         private readonly ISprintService _sprintService;
+        private readonly IQuyTacGiaoViecAIRepository _ruleRepo;
 
         public CongViecService(
             ICongViecRepository repository, 
@@ -29,8 +29,8 @@ namespace Apllication.Service
             ISprintRepository sprintRepository,
             IKanbanNotificationService notificationService,
             IDuAnRepository projectRepository,
-            ITraoLoiRepository commentRepository,
-            ISprintService sprintService)
+            ISprintService sprintService,
+            IQuyTacGiaoViecAIRepository ruleRepo)
         {
             _repository = repository;
             _userRepository = userRepository;
@@ -38,8 +38,8 @@ namespace Apllication.Service
             _sprintRepository = sprintRepository;
             _notificationService = notificationService;
             _projectRepository = projectRepository;
-            _commentRepository = commentRepository;
             _sprintService = sprintService;
+            _ruleRepo = ruleRepo;
         }
 
         public async Task<CongViecDto> GetByIdAsync(int id)
@@ -225,16 +225,6 @@ namespace Apllication.Service
             {
                 cv.SoLanBiTuChoi++;
                 
-                // Tự động thêm một bình luận hệ thống nếu chưa có lý do cụ thể (Trường hợp kéo thả tay)
-                await _commentRepository.AddAsync(new TraoLoiCongViec
-                {
-                    CongViecId = cv.Id,
-                    NguoiTaoId = updaterId,
-                    NoiDung = "Công việc bị từ chối và yêu cầu làm lại.",
-                    Loai = 1, // Rejection
-                    CreatedAt = DateTime.UtcNow
-                });
-
                 // Cảnh báo nếu bị từ chối nhiều lần (ví dụ >= 3)
                 if (cv.SoLanBiTuChoi >= 3 && cv.AssigneeId.HasValue)
                 {
@@ -484,91 +474,7 @@ namespace Apllication.Service
             return result;
         }
 
-        public async Task<bool> RejectTaskWithReasonAsync(int id, string reason, int rejectorId)
-        {
-            var cv = await _repository.GetByIdAsync(id);
-            if (cv == null) return false;
 
-            if (cv.TrangThai != TrangThaiCongViec.Review)
-                throw new Exception("Chỉ có thể từ chối các công việc đang ở trạng thái Review.");
-
-            // 1. Tăng số lần bị từ chối
-            cv.SoLanBiTuChoi++;
-            cv.TrangThai = TrangThaiCongViec.InProgress;
-
-            // 2. Lưu lý do từ chối vào bảng thảo luận
-            await _commentRepository.AddAsync(new TraoLoiCongViec
-            {
-                CongViecId = id,
-                NguoiTaoId = rejectorId,
-                NoiDung = reason,
-                Loai = 1, // Loại: Từ chối
-                CreatedAt = DateTime.UtcNow
-            });
-
-            // 3. Ghi nhật ký hệ thống
-            await _taskLogRepository.AddAsync(new NhatKyCongViec
-            {
-                CongViecId = id,
-                NguoiCapNhatId = rejectorId,
-                GhiChu = $"Từ chối công việc. Lý do: {reason}",
-                NgayCapNhat = DateTime.UtcNow
-            });
-
-            var result = await _repository.UpdateAsync(cv);
-            if (result)
-            {
-                await _notificationService.NotifyTaskUpdated(cv.DuAnId);
-                if (cv.AssigneeId.HasValue)
-                {
-                    await _notificationService.NotifyPersonal(
-                        cv.AssigneeId.Value, 
-                        "Công việc bị từ chối", 
-                        $"Công việc '{cv.TieuDe}' đã bị từ chối. Lý do: {reason}"
-                    );
-                }
-            }
-            return result;
-        }
-
-        public async Task<TraoLoiDto> AddCommentAsync(int taskId, TaoTraoLoiDto dto, int creatorId)
-        {
-            var traoLoi = new TraoLoiCongViec
-            {
-                CongViecId = taskId,
-                NguoiTaoId = creatorId,
-                NoiDung = dto.NoiDung,
-                Loai = dto.Loai,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var added = await _commentRepository.AddAsync(traoLoi);
-            var user = await _userRepository.LayTheoIdAsync(creatorId);
-
-            return new TraoLoiDto
-            {
-                Id = added.Id,
-                NguoiTaoId = added.NguoiTaoId,
-                TenNguoiTao = user?.FullName,
-                NoiDung = added.NoiDung,
-                Loai = added.Loai,
-                CreatedAt = added.CreatedAt
-            };
-        }
-
-        public async Task<IEnumerable<TraoLoiDto>> GetCommentsAsync(int taskId)
-        {
-            var comments = await _commentRepository.GetByCongViecIdAsync(taskId);
-            return comments.Select(c => new TraoLoiDto
-            {
-                Id = c.Id,
-                NguoiTaoId = c.NguoiTaoId,
-                TenNguoiTao = c.NguoiTao?.FullName,
-                NoiDung = c.NoiDung,
-                Loai = c.Loai,
-                CreatedAt = c.CreatedAt
-            });
-        }
 
         public async Task<IEnumerable<CongViecDto>> GetTasksPendingReviewAsync()
         {
@@ -613,16 +519,7 @@ namespace Apllication.Service
                 {
                     DependsOnTaskId = d.DependsOnTaskId,
                     DependsOnTaskTitle = d.DependsOnTask?.TieuDe
-                }).ToList() ?? new List<PhuThuocDto>(),
-                TraoLois = cv.TraoLoiCongViecs?.Select(c => new TraoLoiDto
-                {
-                    Id = c.Id,
-                    NguoiTaoId = c.NguoiTaoId,
-                    TenNguoiTao = c.NguoiTao?.FullName,
-                    NoiDung = c.NoiDung,
-                    Loai = c.Loai,
-                    CreatedAt = c.CreatedAt
-                }).ToList() ?? new List<TraoLoiDto>()
+                }).ToList() ?? new List<PhuThuocDto>()
             };
         }
 
@@ -672,7 +569,16 @@ namespace Apllication.Service
         /// </summary>
         private DateTime TinhNgayKetThucDuKien(DateTime start, double hours)
         {
-            int soNgayLamViec = (int)Math.Ceiling(hours / 8.0);
+            // Lấy cấu hình số giờ làm việc mỗi ngày, mặc định là 8
+            var rulesTask = _ruleRepo.GetAllActiveRulesAsync();
+            rulesTask.Wait(); // Vì hàm này đang là private đồng bộ, ta dùng Wait hoặc chuyển sang async
+            var rules = rulesTask.Result;
+            
+            var rule = rules.FirstOrDefault(r => r.MaQuyTac == "WORKING_HOURS_PER_DAY");
+            double workingHours = 8.0;
+            if (rule != null && double.TryParse(rule.GiaTri, out double val)) workingHours = val;
+
+            int soNgayLamViec = (int)Math.Ceiling(hours / workingHours);
             DateTime result = start.Date;
             int ngayDaDem = 0;
             while (ngayDaDem < soNgayLamViec)

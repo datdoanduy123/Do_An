@@ -15,24 +15,23 @@ namespace Apllication.Service
 {
     public class TaiLieuDuAnService : ITaiLieuDuAnService
     {
-        private readonly ITaiLieuDuAnRepository _repository;
-        private readonly IHostEnvironment _env;
-        private readonly IGiaoViecAIService _giaoViecAiService;
-        private readonly ICongViecRepository _congViecRepo;
         private readonly IKyNangRepository _kyNangRepo;
+        private readonly IQuyTacGiaoViecAIRepository _ruleRepo;
 
         public TaiLieuDuAnService(
             ITaiLieuDuAnRepository repository, 
             IHostEnvironment env,
             IGiaoViecAIService giaoViecAiService,
             ICongViecRepository congViecRepo,
-            IKyNangRepository kyNangRepo)
+            IKyNangRepository kyNangRepo,
+            IQuyTacGiaoViecAIRepository ruleRepo)
         {
             _repository = repository;
             _env = env;
             _giaoViecAiService = giaoViecAiService;
             _congViecRepo = congViecRepo;
             _kyNangRepo = kyNangRepo;
+            _ruleRepo = ruleRepo;
         }
 
         public async Task<TaiLieuDuAnDto> UploadAsync(int duAnId, IFormFile file, int userId)
@@ -147,6 +146,12 @@ namespace Apllication.Service
                             int priorityIdx = headers.FindIndex(h => h.Contains("ưu tiên") || h.Contains("priority"));
                             int depIdx = headers.FindIndex(h => h.Contains("phụ thuộc") || h.Contains("dependency") || h.Contains("tiền đề"));
 
+                            // Lấy các tham số cấu hình AI cho thời gian ước tính
+                            var rules = await _ruleRepo.GetAllActiveRulesAsync();
+                            double hHigh = GetRuleValue(rules, "DEFAULT_HOURS_HIGH", 16);
+                            double hMed = GetRuleValue(rules, "DEFAULT_HOURS_MEDIUM", 8);
+                            double hLow = GetRuleValue(rules, "DEFAULT_HOURS_LOW", 4);
+
                             for (int i = 1; i < table.Rows.Count; i++)
                             {
                                 var row = table.GetRow(i);
@@ -168,14 +173,14 @@ namespace Apllication.Service
 
                                 if (string.IsNullOrEmpty(title)) continue;
 
-                                double estimatedHours = 8;
+                                double estimatedHours = hMed;
                                 var normalizedPriority = priorityStr.ToLower();
                                 if (normalizedPriority.Contains("high") || normalizedPriority.Contains("cao") || normalizedPriority.Contains("urgent") || normalizedPriority.Contains("khẩn")) {
-                                    estimatedHours = 16;
+                                    estimatedHours = hHigh;
                                 } else if (normalizedPriority.Contains("low") || normalizedPriority.Contains("thấp") || normalizedPriority.Contains("small")) {
-                                    estimatedHours = 4; 
+                                    estimatedHours = hLow; 
                                 } else {
-                                    estimatedHours = 8;
+                                    estimatedHours = hMed;
                                 }
 
                                 int.TryParse(new string(positionStr.Where(char.IsDigit).ToArray()), out int viTri);
@@ -310,6 +315,13 @@ namespace Apllication.Service
             if (text.Contains("high") || text.Contains("cao") || text.Contains("urgent") || text.Contains("khẩn")) return DoUuTien.High;
             if (text.Contains("low") || text.Contains("thấp") || text.Contains("nhỏ") || text.Contains("small")) return DoUuTien.Low;
             return DoUuTien.Medium;
+        }
+
+        private double GetRuleValue(IEnumerable<QuyTacGiaoViecAI> rules, string code, double defaultValue)
+        {
+            var rule = rules.FirstOrDefault(r => r.MaQuyTac == code);
+            if (rule != null && double.TryParse(rule.GiaTri, out double val)) return val;
+            return defaultValue;
         }
 
         public async Task<IEnumerable<TaiLieuDuAnDto>> GetByProjectIdAsync(int projectId)

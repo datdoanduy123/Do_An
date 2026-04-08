@@ -61,21 +61,6 @@ export interface CongViecDto {
     dependsOnTaskId: number;
     dependsOnTaskTitle?: string;
   }[];
-  traoLois?: TraoLoiDto[];
-}
-
-export interface TraoLoiDto {
-  id: number;
-  nguoiTaoId: number;
-  tenNguoiTao?: string;
-  noiDung: string;
-  loai: number;
-  createdAt: string;
-}
-
-export interface TaoTraoLoiDto {
-  noiDung: string;
-  loai: number;
 }
 
 export interface TaoCongViecDto {

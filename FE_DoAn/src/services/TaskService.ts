@@ -1,5 +1,5 @@
 import api from './api';
-import type { CongViecDto, TaoCongViecDto, TraoLoiDto, TaoTraoLoiDto } from './TaskTypes';
+import type { CongViecDto, TaoCongViecDto } from './TaskTypes';
 
 /**
  * Service xử lý các thao tác liên quan đến Công việc.
@@ -48,35 +48,6 @@ class TaskService {
       const message = error.response?.data?.message || 'Không thể cập nhật trạng thái.';
       throw new Error(message);
     }
-  }
-
-  /**
-   * Từ chối công việc với lý do cụ thể.
-   */
-  async reject(id: number, reason: string): Promise<boolean> {
-    try {
-      const response = await api.patch(`/CongViec/${id}/reject?reason=${encodeURIComponent(reason)}`);
-      return response.data.statusCode === 200;
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Không thể từ chối công việc.';
-      throw new Error(message);
-    }
-  }
-
-  /**
-   * Thêm bình luận vào công việc.
-   */
-  async addComment(id: number, data: TaoTraoLoiDto): Promise<TraoLoiDto> {
-    const response = await api.post(`/CongViec/${id}/comments`, data);
-    return response.data.data;
-  }
-
-  /**
-   * Lấy danh sách bình luận.
-   */
-  async getComments(id: number): Promise<TraoLoiDto[]> {
-    const response = await api.get(`/CongViec/${id}/comments`);
-    return response.data.data;
   }
 
   /**

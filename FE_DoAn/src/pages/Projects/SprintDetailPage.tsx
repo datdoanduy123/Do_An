@@ -19,9 +19,7 @@ import {
   CheckSquare,
   AlertTriangle,
   Link,
-  Activity,
-  MessageSquare,
-  Send
+  Activity
 } from 'lucide-react';
 import SprintService from '../../services/SprintService';
 import type { SprintDto } from '../../services/SprintService';
@@ -30,7 +28,6 @@ import UserService from '../../services/UserService';
 import type { CongViecDto } from '../../services/TaskService';
 import { TrangThaiCongViec as StatusEnum } from '../../services/TaskService';
 import ProjectService, { ProjectRole } from '../../services/ProjectService';
-import RejectionModal from '../../components/Tasks/RejectionModal';
 import type { ThanhVienDuAnDto } from '../../services/ProjectTypes';
 import SignalRService from '../../services/SignalRService';
 import ConfirmModal from '../../components/Common/ConfirmModal';
@@ -68,13 +65,6 @@ const SprintDetailPage: React.FC = () => {
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<CongViecDto | null>(null);
 
-  // Rejection Modal State
-  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
-  const [taskToReject, setTaskToReject] = useState<CongViecDto | null>(null);
-
-  // New Comment State
-  const [newComment, setNewComment] = useState('');
-  const [isSendingComment, setIsSendingComment] = useState(false);
 
   // New states for Review/Approval View
   const [viewMode, setViewMode] = useState<'kanban' | 'review'>('kanban');
@@ -275,12 +265,23 @@ const SprintDetailPage: React.FC = () => {
     }
     
     if (!approve) {
-      // Nếu là từ chối -> Mở Modal nhập lý do
-      const task = tasks.find(t => t.id === taskId);
-      if (task) {
-        setTaskToReject(task);
-        setIsRejectionModalOpen(true);
-      }
+      setConfirmConfig({
+        isOpen: true,
+        title: 'Từ chối Công việc',
+        message: 'Bạn có chắc chắn muốn từ chối công việc này? Công việc sẽ được chuyển về trạng thái Cần làm.',
+        type: 'warning',
+        onConfirm: async () => {
+          try {
+            const success = await TaskService.updateStatus(taskId, 0); // 0 = Todo
+            if (success) {
+              setTasks(prev => prev.map(t => t.id === taskId ? { ...t, trangThai: 0 as any } : t));
+              showToast('Đã từ chối công việc và chuyển lại về trạng thái Cần làm.');
+            }
+          } catch (error: any) {
+            showToast(error.message || 'Thao tác thất bại.', 'error');
+          }
+        }
+      });
       return;
     }
 
@@ -297,44 +298,6 @@ const SprintDetailPage: React.FC = () => {
     }
   };
 
-  const handleConfirmRejection = async (reason: string) => {
-    if (!taskToReject) return;
-    try {
-      const success = await TaskService.reject(taskToReject.id, reason);
-      if (success) {
-        setIsRejectionModalOpen(false);
-        setTaskToReject(null);
-        showToast('Đã từ chối công việc và gửi yêu cầu sửa lại.');
-        fetchData(true); // Refresh
-      }
-    } catch (error: any) {
-      showToast(error.message || 'Không thể từ chối.', 'error');
-    }
-  };
-
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingTask || !newComment.trim()) return;
-
-    try {
-      setIsSendingComment(true);
-      const comment = await TaskService.addComment(editingTask.id, {
-        noiDung: newComment,
-        loai: 0 // Thảo luận
-      });
-      
-      // Update local state
-      setEditingTask({
-        ...editingTask,
-        traoLois: [...(editingTask.traoLois || []), comment]
-      });
-      setNewComment('');
-    } catch (error) {
-      showToast('Không thể gửi bình luận.', 'error');
-    } finally {
-      setIsSendingComment(false);
-    }
-  };
 
   const isAdmin = currentUser?.vaiTros?.some((r: string) => {
     const normalized = r.toLowerCase().replace(/\s+/g, '');
@@ -822,54 +785,6 @@ const SprintDetailPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="discussion-section">
-                        <div className="section-header">
-                          <MessageSquare size={18} />
-                          <h3>Trao đổi & Phản hồi</h3>
-                        </div>
-                        <div className="tester-comment-area">
-                          <div className="comment-list">
-                            {!task.traoLois || task.traoLois.length === 0 ? (
-                              <div className="empty-comments">Chưa có thảo luận nào.</div>
-                            ) : (
-                              task.traoLois.map(c => (
-                                <div key={c.id} className={`comment-item ${c.loai === 1 ? 'rejection-reason' : ''}`}>
-                                  <div className="comment-header">
-                                    <span className="author">{c.tenNguoiTao}</span>
-                                    <span className="time">{new Date(c.createdAt).toLocaleString('vi-VN')}</span>
-                                    {c.loai === 1 && <span className="type-tag">Lý do từ chối</span>}
-                                  </div>
-                                  <div className="comment-body">{c.noiDung}</div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                          <form className="comment-input-area" onSubmit={async (e) => {
-                            e.preventDefault();
-                            if (!newComment.trim()) return;
-                            try {
-                              setIsSendingComment(true);
-                              const comment = await TaskService.addComment(task.id, { noiDung: newComment, loai: 0 });
-                              setTasks(prev => prev.map(t => t.id === task.id ? { ...t, traoLois: [...(t.traoLois || []), comment] } : t));
-                              setNewComment('');
-                            } catch (e) {
-                              showToast('Không thể gửi bình luận.', 'error');
-                            } finally {
-                              setIsSendingComment(false);
-                            }
-                          }}>
-                            <textarea 
-                              placeholder="Nhập nội dung phản hồi..." 
-                              value={newComment}
-                              onChange={e => setNewComment(e.target.value)}
-                              disabled={isSendingComment}
-                            />
-                            <button type="submit" disabled={isSendingComment || !newComment.trim()}>
-                              <Send size={16} />
-                            </button>
-                          </form>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 );
@@ -977,51 +892,12 @@ const SprintDetailPage: React.FC = () => {
                 </div>
               </form>
 
-              {/* Comment Section in Detail Modal */}
-              {editingTask && (
-                <div className="task-discussion-section">
-                  <h3><MessageSquare size={18} /> Thảo luận & Phản hồi</h3>
-                  <div className="comment-list">
-                    {!editingTask.traoLois || editingTask.traoLois.length === 0 ? (
-                      <div className="empty-comments">Chưa có thảo luận nào cho công việc này.</div>
-                    ) : (
-                      editingTask.traoLois.map(c => (
-                        <div key={c.id} className={`comment-item ${c.loai === 1 ? 'rejection-reason' : ''}`}>
-                          <div className="comment-header">
-                            <span className="author">{c.tenNguoiTao}</span>
-                            <span className="time"><Clock size={12} /> {new Date(c.createdAt).toLocaleString('vi-VN')}</span>
-                            {c.loai === 1 && <span className="type-tag">Lý do từ chối</span>}
-                          </div>
-                          <div className="comment-body">{c.noiDung}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <form className="comment-input-area" onSubmit={handleAddComment}>
-                    <textarea 
-                      placeholder="Nhập nội dung trao đổi..." 
-                      value={newComment}
-                      onChange={e => setNewComment(e.target.value)}
-                      disabled={isSendingComment}
-                    />
-                    <button type="submit" disabled={isSendingComment || !newComment.trim()}>
-                      <Send size={16} />
-                    </button>
-                  </form>
-                </div>
-              )}
+              {/* Comment Section in Detail Modal Removed */}
             </div>
           </div>
         </div>
       )}
 
-      {/* Rejection Modal */}
-      <RejectionModal
-        isOpen={isRejectionModalOpen}
-        onClose={() => { setIsRejectionModalOpen(false); setTaskToReject(null); }}
-        onConfirm={handleConfirmRejection}
-        taskTitle={taskToReject?.tieuDe || ''}
-      />
 
       {showCreateTaskModal && (
         <div className="sprint-modal-overlay" onClick={() => setShowCreateTaskModal(false)}>

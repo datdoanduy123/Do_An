@@ -6,34 +6,9 @@ import {
   Layers,
   User as UserIcon,
   CheckSquare,
-  ArrowRight,
-  BarChart2,
-  PieChart,
-  Activity,
-  TrendingUp,
-  Target,
-  Zap,
-  ChevronRight,
-  Plus
+  ArrowRight
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  PieChart as RePieChart,
-  Pie,
-  Cell,
-  BarChart as ReBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as ReTooltip,
-  Legend
-} from 'recharts';
+
 
 import ProjectService from '../../services/ProjectService';
 import type { DuAnDto } from '../../services/ProjectTypes';
@@ -55,8 +30,6 @@ const DashboardPage: React.FC = () => {
   
   const [sprints, setSprints] = useState<SprintDto[]>([]);
   const [tasks, setTasks] = useState<CongViecDto[]>([]);
-  const [skillCoverage, setSkillCoverage] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'operations'>('overview');
   const [boardLoading, setBoardLoading] = useState(false);
 
   // Khởi tạo: Lấy profile và danh sách dự án
@@ -90,14 +63,12 @@ const DashboardPage: React.FC = () => {
       if (!selectedProjectId) return;
       try {
         setBoardLoading(true);
-        const [sprintList, taskList, skillData] = await Promise.all([
+        const [sprintList, taskList] = await Promise.all([
           SprintService.getByProjectId(Number(selectedProjectId)),
           TaskService.getByProjectId(Number(selectedProjectId)),
-          ProjectService.getSkillCoverage(Number(selectedProjectId))
         ]);
         setSprints(sprintList || []);
         setTasks(taskList || []);
-        setSkillCoverage(skillData || []);
       } catch (error) {
         console.error('Error fetching board data:', error);
       } finally {
@@ -107,154 +78,13 @@ const DashboardPage: React.FC = () => {
     fetchBoardData();
   }, [selectedProjectId]);
 
-  // --- Logic tính toán số liệu Thống kê ---
-  
-  // 1. Thống kê trạng thái Công việc (Pie Chart)
-  const statusData = [
-    { name: 'Chưa làm', value: tasks.filter(t => t.trangThai === TrangThaiCongViec.Todo).length, color: '#94a3b8' },
-    { name: 'Đang làm', value: tasks.filter(t => t.trangThai === TrangThaiCongViec.InProgress).length, color: '#3b82f6' },
-    { name: 'Chờ duyệt', value: tasks.filter(t => t.trangThai === TrangThaiCongViec.Review).length, color: '#f59e0b' },
-    { name: 'Hoàn thành', value: tasks.filter(t => t.trangThai === TrangThaiCongViec.Done).length, color: '#10b981' },
-  ].filter(d => d.value > 0);
 
-  // 2. Thống kê khối lượng công việc theo Thành viên (Bar Chart)
-  const memberWorkload = Array.from(new Set(tasks.map(t => t.assigneeName || 'Chưa giao'))).map(name => ({
-    name,
-    total: tasks.filter(t => (t.assigneeName || 'Chưa giao') === name).length,
-    done: tasks.filter(t => (t.assigneeName || 'Chưa giao') === name && t.trangThai === TrangThaiCongViec.Done).length
-  }));
-
-  // 3. Tính toán các KPI tổng quát
-  const stats = {
-    totalProjects: projects.length,
-    activeSprints: sprints.filter(s => s.trangThai === 1).length,
-    totalTasks: tasks.length,
-    overallProgress: tasks.length > 0 ? (tasks.filter(t => t.trangThai === TrangThaiCongViec.Done).length / tasks.length) * 100 : 0
-  };
 
   const getSprintStatusLabel = (status: number, tienDo: number, hasActiveTasks: boolean) => {
     if (status === 2) return { text: 'Hoàn thành', class: 'bg-emerald-100 text-emerald-700' };
     if (status === 1 || tienDo > 0 || hasActiveTasks) return { text: 'Đang chạy', class: 'bg-blue-100 text-blue-700' };
     return { text: 'Mới tạo', class: 'bg-slate-100 text-slate-700' };
   };
-
-  // --- Giao diện Overview (Charts & KPIs) ---
-  const renderOverview = () => (
-    <div className="dashboard-overview-tab fade-in">
-      {/* 3.1. KPI Cards Row */}
-      <div className="kpi-grid">
-        <div className="kpi-card gradient-blue">
-          <div className="kpi-icon"><Briefcase size={24}/></div>
-          <div className="kpi-info">
-            <span className="kpi-label">Tổng Dự Án</span>
-            <span className="kpi-value">{stats.totalProjects}</span>
-          </div>
-          <div className="kpi-mini-chart"><Activity size={16}/> +2 tháng này</div>
-        </div>
-        <div className="kpi-card gradient-purple">
-          <div className="kpi-icon"><Zap size={24}/></div>
-          <div className="kpi-info">
-            <span className="kpi-label">Sprint Đang Chạy</span>
-            <span className="kpi-value">{stats.activeSprints}</span>
-          </div>
-          <div className="kpi-trend">Đang vận hành</div>
-        </div>
-        <div className="kpi-card gradient-emerald">
-          <div className="kpi-icon"><CheckSquare size={24}/></div>
-          <div className="kpi-info">
-            <span className="kpi-label">Tổng Công Việc</span>
-            <span className="kpi-value">{stats.totalTasks}</span>
-          </div>
-          <div className="kpi-stat">Trong dự án hiện tại</div>
-        </div>
-        <div className="kpi-card gradient-orange">
-          <div className="kpi-icon"><Target size={24}/></div>
-          <div className="kpi-info">
-            <span className="kpi-label">Hoàn Thành Mục Tiêu</span>
-            <span className="kpi-value">{Math.round(stats.overallProgress)}%</span>
-          </div>
-          <div className="kpi-progress-bg">
-            <div className="kpi-progress-fill" style={{width: `${stats.overallProgress}%`}}></div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3.2. Charts Section */}
-      <div className="charts-main-grid">
-        <div className="chart-container large-chart">
-          <div className="chart-header">
-            <h3><TrendingUp size={18}/> Khối lượng công việc theo Thành viên</h3>
-          </div>
-          <div className="chart-body" style={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ReBarChart data={memberWorkload} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <ReTooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
-                />
-                <Legend iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
-                <Bar dataKey="total" name="Tổng cộng" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={30} />
-                <Bar dataKey="done" name="Đã xong" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
-              </ReBarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="chart-container">
-          <div className="chart-header">
-            <h3><PieChart size={18}/> Trạng thái công việc</h3>
-          </div>
-          <div className="chart-body" style={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <RePieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {statusData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <ReTooltip />
-                <Legend verticalAlign="bottom" height={36}/>
-              </RePieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="chart-container">
-          <div className="chart-header">
-            <h3><Activity size={18}/> Độ phủ Kỹ năng (Team Radar)</h3>
-          </div>
-          <div className="chart-body" style={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={skillCoverage}>
-                <PolarGrid stroke="#e2e8f0" />
-                <PolarAngleAxis dataKey="skillName" tick={{fill: '#64748b', fontSize: 11}} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} axisLine={false} tick={false} />
-                <Radar
-                  name="Độ phủ kỹ năng"
-                  dataKey="coveragePercent"
-                  stroke="#8b5cf6"
-                  fill="#8b5cf6"
-                  fillOpacity={0.4}
-                />
-                <ReTooltip />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   // --- Giao diện Operations (Kanban Board cũ) ---
   const renderOperations = () => (
@@ -305,9 +135,9 @@ const DashboardPage: React.FC = () => {
                           <div key={task.id} className="k-task-card">
                             <div className="k-task-header">
                               <span className="k-task-id">#{task.id}</span>
-                              {task.doUuTien === 2 ? <span className="k-prio high">Nguy cấp</span> :
-                                task.doUuTien === 1 ? <span className="k-prio medium">Ưu tiên</span> :
-                                null}
+                              {task.doUuTien === 2 ? <span className="k-prio high">Cao</span> :
+                                task.doUuTien === 1 ? <span className="k-prio medium">Vừa</span> :
+                                <span className="k-prio low">Thấp</span>}
                             </div>
                             <h5 className="k-task-title" title={task.tieuDe}>{task.tieuDe}</h5>
                             <div className="k-task-footer">
@@ -379,17 +209,7 @@ const DashboardPage: React.FC = () => {
 
       {/* 2. Tab Navigation */}
       <nav className="dashboard-tabs">
-        <button 
-          className={`dash-tab ${activeTab === 'overview' ? 'active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          <BarChart2 size={18}/>
-          <span>Tổng quan số liệu</span>
-        </button>
-        <button 
-          className={`dash-tab ${activeTab === 'operations' ? 'active' : ''}`}
-          onClick={() => setActiveTab('operations')}
-        >
+        <button className="dash-tab active">
           <Layers size={18}/>
           <span>Bảng điều hành Sprint</span>
         </button>
@@ -400,8 +220,6 @@ const DashboardPage: React.FC = () => {
         <div className="master-board-content">
           {boardLoading ? (
             <div className="board-loading">Đang cập nhật luồng dữ liệu thời gian thực...</div>
-          ) : activeTab === 'overview' ? (
-            renderOverview()
           ) : sprints.length > 0 ? (
             renderOperations()
           ) : (

@@ -100,7 +100,5 @@ namespace Domain.Entities
         // Quan hệ: Một công việc có thể phụ thuộc vào nhiều công việc khác
         public ICollection<PhuThuocCongViec> Dependencies { get; set; } = new List<PhuThuocCongViec>();
 
-        // Quan hệ: Một công việc có thể có nhiều trao đổi, thảo luận
-        public ICollection<TraoLoiCongViec> TraoLoiCongViecs { get; set; } = new List<TraoLoiCongViec>();
     }
 }
