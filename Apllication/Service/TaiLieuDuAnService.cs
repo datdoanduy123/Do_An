@@ -15,6 +15,10 @@ namespace Apllication.Service
 {
     public class TaiLieuDuAnService : ITaiLieuDuAnService
     {
+        private readonly ITaiLieuDuAnRepository _repository;
+        private readonly IHostEnvironment _env;
+        private readonly IGiaoViecAIService _giaoViecAiService;
+        private readonly ICongViecRepository _congViecRepo;
         private readonly IKyNangRepository _kyNangRepo;
         private readonly IQuyTacGiaoViecAIRepository _ruleRepo;
 
@@ -46,7 +50,7 @@ namespace Apllication.Service
             string uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
             string filePath = Path.Combine(uploadPath, uniqueFileName);
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            using (var stream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
             {
                 await file.CopyToAsync(stream);
             }
@@ -76,7 +80,7 @@ namespace Apllication.Service
             {
                 if (!File.Exists(taiLieu.FilePath)) return false;
 
-                using (var stream = new FileStream(taiLieu.FilePath, FileMode.Open, FileAccess.Read))
+                using (var stream = new System.IO.FileStream(taiLieu.FilePath, System.IO.FileMode.Open, System.IO.FileAccess.Read))
                 {
                     var doc = new NPOI.XWPF.UserModel.XWPFDocument(stream);
                     var tables = doc.Tables;

@@ -4,6 +4,6 @@ namespace Apllication.IService
 {
     public interface IDashboardService
     {
-        Task<object> GetDashboardStatsAsync(int userId);
+        Task<object> GetDashboardStatsAsync(int userId, int? projectId = null);
     }
 }

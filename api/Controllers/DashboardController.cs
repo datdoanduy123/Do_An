@@ -18,7 +18,7 @@ namespace api.Controllers
         }
 
         [HttpGet("stats")]
-        public async Task<IActionResult> GetStats()
+        public async Task<IActionResult> GetStats([FromQuery] int? projectId)
         {
             try
             {
@@ -29,7 +29,7 @@ namespace api.Controllers
                     return ErrorResponse(401, "Nguoi dung chua dang nhap.");
                 }
 
-                var result = await _dashboardService.GetDashboardStatsAsync(userId);
+                var result = await _dashboardService.GetDashboardStatsAsync(userId, projectId);
                 return SuccessResponse(result, "Lay thong ke dashboard thanh cong.");
             }
             catch (Exception ex)

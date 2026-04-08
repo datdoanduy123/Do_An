@@ -6,8 +6,14 @@ import {
   Layers,
   User as UserIcon,
   CheckSquare,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle,
+  Smile,
+  Zap,
+  Coffee
 } from 'lucide-react';
+import DashboardService from '../../services/DashboardService';
+import type { DashboardStats } from '../../services/DashboardService';
 
 
 import ProjectService from '../../services/ProjectService';
@@ -31,6 +37,7 @@ const DashboardPage: React.FC = () => {
   const [sprints, setSprints] = useState<SprintDto[]>([]);
   const [tasks, setTasks] = useState<CongViecDto[]>([]);
   const [boardLoading, setBoardLoading] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
 
   // Khởi tạo: Lấy profile và danh sách dự án
   useEffect(() => {
@@ -63,12 +70,14 @@ const DashboardPage: React.FC = () => {
       if (!selectedProjectId) return;
       try {
         setBoardLoading(true);
-        const [sprintList, taskList] = await Promise.all([
+        const [sprintList, taskList, stats] = await Promise.all([
           SprintService.getByProjectId(Number(selectedProjectId)),
           TaskService.getByProjectId(Number(selectedProjectId)),
+          DashboardService.getDashboardData(Number(selectedProjectId))
         ]);
         setSprints(sprintList || []);
         setTasks(taskList || []);
+        setDashboardStats(stats);
       } catch (error) {
         console.error('Error fetching board data:', error);
       } finally {
@@ -86,9 +95,78 @@ const DashboardPage: React.FC = () => {
     return { text: 'Mới tạo', class: 'bg-slate-100 text-slate-700' };
   };
 
+  // Render bảng theo dõi tải công việc nhân sự trong Sprint
+  const renderWorkloadRegistry = () => {
+    if (!dashboardStats?.sprintWorkload || dashboardStats.sprintWorkload.length === 0) return null;
+
+    return (
+      <div className="sprint-workload-registry mt-6 mb-8">
+        <div className="registry-header">
+          <div className="flex items-center gap-2">
+            <Zap size={18} className="text-amber-500 fill-amber-500" />
+            <h3 className="text-lg font-bold text-slate-800">Cân bằng nguồn lực Sprint</h3>
+          </div>
+          <p className="text-sm text-slate-500">Giám sát tải công việc thời gian thực của các thành viên.</p>
+        </div>
+
+        <div className="workload-grid">
+          {dashboardStats.sprintWorkload.map((user: any) => {
+            let statusColor = '#10b981'; // Green
+            let statusIcon = <Smile size={16} />;
+            let statusText = 'Đang rảnh / Ổn định';
+
+            if (user.status === 'Overloaded') {
+              statusColor = '#ef4444'; // Red
+              statusIcon = <AlertTriangle size={16} />;
+              statusText = 'Đang quá tải';
+            } else if (user.status === 'Warning') {
+              statusColor = '#f59e0b'; // Amber
+              statusIcon = <AlertTriangle size={16} />;
+              statusText = 'Sắp đầy tải';
+            } else if (user.status === 'Under-load') {
+              statusColor = '#64748b'; // Slate (Under-load)
+              statusIcon = <Coffee size={16} />;
+              statusText = 'Dư thừa NL / Rảnh';
+            }
+
+            return (
+              <div key={user.userId} className={`workload-card ${user.status.toLowerCase()}`}>
+                <div className="user-info-row">
+                  <div className="user-avatar-small">{user.fullName.charAt(0)}</div>
+                  <div className="user-name-box">
+                    <span className="name">{user.fullName}</span>
+                    <span className="tasks">{user.totalTasks} task chưa xong</span>
+                  </div>
+                  <div className={`workload-status-badge ${user.status.toLowerCase()}`}>
+                    {statusIcon}
+                    <span>{statusText}</span>
+                  </div>
+                </div>
+
+                <div className="progress-container">
+                  <div className="progress-labels">
+                    <span>Khối lượng: <strong>{user.totalHours}h</strong> / {user.capacity}h</span>
+                    <span>{user.loadFactor}%</span>
+                  </div>
+                  <div className="workload-progress-bg">
+                    <div 
+                      className={`workload-progress-fill ${user.status.toLowerCase()}`} 
+                      style={{ width: `${Math.min(user.loadFactor, 100)}%`, backgroundColor: statusColor }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   // --- Giao diện Operations (Kanban Board cũ) ---
   const renderOperations = () => (
     <div className="sprint-swimlanes fade-in">
+      {renderWorkloadRegistry()}
       {sprints.map(sprint => {
         const sprintTasks = tasks.filter(t => t.sprintId === sprint.id);
         const hasActive = sprintTasks.some(t => t.trangThai > 0 && t.trangThai < 3);

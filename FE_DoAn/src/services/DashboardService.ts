@@ -7,10 +7,12 @@ export interface DashboardStats {
   pendingReviews: number;
   taskStatusDistribution: any[];
   teamWorkload: any[];
+  sprintWorkload: any[];
   projectProgress: any[];
   burndownData: any[];
   velocityData: any[];
   recentProjects: any[];
+  selectedProjectName?: string;
   myPriorityTasks: any[];
 }
 
@@ -21,9 +23,11 @@ class DashboardService {
   /**
    * Lấy số liệu thống kê cho Dashboard từ Backend tập trung.
    */
-  async getDashboardData(): Promise<DashboardStats> {
+  async getDashboardData(projectId?: number): Promise<DashboardStats> {
     try {
-      const response = await api.get('/Dashboard/stats');
+      const response = await api.get('/Dashboard/stats', {
+        params: { projectId }
+      });
       const data = response.data.data;
       
       return {
@@ -33,10 +37,12 @@ class DashboardService {
         pendingReviews: data.pendingReviews,
         taskStatusDistribution: data.taskStatusDistribution,
         teamWorkload: data.teamWorkload,
+        sprintWorkload: data.sprintWorkload,
         projectProgress: data.projectProgress,
         burndownData: data.burndownData,
         velocityData: data.velocityData,
         recentProjects: data.recentProjects,
+        selectedProjectName: data.selectedProjectName,
         myPriorityTasks: data.myPriorityTasks
       };
     } catch (error) {
