@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ Use Case - Hệ thống Quản lý Dự án</title>
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ 
+          startOnLoad: true,
+          theme: 'default',
+          flowchart: { curve: 'basis' }
+      });
+    </script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f7f6; 
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { color: #333; margin-bottom: 20px; }
+        .mermaid { 
+            background-color: #ffffff; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 1000px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Sơ đồ Use Case: Hệ thống Quản lý Dự án & Giao việc AI</h2>
+
+    <div class="mermaid">
+        flowchart LR
+            %% Định nghĩa các Actor
+            PM(("Quản lý\n(Admin / PM)"))
+            Member(("Nhân viên\n(Member)"))
+
+            %% Border cho hệ thống
+            subgraph System ["HỆ THỐNG QUẢN LÝ DỰ ÁN"]
+                direction TB
+                
+                UC_Login("Đăng nhập hệ thống & Nhận thông báo")
+                
+                UC_ManageUsers("Quản lý tài khoản & Vai trò")
+                UC_ManageProjects("Quản lý dự án & Thành viên")
+                UC_UploadDoc("Tải lên tài liệu đặc tả (.docx)")
+                UC_ParseData("AI Bóc tách dữ liệu")
+                UC_AutoAssign("AI Tự động giao việc (KNN)")
+                UC_Monitor("Xem Dashboard & Biểu đồ Gantt")
+                
+                UC_ManageSkills("Cập nhật Kỹ năng & Kinh nghiệm")
+                UC_ViewTasks("Xem công việc được giao")
+                UC_UpdateTasks("Cập nhật trạng thái việc")
+                UC_LogWork("Ghi nhật ký làm việc (Daily Log)")
+            end
+
+            %% Nối Quản lý (Admin/PM)
+            PM --> UC_Login
+            PM --> UC_ManageUsers
+            PM --> UC_ManageProjects
+            PM --> UC_UploadDoc
+            PM --> UC_Monitor
+
+            %% Nối Include/Extend cho AI
+            UC_UploadDoc -. "&lt;&lt;include&gt;&gt;" .-> UC_ParseData
+            UC_ParseData -. "&lt;&lt;extend&gt;&gt;" .-> UC_AutoAssign
+
+            %% Nối Member
+            Member --> UC_Login
+            Member --> UC_ManageSkills
+            Member --> UC_ViewTasks
+            Member --> UC_UpdateTasks
+            Member --> UC_LogWork
+
+            %% Styles
+            classDef actorStyle fill:#fff,stroke:#333,stroke-width:2px,color:#000;
+            classDef usecaseStyle fill:#e6f3ff,stroke:#0066cc,stroke-width:2px,color:#000,rx:20,ry:20;
+            classDef aiStyle fill:#fff0f5,stroke:#cc0066,stroke-width:2px,color:#000,rx:20,ry:20;
+            
+            class PM,Member actorStyle;
+            class UC_Login,UC_ManageUsers,UC_ManageProjects,UC_Monitor,UC_ManageSkills,UC_ViewTasks,UC_UpdateTasks,UC_LogWork usecaseStyle;
+            class UC_UploadDoc,UC_ParseData,UC_AutoAssign aiStyle;
+    </div>
+
+    <p style="margin-top: 20px; color: #666; font-size: 14px;">
+        * Các khối màu hồng (viền đỏ) là các module liên quan đến Trí tuệ nhân tạo (AI).<br>
+        * Vai trò Quản lý (PM) bao gồm cả quyền quản trị hệ thống (như quản lý tài khoản) và quyền nghiệp vụ dự án.
+    </p>
+
+</body>
+</html>

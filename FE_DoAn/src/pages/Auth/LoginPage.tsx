@@ -6,7 +6,7 @@ import './Login.css';
 
 /**
  * Component trang Đăng nhập.
- * Hiển thị giao diện đăng nhập với phong cách Glassmorphism.
+ * Giao diện tối giản, tông màu sáng theo yêu cầu.
  */
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,7 +30,6 @@ const LoginPage: React.FC = () => {
         AuthService.setSession(response.data.token);
         
         try {
-          // Lấy thông tin người dùng ngay sau khi đăng nhập để điều hướng đúng vai trò
           const profile = await UserService.getProfile();
           
           const isAdminOrManager = profile.vaiTros?.some((r: string) => {
@@ -38,16 +37,13 @@ const LoginPage: React.FC = () => {
             return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
           });
 
-          // Điều hướng dựa trên vai trò
           if (isAdminOrManager) {
             navigate('/dashboard');
           } else {
-            // Nếu là nhân viên, điều hướng về trang công việc của tôi
             navigate('/my-tasks');
           }
         } catch (profileError) {
           console.error('Lỗi khi lấy thông tin vai trò:', profileError);
-          // Fallback mặc định nếu có lỗi lấy profile
           navigate('/my-tasks');
         }
       } else {
@@ -65,10 +61,14 @@ const LoginPage: React.FC = () => {
       <div className="login-card">
         <div className="login-header">
           <h1>Đăng nhập</h1>
-          <p>Chào mừng bạn trở lại với hệ thống</p>
+          <p>Hệ thống Quản trị Dự án</p>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
@@ -77,7 +77,7 @@ const LoginPage: React.FC = () => {
               <input
                 id="username"
                 type="text"
-                placeholder="Nhập tên đăng nhập của bạn"
+                placeholder="Nhập tài khoản"
                 value={tenDangNhap}
                 onChange={(e) => setTenDangNhap(e.target.value)}
                 required
@@ -91,7 +91,7 @@ const LoginPage: React.FC = () => {
               <input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Nhập mật khẩu"
                 value={matKhau}
                 onChange={(e) => setMatKhau(e.target.value)}
                 required
@@ -103,6 +103,12 @@ const LoginPage: React.FC = () => {
             {loading ? 'Đang xử lý...' : 'Đăng nhập'}
           </button>
         </form>
+        
+        <div className="login-footer">
+          <p className="copyright">
+            © 2024 Project Management System
+          </p>
+        </div>
       </div>
     </div>
   );

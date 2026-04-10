@@ -199,7 +199,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="sidebar-header">
           <div className="logo-box">
             <div className="logo-icon">D</div>
-            {isSidebarOpen && <span className="logo-text">DoAnHub</span>}
+            {isSidebarOpen && <span className="logo-text">MENU</span>}
           </div>
           <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(!isSidebarOpen)}>
             <Menu size={20} />
