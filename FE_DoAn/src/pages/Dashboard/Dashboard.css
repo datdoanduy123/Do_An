@@ -205,55 +205,129 @@
   .sprint-kanban-board { grid-template-columns: 1fr; }
 }
 
-/* --- SPRINT WORKLOAD REGISTRY --- */
+/* --- SPRINT WORKLOAD REGISTRY (PREMIUM DESIGN) --- */
 .sprint-workload-registry {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 12px;
-    border: 1px solid var(--slate-200);
+    background: #ffffff;
+    padding: 2rem;
+    border-radius: 24px;
+    border: 1px solid var(--slate-100);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+.sprint-workload-registry::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--primary), var(--secondary));
 }
 
 .registry-header {
-    margin-bottom: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.registry-main-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.registry-main-header h3 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--slate-800);
+    margin: 0;
+}
+
+.zap-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    background: #fffbeb;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--orange);
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.15);
+}
+
+.sprint-name-sub {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--slate-50);
+    border-radius: 10px;
+    color: var(--slate-600);
+    font-size: 0.9rem;
+    font-weight: 700;
+    border: 1px solid var(--slate-100);
+    margin-bottom: 12px;
+}
+
+.sprint-name-sub span {
+    color: var(--primary);
+    background: white;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.registry-desc {
+    font-size: 0.9rem;
+    color: var(--slate-400);
+    font-weight: 500;
+    margin: 0;
 }
 
 .workload-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
 }
 
 .workload-card {
-    background: var(--slate-50);
-    border-radius: 10px;
-    padding: 1rem;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid var(--slate-100);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    cursor: default;
 }
 
 .workload-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 30px rgba(0,0,0,0.06);
+    border-color: var(--primary-light);
 }
 
 .user-info-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .user-avatar-small {
-    width: 32px;
-    height: 32px;
-    background: var(--primary);
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
-    border-radius: 50%;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    font-size: 0.85rem;
+    font-weight: 800;
+    font-size: 1.1rem;
+    box-shadow: 0 8px 15px rgba(99, 102, 241, 0.2);
 }
 
 .user-name-box {
@@ -263,69 +337,93 @@
 }
 
 .user-name-box .name {
-    font-weight: 600;
-    font-size: 0.95rem;
+    font-weight: 700;
+    font-size: 1.05rem;
     color: var(--slate-800);
 }
 
 .user-name-box .tasks {
-    font-size: 0.8rem;
-    color: var(--slate-500);
+    font-size: 0.85rem;
+    color: var(--slate-400);
+    font-weight: 600;
 }
 
 .workload-status-badge {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 6px;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
+    transition: all 0.3s;
 }
 
 .workload-status-badge.normal {
-    background: #ecfdf5;
+    background: #f0fdf4;
     color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.1);
 }
 
 .workload-status-badge.warning {
     background: #fffbeb;
     color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.1);
+}
+
+.workload-status-badge.overloaded {
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.1);
 }
 
 .workload-status-badge.under-load {
-    background: #f1f5f9;
-    color: #64748b;
+    background: var(--slate-50);
+    color: var(--slate-400);
+    border: 1px solid var(--slate-100);
 }
-
-.workload-card.under-load {
-    border-color: #e2e8f0;
-    opacity: 0.9;
-}
-
 
 .progress-container {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
 }
 
 .progress-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--slate-600);
+    font-weight: 600;
+}
+
+.progress-labels strong {
+    color: var(--slate-800);
+    font-weight: 800;
 }
 
 .workload-progress-bg {
-    height: 6px;
-    background: var(--slate-200);
-    border-radius: 3px;
-    overflow: hidden;
+    height: 10px;
+    background: var(--slate-50);
+    border-radius: 10px;
+    padding: 2px;
+    border: 1px solid var(--slate-100);
 }
 
 .workload-progress-fill {
     height: 100%;
-    border-radius: 3px;
-    transition: width 0.5s ease;
+    border-radius: 8px;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.workload-progress-fill.overloaded {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+
+.workload-progress-fill.normal {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+
+.workload-progress-fill.warning {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
 }

@@ -149,6 +149,7 @@ namespace Apllication.Service
                     return new { p.Id, p.TenDuAn, p.NgayBatDau, p.NgayKetThuc, p.TrangThai, Progress = total > 0 ? (int)((double)completed / total * 100) : 0 };
                 }),
                 SelectedProjectName = targetProject?.TenDuAn,
+                ActiveSprintName = activeSprint?.TenSprint,
                 MyPriorityTasks = myTasks.Where(t => t.TrangThai != TrangThaiCongViec.Done && t.DoUuTien >= DoUuTien.High).Take(5).Select(t => new { t.Id, t.TieuDe, t.DoUuTien, t.ThoiGianUocTinh })
             };
         }

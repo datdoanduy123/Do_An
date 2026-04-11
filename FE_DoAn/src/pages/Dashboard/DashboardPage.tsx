@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Clock, 
+import {
+  Clock,
   Calendar,
   Briefcase,
   Layers,
@@ -29,11 +29,11 @@ import './Dashboard.css';
 const DashboardPage: React.FC = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Data States
   const [projects, setProjects] = useState<DuAnDto[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | ''>('');
-  
+
   const [sprints, setSprints] = useState<SprintDto[]>([]);
   const [tasks, setTasks] = useState<CongViecDto[]>([]);
   const [boardLoading, setBoardLoading] = useState(false);
@@ -50,7 +50,7 @@ const DashboardPage: React.FC = () => {
         ]);
         setUserProfile(profile);
         setProjects(projList || []);
-        
+
         // Mặc định chọn dự án đầu tiên nếu có
         if (projList && projList.length > 0) {
           setSelectedProjectId(projList[0].id);
@@ -102,11 +102,20 @@ const DashboardPage: React.FC = () => {
     return (
       <div className="sprint-workload-registry mt-6 mb-8">
         <div className="registry-header">
-          <div className="flex items-center gap-2">
-            <Zap size={18} className="text-amber-500 fill-amber-500" />
-            <h3 className="text-lg font-bold text-slate-800">Cân bằng nguồn lực Sprint</h3>
+          <div className="registry-main-header">
+            <div className="zap-icon-wrapper">
+              <Zap size={20} fill="currentColor" />
+            </div>
+            <h3>Cân bằng nguồn lực Sprint</h3>
           </div>
-          <p className="text-sm text-slate-500">Giám sát tải công việc thời gian thực của các thành viên.</p>
+
+          {dashboardStats.activeSprintName && (
+            <div className="sprint-name-sub">
+              <span>Đang chạy</span> {dashboardStats.activeSprintName}
+            </div>
+          )}
+
+          <p className="registry-desc">Giám sát tải công việc thời gian thực của các thành viên.</p>
         </div>
 
         <div className="workload-grid">
@@ -149,8 +158,8 @@ const DashboardPage: React.FC = () => {
                     <span>{user.loadFactor}%</span>
                   </div>
                   <div className="workload-progress-bg">
-                    <div 
-                      className={`workload-progress-fill ${user.status.toLowerCase()}`} 
+                    <div
+                      className={`workload-progress-fill ${user.status.toLowerCase()}`}
                       style={{ width: `${Math.min(user.loadFactor, 100)}%`, backgroundColor: statusColor }}
                     ></div>
                   </div>
@@ -171,22 +180,22 @@ const DashboardPage: React.FC = () => {
         const sprintTasks = tasks.filter(t => t.sprintId === sprint.id);
         const hasActive = sprintTasks.some(t => t.trangThai > 0 && t.trangThai < 3);
         const statusStyle = getSprintStatusLabel(sprint.trangThai!, sprint.tienDo || 0, hasActive);
-        
+
         return (
           <div key={sprint.id} className="sprint-lane">
             <div className="sprint-lane-header">
               <div className="sprint-lane-title">
-                <h2><Layers size={20}/> {sprint.tenSprint}</h2>
+                <h2><Layers size={20} /> {sprint.tenSprint}</h2>
                 <span className={`sprint-badge ${statusStyle.class}`}>{statusStyle.text}</span>
                 <span className="sprint-dates">
-                  <Calendar size={14}/> 
-                  {new Date(sprint.ngayBatDau).toLocaleDateString()} <ArrowRight size={12}/> {new Date(sprint.ngayKetThuc).toLocaleDateString()}
+                  <Calendar size={14} />
+                  {new Date(sprint.ngayBatDau).toLocaleDateString()} <ArrowRight size={12} /> {new Date(sprint.ngayKetThuc).toLocaleDateString()}
                 </span>
               </div>
               <div className="sprint-lane-progress">
                 <span>Tiến độ: <strong>{Math.round(sprint.tienDo || 0)}%</strong></span>
                 <div className="progress-bar-bg-mini">
-                  <div className="progress-bar-fill-mini" style={{width: `${Math.round(sprint.tienDo || 0)}%`}}></div>
+                  <div className="progress-bar-fill-mini" style={{ width: `${Math.round(sprint.tienDo || 0)}%` }}></div>
                 </div>
               </div>
             </div>
@@ -215,18 +224,18 @@ const DashboardPage: React.FC = () => {
                               <span className="k-task-id">#{task.id}</span>
                               {task.doUuTien === 2 ? <span className="k-prio high">Cao</span> :
                                 task.doUuTien === 1 ? <span className="k-prio medium">Vừa</span> :
-                                <span className="k-prio low">Thấp</span>}
+                                  <span className="k-prio low">Thấp</span>}
                             </div>
                             <h5 className="k-task-title" title={task.tieuDe}>{task.tieuDe}</h5>
                             <div className="k-task-footer">
                               <div className="k-assignee">
-                                  <div className="k-avatar">
-                                    {task.assigneeName ? task.assigneeName.charAt(0).toUpperCase() : '?'}
-                                  </div>
-                                  <span className="k-name">{task.assigneeName || 'Chưa giao'}</span>
+                                <div className="k-avatar">
+                                  {task.assigneeName ? task.assigneeName.charAt(0).toUpperCase() : '?'}
+                                </div>
+                                <span className="k-name">{task.assigneeName || 'Chưa giao'}</span>
                               </div>
                               <div className="k-time">
-                                <Clock size={12}/> {task.thoiGianUocTinh}h
+                                <Clock size={12} /> {task.thoiGianUocTinh}h
                               </div>
                             </div>
                           </div>
@@ -258,18 +267,18 @@ const DashboardPage: React.FC = () => {
       <header className="master-header">
         <div className="welcome-part">
           <div className="master-avatar">
-            {userProfile?.hoTen?.charAt(0) || <UserIcon size={24}/>}
+            {userProfile?.hoTen?.charAt(0) || <UserIcon size={24} />}
           </div>
           <div className="welcome-text">
             <h1>Tổng quan điều hành dự án</h1>
             <p>Xin chào <strong>{userProfile?.hoTen || 'Quản lý'}</strong>. Hệ thống AI đã sẵn sàng điều hành.</p>
           </div>
         </div>
-        
+
         <div className="project-selector-wrapper">
-          <label><Briefcase size={16}/> Chọn Dự Án Điều Hành:</label>
+          <label><Briefcase size={16} /> Chọn Dự Án Điều Hành:</label>
           <div className="select-container">
-            <select 
+            <select
               className="master-project-select"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : '')}
@@ -288,7 +297,7 @@ const DashboardPage: React.FC = () => {
       {/* 2. Tab Navigation */}
       <nav className="dashboard-tabs">
         <button className="dash-tab active">
-          <Layers size={18}/>
+          <Layers size={18} />
           <span>Bảng điều hành Sprint</span>
         </button>
       </nav>
@@ -302,14 +311,14 @@ const DashboardPage: React.FC = () => {
             renderOperations()
           ) : (
             <div className="empty-master-board">
-              <CheckSquare size={48} className="empty-icon"/>
-                <h3>Dự án này chưa có Sprint nào!</h3>
-                <p>Vui lòng cập nhật tài liệu hoặc tạo Sprint mới để bắt đầu theo dõi tiến độ.</p>
-             </div>
+              <CheckSquare size={48} className="empty-icon" />
+              <h3>Dự án này chưa có Sprint nào!</h3>
+              <p>Vui lòng cập nhật tài liệu hoặc tạo Sprint mới để bắt đầu theo dõi tiến độ.</p>
+            </div>
           )}
         </div>
       ) : (
-         <div className="empty-master-board">Vui lòng chọn một dự án để bắt đầu điều hành.</div>
+        <div className="empty-master-board">Vui lòng chọn một dự án để bắt đầu điều hành.</div>
       )}
     </div>
   );

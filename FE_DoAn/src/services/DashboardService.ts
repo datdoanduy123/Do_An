@@ -13,6 +13,7 @@ export interface DashboardStats {
   velocityData: any[];
   recentProjects: any[];
   selectedProjectName?: string;
+  activeSprintName?: string;
   myPriorityTasks: any[];
 }
 
@@ -43,6 +44,7 @@ class DashboardService {
         velocityData: data.velocityData,
         recentProjects: data.recentProjects,
         selectedProjectName: data.selectedProjectName,
+        activeSprintName: data.activeSprintName,
         myPriorityTasks: data.myPriorityTasks
       };
     } catch (error) {
