@@ -135,16 +135,30 @@ const ProjectDetailPage: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file || !id) return;
 
+    // Kiểm tra định dạng tệp tin (Chỉ cho phép Word và Excel)
+    const allowedExtensions = ['doc', 'docx', 'xls', 'xlsx'];
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      showToast('Định dạng file không hợp lệ. Vui lòng tải lên file Word (.doc, .docx) hoặc Excel (.xls, .xlsx).', 'error');
+      // Reset input để có thể chọn lại cùng tệp đó sau khi sửa
+      event.target.value = '';
+      return;
+    }
+
     try {
       setDocLoading(true);
       await DocumentService.upload(Number(id), file);
       const updatedDocs = await DocumentService.getByProject(Number(id));
       setDocuments(updatedDocs);
+      showToast('Tải lên tài liệu thành công.');
     } catch (error) {
       console.error('Upload failed:', error);
       showToast('Tải lên tài liệu thất bại.', 'error');
     } finally {
       setDocLoading(false);
+      // Reset input
+      event.target.value = '';
     }
   };
 
@@ -690,7 +704,7 @@ const ProjectDetailPage: React.FC = () => {
                 id="doc-upload"
                 hidden
                 onChange={handleFileUpload}
-                accept=".doc,.docx"
+                accept=".doc,.docx,.xls,.xlsx"
                 disabled={docLoading}
               />
               <label htmlFor="doc-upload" className={`upload-btn-premium ${docLoading ? 'loading' : ''}`}>
