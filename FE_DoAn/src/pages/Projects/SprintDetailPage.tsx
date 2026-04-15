@@ -808,6 +808,17 @@ const SprintDetailPage: React.FC = () => {
             </div>
             <div className="sprint-modal-scroll-area">
               <form onSubmit={handleUpdateTask} className="sprint-modal-body">
+                {/* XAI: Nhận định từ AI */}
+                {editingTask?.aiReasoning && (
+                  <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f5f3ff', borderRadius: '8px', border: '1px solid #ddd6fe', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '1.2rem', marginTop: '-2px' }}>🤖</span>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6d28d9', marginBottom: '4px' }}>Nhận định từ AI (XAI)</strong>
+                      <span style={{ fontSize: '0.85rem', color: '#4b5563', lineHeight: '1.4', display: 'block' }}>{editingTask.aiReasoning}</span>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="form-group">
                   <label>Tiêu đề <span className="required">*</span></label>
                   <input 

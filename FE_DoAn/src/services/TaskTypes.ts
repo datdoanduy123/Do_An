@@ -61,6 +61,7 @@ export interface CongViecDto {
     dependsOnTaskId: number;
     dependsOnTaskTitle?: string;
   }[];
+  aiReasoning?: string;
 }
 
 export interface TaoCongViecDto {

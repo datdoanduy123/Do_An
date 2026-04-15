@@ -514,6 +514,7 @@ namespace Apllication.Service
                 NgayBatDauSprint = cv.Sprint?.NgayBatDau,
                 NgayKetThucSprint = cv.Sprint?.NgayKetThuc,
                 SoLanBiTuChoi = cv.SoLanBiTuChoi,
+                AiReasoning = cv.AiReasoning,
                 CreatedBy = cv.CreatedBy,
                 Dependencies = cv.Dependencies?.Select(d => new PhuThuocDto
                 {

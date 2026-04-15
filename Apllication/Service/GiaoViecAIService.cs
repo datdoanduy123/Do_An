@@ -154,13 +154,26 @@ namespace Apllication.Service
             double defaultEstimate = GetRuleValue(rules, "DEFAULT_TASK_ESTIMATE", 8.0);
             int topK = (int)GetRuleValue(rules, "KNN_TOP_K", 3);
 
-            var userWorkloadHours = new Dictionary<int, double>();
-            foreach (var kvp in cachedUsers)
+            // Tính số giờ hiện tại tách biệt rõ ràng theo từng Moudle (SprintId)
+            // Key 1: SprintId (0 nếu Null/Backlog). Key 2: UserId -> Tổng số giờ đang gánh trong Module đó
+            var workloadPerSprint = new Dictionary<int, Dictionary<int, double>>();
+
+            Dictionary<int, double> GetWorkloadForSprint(int? sprintId)
             {
-                double currentHours = allTasksInProject
-                     .Where(t => t.AssigneeId == kvp.Key && t.TrangThai != TrangThaiCongViec.Done)
-                     .Sum(t => t.ThoiGianUocTinh > 0 ? t.ThoiGianUocTinh : defaultEstimate);
-                userWorkloadHours[kvp.Key] = currentHours;
+                int sKey = sprintId ?? 0;
+                if (!workloadPerSprint.ContainsKey(sKey))
+                {
+                    var wDict = new Dictionary<int, double>();
+                    foreach (var kvp in cachedUsers)
+                    {
+                        double currentHours = allTasksInProject
+                             .Where(t => t.AssigneeId == kvp.Key && t.SprintId == sprintId && t.TrangThai != TrangThaiCongViec.Done)
+                             .Sum(t => t.ThoiGianUocTinh > 0 ? t.ThoiGianUocTinh : defaultEstimate);
+                        wDict[kvp.Key] = currentHours;
+                    }
+                    workloadPerSprint[sKey] = wDict;
+                }
+                return workloadPerSprint[sKey];
             }
 
             foreach (var tDto in sortedTasks)
@@ -168,22 +181,32 @@ namespace Apllication.Service
                 var task = await _congViecRepo.GetByIdAsync(tDto.Id);
                 if (task == null) continue;
 
-                // Dùng thuật toán chuẩn 2 Bước: (1) KNN Top K -> (2) Workload Thấp nhất
-                var bestUserId = KnnTimNguoiPhuHop(task, cachedUsers, userWorkloadHours, rules);
+                // CHỈ TÍNH TOÁN DỰA TRÊN SỨC CHỨA CỦA SPRINT ĐÍCH (Đúng với yêu cầu Từng Module reset từ đầu)
+                var sprintWorkload = GetWorkloadForSprint(task.SprintId);
+
+                // Dùng thuật toán chuẩn 2 Bước với Mức độ tải của SPRINT NÀY
+                var bestUserId = KnnTimNguoiPhuHop(task, cachedUsers, sprintWorkload, rules);
 
                 if (bestUserId.HasValue)
                 {
                     // Cập nhật bộ đếm workload sau khi giao
                     double taskEstimate = task.ThoiGianUocTinh > 0 ? task.ThoiGianUocTinh : defaultEstimate;
                     
+                    // Cập nhật dung lượng cho Module này để tính tiếp vòng lặp
+                    sprintWorkload[bestUserId.Value] += taskEstimate;
+
+                    // KHỐI LƯỢNG CHUNG Toàn Dự án: Vẫn tính dồn để trả về DB
+                    var user = cachedUsers[bestUserId.Value];
+                    user.KhoiLuongCongViec += taskEstimate;
+
                     // Tìm được người phù hợp → Giao cho họ
                     task.AssigneeId = bestUserId.Value;
                     task.PhuongThucGiaoViec = PhuongThucGiaoViec.AI;
                     task.AiMatchScore = 1.0; // Đánh dấu là AI đã chọn
-                    task.AiReasoning = $"Chọn từ Top {topK} ứng viên skill cao nhất, workload hiện tại thấp nhất ({userWorkloadHours[bestUserId.Value]}h)";
+                    task.AiReasoning = $"Module reset: Gán vì Workload trong Module này thấp {sprintWorkload[bestUserId.Value]}h (<{GetRuleValue(rules, "MAX_HOURS_PER_USER", 40.0)}h)";
                     task.TrangThai = TrangThaiCongViec.Todo;
 
-                    userWorkloadHours[bestUserId.Value] += taskEstimate;
+                    // userWorkloadHours KHÔNG CÒN TỒN TẠI NỮA => Đã xoá dòng lỗi
                 }
                 else
                 {

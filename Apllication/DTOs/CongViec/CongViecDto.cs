@@ -34,6 +34,7 @@ namespace Apllication.DTOs.CongViec
         public DateTime? NgayBatDauSprint { get; set; }
         public DateTime? NgayKetThucSprint { get; set; }
         public int SoLanBiTuChoi { get; set; }
+        public string? AiReasoning { get; set; }
         public int? CreatedBy { get; set; }
         public List<PhuThuocDto> Dependencies { get; set; } = new List<PhuThuocDto>();
     }

@@ -325,29 +325,87 @@ namespace Apllication.Service
             using (var stream = new System.IO.FileStream(taiLieu.FilePath, System.IO.FileMode.Open, System.IO.FileAccess.Read))
             {
                 var workbook = new XSSFWorkbook(stream);
-                var sheet = workbook.GetSheetAt(0); // Chỉ quét Sheet đầu tiên
+                if (workbook.NumberOfSheets == 0) return false;
 
-                var headerRow = sheet.GetRow(0);
-                if (headerRow == null) return false;
+                var moduleMapping = new Dictionary<string, string>();
+                var moduleDescMapping = new Dictionary<string, string>();
+                NPOI.SS.UserModel.ISheet? taskSheet = null;
 
-                var headers = new List<string>();
-                for (int i = 0; i < headerRow.LastCellNum; i++)
+                // LƯỢT 1: Quét tất cả các sheet để tìm Sheet danh sách Module & truy xuất thông tin
+                for (int s = 0; s < workbook.NumberOfSheets; s++)
                 {
-                    var cell = headerRow.GetCell(i);
-                    headers.Add(cell != null ? NormalizeText(cell.ToString() ?? "") : "");
+                    var sheet = workbook.GetSheetAt(s);
+                    var headerRow = sheet.GetRow(0);
+                    if (headerRow == null) continue;
+
+                    var headers = new List<string>();
+                    for (int i = 0; i < headerRow.LastCellNum; i++)
+                    {
+                        var cell = headerRow.GetCell(i);
+                        headers.Add(cell != null ? NormalizeText(cell.ToString() ?? "") : "");
+                    }
+
+                    // Kiểm tra xem sheet này là Sheet Module hay Sheet Tasks
+                    bool isTaskSheet = headers.Any(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ") || h.Contains("công việc"));
+                    
+                    if (isTaskSheet) 
+                    {
+                        if (taskSheet == null) taskSheet = sheet;
+                    }
+                    else
+                    {
+                        // Khả năng cao đây là Sheet Module nếu có các cột "Module", "Tên Module"
+                        int mCodeIdx = headers.FindIndex(h => h == "module" || h.Contains("mã module"));
+                        int mNameIdx = headers.FindIndex(h => h.Contains("tên module") || h.Contains("ý nghĩa"));
+                        int mDescIdx = headers.FindIndex(h => h.Contains("mô tả") || h.Contains("description") || h.Contains("chi tiết"));
+
+                        if (mCodeIdx >= 0 && mNameIdx >= 0 && mCodeIdx != mNameIdx)
+                        {
+                            for (int i = 1; i <= sheet.LastRowNum; i++)
+                            {
+                                var row = sheet.GetRow(i);
+                                if (row == null) continue;
+
+                                string GetCellText(int idx) => idx >= 0 && row.GetCell(idx) != null ? row.GetCell(idx).ToString()?.Trim() ?? "" : "";
+
+                                string code = GetCellText(mCodeIdx);
+                                string name = GetCellText(mNameIdx);
+                                string desc = GetCellText(mDescIdx);
+
+                                if (!string.IsNullOrEmpty(code))
+                                {
+                                    string normalizedCode = NormalizeModuleCode(code);
+                                    moduleMapping[normalizedCode] = name;
+                                    if (!string.IsNullOrEmpty(desc))
+                                    {
+                                        moduleDescMapping[normalizedCode] = desc;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (taskSheet == null) throw new Exception("Tài liệu không đúng định dạng. Không tìm thấy sheet Công Việc.");
+
+                // LƯỢT 2: Quét Sheet Danh sách công việc (taskSheet)
+                var taskHeaderRow = taskSheet.GetRow(0);
+                var taskHeaders = new List<string>();
+                for (int i = 0; i < taskHeaderRow.LastCellNum; i++)
+                {
+                    var cell = taskHeaderRow.GetCell(i);
+                    taskHeaders.Add(cell != null ? NormalizeText(cell.ToString() ?? "") : "");
                 }
 
                 // Xác định chỉ mục cột dựa trên tiêu đề (Headers)
-                int sttIdx = headers.FindIndex(h => h.Contains("stt") || h.Contains("id") || h == "no.");
-                int moduleIdx = headers.FindIndex(h => h == "module" || h.Contains("mã module") || h.Contains("sprint"));
-                int titleIdx = headers.FindIndex(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ") || h.Contains("công việc"));
-                int descIdx = headers.FindIndex(h => h.Contains("mô tả") || h.Contains("description"));
-                int typeIdx = headers.FindIndex(h => h.Contains("loại") || h.Contains("type"));
-                int skillIdx = headers.FindIndex(h => h.Contains("kỹ năng") || h.Contains("skill") || h.Contains("công nghệ"));
-                int priorityIdx = headers.FindIndex(h => h.Contains("ưu tiên") || h.Contains("priority"));
-                int depIdx = headers.FindIndex(h => h.Contains("phụ thuộc") || h.Contains("dependency") || h.Contains("tiền đề"));
-
-                if (titleIdx < 0) throw new Exception("Tài liệu không đúng định dạng.");
+                int sttIdx = taskHeaders.FindIndex(h => h.Contains("stt") || h.Contains("id") || h == "no.");
+                int moduleIdx = taskHeaders.FindIndex(h => h == "module" || h.Contains("mã module") || h.Contains("sprint"));
+                int titleIdx = taskHeaders.FindIndex(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ") || h.Contains("công việc"));
+                int descIdx = taskHeaders.FindIndex(h => h.Contains("mô tả") || h.Contains("description"));
+                int typeIdx = taskHeaders.FindIndex(h => h.Contains("loại") || h.Contains("type"));
+                int skillIdx = taskHeaders.FindIndex(h => h.Contains("kỹ năng") || h.Contains("skill") || h.Contains("công nghệ"));
+                int priorityIdx = taskHeaders.FindIndex(h => h.Contains("ưu tiên") || h.Contains("priority"));
+                int depIdx = taskHeaders.FindIndex(h => h.Contains("phụ thuộc") || h.Contains("dependency") || h.Contains("tiền đề"));
 
                 string currentModuleName = "";
                 var sprintCache = new Dictionary<string, int>();
@@ -358,9 +416,9 @@ namespace Apllication.Service
                 double hMed = GetRuleValue(rules, "DEFAULT_HOURS_MEDIUM", 8);
                 double hLow = GetRuleValue(rules, "DEFAULT_HOURS_LOW", 4);
 
-                for (int i = 1; i <= sheet.LastRowNum; i++)
+                for (int i = 1; i <= taskSheet.LastRowNum; i++)
                 {
-                    var row = sheet.GetRow(i);
+                    var row = taskSheet.GetRow(i);
                     if (row == null) continue;
 
                     string GetCellText(int idx) => idx >= 0 && row.GetCell(idx) != null ? row.GetCell(idx).ToString()?.Trim() ?? "" : "";
@@ -394,12 +452,16 @@ namespace Apllication.Service
                     if (!string.IsNullOrEmpty(currentModuleName))
                     {
                         string normalizedCurrent = NormalizeModuleCode(currentModuleName);
-                        
-                        if (!sprintCache.TryGetValue(normalizedCurrent, out int sId))
+                        string fullSprintName = moduleMapping.ContainsKey(normalizedCurrent) 
+                            ? moduleMapping[normalizedCurrent] : currentModuleName;
+                        string? sprintDesc = moduleDescMapping.ContainsKey(normalizedCurrent)
+                            ? moduleDescMapping[normalizedCurrent] : null;
+
+                        if (!sprintCache.TryGetValue(fullSprintName, out int sId))
                         {
-                            var Sprints = await _giaoViecAiService.GetOrCreateSprintByModuleNameAsync(taiLieu.DuAnId, normalizedCurrent, null);
+                            var Sprints = await _giaoViecAiService.GetOrCreateSprintByModuleNameAsync(taiLieu.DuAnId, fullSprintName, sprintDesc);
                             sId = Sprints.Id;
-                            sprintCache[normalizedCurrent] = sId;
+                            sprintCache[fullSprintName] = sId;
                         }
                         sprintId = sId;
                     }

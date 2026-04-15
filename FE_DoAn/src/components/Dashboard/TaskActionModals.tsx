@@ -78,6 +78,17 @@ export const AssignModal: React.FC<AssignModalProps> = ({ task, members, onClose
             </div>
           </div>
 
+          {/* XAI: Giải thích quyết định của AI */}
+          {task.aiReasoning && (
+            <div style={{ marginTop: '0', marginBottom: '16px', padding: '10px 12px', backgroundColor: '#f5f3ff', borderRadius: '8px', border: '1px solid #ddd6fe', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '1.1rem', marginTop: '-2px' }}>🤖</span>
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.82rem', color: '#6d28d9', marginBottom: '4px' }}>Nhận định từ AI (XAI)</strong>
+                <span style={{ fontSize: '0.82rem', color: '#4b5563', lineHeight: '1.4', display: 'block' }}>{task.aiReasoning}</span>
+              </div>
+            </div>
+          )}
+
           {/* Dropdown chọn người nhận:
               - Hiển thị TẤT CẢ thành viên trong dự án
               - Loại bỏ những người có role PM (ProjectRole.PM = 4)
