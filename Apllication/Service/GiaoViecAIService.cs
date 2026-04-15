@@ -150,28 +150,40 @@ namespace Apllication.Service
                 if (u != null) cachedUsers[u.Id] = u;
             }
 
-            // Đếm số task đã gán tạm thời cho mỗi user (để tính penalty chia đều)
-            var taskCountPerUser = new Dictionary<int, int>();
+            // Tính số giờ hiện tại của mỗi người để làm gốc (không thể chỉ đếm tạm thời từ 0)
+            double defaultEstimate = GetRuleValue(rules, "DEFAULT_TASK_ESTIMATE", 8.0);
+            int topK = (int)GetRuleValue(rules, "KNN_TOP_K", 3);
+
+            var userWorkloadHours = new Dictionary<int, double>();
+            foreach (var kvp in cachedUsers)
+            {
+                double currentHours = allTasksInProject
+                     .Where(t => t.AssigneeId == kvp.Key && t.TrangThai != TrangThaiCongViec.Done)
+                     .Sum(t => t.ThoiGianUocTinh > 0 ? t.ThoiGianUocTinh : defaultEstimate);
+                userWorkloadHours[kvp.Key] = currentHours;
+            }
 
             foreach (var tDto in sortedTasks)
             {
                 var task = await _congViecRepo.GetByIdAsync(tDto.Id);
                 if (task == null) continue;
 
-                // Dùng thuật toán KNN để tìm người phù hợp nhất
-                var bestUserId = KnnTimNguoiPhuHop(task, cachedUsers, taskCountPerUser, allTasksInProject, rules);
+                // Dùng thuật toán chuẩn 2 Bước: (1) KNN Top K -> (2) Workload Thấp nhất
+                var bestUserId = KnnTimNguoiPhuHop(task, cachedUsers, userWorkloadHours, rules);
 
                 if (bestUserId.HasValue)
                 {
+                    // Cập nhật bộ đếm workload sau khi giao
+                    double taskEstimate = task.ThoiGianUocTinh > 0 ? task.ThoiGianUocTinh : defaultEstimate;
+                    
                     // Tìm được người phù hợp → Giao cho họ
                     task.AssigneeId = bestUserId.Value;
                     task.PhuongThucGiaoViec = PhuongThucGiaoViec.AI;
-                    task.AiMatchScore = 1.0; // KNN không trả về score 0-1 trực tiếp, đánh dấu là AI đã chọn
-                    task.AiReasoning = $"AI (KNN) đã chọn người phù hợp nhất dựa trên kỹ năng yêu cầu.";
+                    task.AiMatchScore = 1.0; // Đánh dấu là AI đã chọn
+                    task.AiReasoning = $"Chọn từ Top {topK} ứng viên skill cao nhất, workload hiện tại thấp nhất ({userWorkloadHours[bestUserId.Value]}h)";
                     task.TrangThai = TrangThaiCongViec.Todo;
 
-                    // Cập nhật bộ đếm task chia đều
-                    taskCountPerUser[bestUserId.Value] = taskCountPerUser.GetValueOrDefault(bestUserId.Value) + 1;
+                    userWorkloadHours[bestUserId.Value] += taskEstimate;
                 }
                 else
                 {
@@ -330,46 +342,28 @@ namespace Apllication.Service
 
         /// <summary>
         /// Thuật toán KNN (K-Nearest Neighbors) để tìm người phù hợp nhất cho một Task.
-        /// Nguyên lý: Tính khoảng cách Euclidean giữa vector kỹ năng của User và yêu cầu kỹ năng của Task.
-        /// Khoảng cách càng nhỏ = User càng phù hợp. Thêm penalty chia đều để không ai làm quá nhiều.
+        /// Nguyên lý mới: (1) Lọc KNN lấy Top K người phù hợp kỹ năng nhất. (2) Chọn người ít workload nhất trong Top K.
         /// </summary>
-        /// <param name="task">Task cần giao việc</param>
-        /// <param name="cachedUsers">Danh sách Users đã nạp sẵn</param>
-        /// <param name="taskCountPerUser">Bộ đếm số task đã gán tạm thời cho mỗi user (để chia đều)</param>
-        /// <param name="allTasksInProject">Toàn bộ task trong dự án (để tính workload thực tế)</param>
-        /// <returns>UserId của người phù hợp nhất, hoặc null nếu không tìm thấy</returns>
         private int? KnnTimNguoiPhuHop(
             CongViec task,
             Dictionary<int, User> cachedUsers,
-            Dictionary<int, int> taskCountPerUser,
-            List<CongViec> allTasksInProject,
+            Dictionary<int, double> userWorkloadHours,
             IEnumerable<QuyTacGiaoViecAI> rules)
         {
-            // Lấy các tham số cấu hình AI
-            double skillWeight = GetRuleValue(rules, "SKILL_MATCH_WEIGHT", 1.0);
-            double workloadWeight = GetRuleValue(rules, "WORKLOAD_BALANCE_WEIGHT", 0.5);
-            double pmPenalty = GetRuleValue(rules, "PM_TASK_PENALTY", 10.0);
             double minAcceptableScore = GetRuleValue(rules, "MINIMUM_ACCEPABLE_SCORE", 0.3);
 
-            // Lấy danh sách kỹ năng yêu cầu của Task
             var reqs = task.YeuCauCongViecs ?? new List<YeuCauCongViec>();
-
-            // Tất cả Id kỹ năng cần xét (lấy từ yêu cầu task)
             var allSkillIds = reqs.Select(r => r.KyNangId).Distinct().ToList();
 
-            // Nếu task không có yêu cầu kỹ năng cụ thể → Fallback về người ít việc nhất
             if (!allSkillIds.Any())
             {
-                return TimNguoiItViecNhat(cachedUsers, taskCountPerUser, allTasksInProject, rules);
+                return TimNguoiItViecNhat(cachedUsers, userWorkloadHours, rules);
             }
 
-            // Tính trung bình số task đã được gán để tính penalty chia đều
-            int totalTasksAssigned = taskCountPerUser.Values.Sum();
-            double avgTaskPerUser = cachedUsers.Count > 0 ? (double)totalTasksAssigned / cachedUsers.Count : 0;
-
-            double bestDistance = double.MaxValue;
-            int? bestUserId = null;
-
+            // Bước 1: Lọc KNN thuần túy theo Skill để lấy Top K candidates
+            var userDistances = new List<(int UserId, double Score, bool IsPm)>();
+            double baseMaxDistance = Math.Sqrt(reqs.Count * 25.0);
+            
             foreach (var kvp in cachedUsers)
             {
                 var user = kvp.Value;
@@ -377,15 +371,11 @@ namespace Apllication.Service
                                    user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN");
 
                 var userSkills = user.KyNangNguoiDungs ?? new List<KyNangNguoiDung>();
-
-                // ---- Tính khoảng cách theo chiều năng lực (Dựa trên Số năm kinh nghiệm) ----
-                // AI sẽ ưu tiên người có nhiều kinh nghiệm nhất cho kỹ năng yêu cầu.
                 double skillDistanceTotal = 0;
+
                 foreach (var req in reqs)
                 {
                     double userExperience = 0;
-
-                    // 1. Kiểm tra khớp chính xác kỹ năng (Direct Match)
                     var directSkill = userSkills.FirstOrDefault(s => s.KyNangId == req.KyNangId);
                     if (directSkill != null)
                     {
@@ -393,73 +383,58 @@ namespace Apllication.Service
                     }
                     else if (req.KyNang?.CongNgheId > 0)
                     {
-                        // 2. Không khớp chính xác -> Kiểm tra cùng Công nghệ (Tech Similarity - 50% hiệu quả)
                         var sameTechSkills = userSkills.Where(s => s.KyNang?.CongNgheId == req.KyNang.CongNgheId);
                         if (sameTechSkills.Any())
-                        {
                             userExperience = sameTechSkills.Max(s => (double)s.SoNamKinhNghiem) * 0.5;
-                        }
                         else if (req.KyNang.CongNghe?.NhomKyNangId > 0)
                         {
-                            // 3. Không cùng công nghệ -> Kiểm tra cùng Nhóm/Lĩnh vực (Domain Similarity - 20% hiệu quả)
                             var sameGroupSkills = userSkills.Where(s => s.KyNang?.CongNghe?.NhomKyNangId == req.KyNang.CongNghe.NhomKyNangId);
                             if (sameGroupSkills.Any())
-                            {
                                 userExperience = sameGroupSkills.Max(s => (double)s.SoNamKinhNghiem) * 0.2;
-                            }
                         }
                     }
 
-                    // Tính điểm phạt: Nếu user ít kinh nghiệm hơn thì distance càng lớn.
-                    // Sử dụng mốc 5 năm làm trần (ceiling) để tính khoảng cách chuẩn hóa.
+                    // Điểm trừ khoảng cách
                     double diff = Math.Max(0, 5.0 - userExperience); 
                     skillDistanceTotal += diff * diff;
                 }
 
                 double euclideanDistance = Math.Sqrt(skillDistanceTotal);
-                double weightedEuclideanDistance = euclideanDistance * skillWeight;
-
-                // ---- Penalty chia đều: Nếu user đã nhiều task hơn TB → cộng thêm khoảng cách ----
-                // Áp dụng trọng số cân bằng công việc
-                int userTaskCount = taskCountPerUser.GetValueOrDefault(user.Id, 0);
-                double balancePenalty = Math.Max(0, userTaskCount - avgTaskPerUser) * workloadWeight;
-
-                // ---- Penalty cho Quản lý: Phạt điểm nặng để rớt xuống cuối danh sách ----
-                double rolePenalty = isPmOrAdmin ? pmPenalty : 0;
-
-                double totalDistance = weightedEuclideanDistance + balancePenalty + rolePenalty;
-
-                // Chọn người có khoảng cách tổng nhỏ nhất
-                if (totalDistance < bestDistance)
-                {
-                    bestDistance = totalDistance;
-                    bestUserId = user.Id;
-                }
-            }
-
-            // Nếu khoảng cách tốt nhất vẫn quá lớn (không ai có kỹ năng phù hợp)
-            // ngưỡng cơ bản: sqrt(reqs.Count * 25)
-            double baseMaxDistance = Math.Sqrt(reqs.Count * 25.0);
-            
-            // Tính toán Max Distance thực tế có xét thêm trọng số kỹ năng
-            double maxAllowedDistanceForScore = baseMaxDistance * skillWeight;
-
-            // Nếu không ai xử lý được (hoặc chỉ có PM bị phạt rất nặng) và điểm số không đạt sàn
-            if (bestUserId.HasValue)
-            {
-                // Quy đổi ngược từ bestDistance sang Score (0-1) để so sánh với điểm sàn
-                // (Loại bỏ PM penalty và Balance penalty khi tính score để đánh giá đúng năng lực)
-                // Lưu ý: Ở đây ta ước tính đơn giản là distance cơ bản
-                double score = maxAllowedDistanceForScore > 0 ? Math.Max(0, 1 - (bestDistance / maxAllowedDistanceForScore)) : 0;
+                double score = baseMaxDistance > 0 ? Math.Max(0, 1 - (euclideanDistance / baseMaxDistance)) : 0;
                 
-                if (score < minAcceptableScore)
+                if (score >= minAcceptableScore)
                 {
-                    // Không đạt điểm sàn -> trả về null để Fallback kích hoạt
-                    return null;
+                    userDistances.Add((user.Id, score, isPmOrAdmin));
                 }
             }
 
-            return bestUserId;
+            if (!userDistances.Any()) return null;
+
+            // Loại bỏ PM để ưu tiên Developer, trừ khi không còn ai.
+            var developerCandidates = userDistances.Where(u => !u.IsPm).OrderByDescending(u => u.Score).ToList();
+            if (!developerCandidates.Any()) developerCandidates = userDistances.OrderByDescending(u => u.Score).ToList();
+
+            // Lấy Top K ứng viên có Score cao nhất
+            int k = (int)GetRuleValue(rules, "KNN_TOP_K", 3);
+            var candidates = developerCandidates.Take(k).ToList();
+
+            // Capacity Limit: Lọc những người đã vượt ngưỡng
+            double maxHours = GetRuleValue(rules, "MAX_HOURS_PER_USER", 40.0);
+            candidates = candidates
+                .Where(u => userWorkloadHours.GetValueOrDefault(u.UserId, 0) < maxHours)
+                .ToList();
+
+            if (!candidates.Any()) return null;
+
+            // Bước 2: Trong nhóm Candidates, ưu tiên chọn người đang có ít Workload nhất (tính bằng Hours)
+            var minLoad = candidates.Min(u => userWorkloadHours.GetValueOrDefault(u.UserId, 0));
+
+            var selectedUser = candidates
+                .Where(u => userWorkloadHours.GetValueOrDefault(u.UserId, 0) == minLoad)
+                .OrderBy(x => Guid.NewGuid()) // Tránh bias ngầm luôn chọn người đầu tiên
+                .First();
+
+            return selectedUser.UserId;
         }
 
         /// <summary>
@@ -467,8 +442,7 @@ namespace Apllication.Service
         /// </summary>
         private int? TimNguoiItViecNhat(
             Dictionary<int, User> cachedUsers,
-            Dictionary<int, int> taskCountPerUser,
-            List<CongViec> allTasksInProject,
+            Dictionary<int, double> userWorkloadHours,
             IEnumerable<QuyTacGiaoViecAI> rules)
         {
             double pmPenalty = GetRuleValue(rules, "PM_TASK_PENALTY", 10.0);
@@ -482,8 +456,8 @@ namespace Apllication.Service
                 bool isPmOrAdmin = user.NguoiDungVaiTros != null &&
                                    user.NguoiDungVaiTros.Any(uv => uv.VaiTro.MaVaiTro == "QUAN_LY" || uv.VaiTro.MaVaiTro == "ADMIN");
 
-                int count = taskCountPerUser.GetValueOrDefault(user.Id, 0);
-                double votedCount = count + (isPmOrAdmin ? pmPenalty : 0);
+                double hours = userWorkloadHours.GetValueOrDefault(user.Id, 0);
+                double votedCount = hours + (isPmOrAdmin ? pmPenalty * 8.0 : 0);
 
                 if (votedCount < minVotedCount)
                 {
