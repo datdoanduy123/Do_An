@@ -10,20 +10,22 @@ import {
   AlertTriangle,
   Smile,
   Zap,
-  Coffee
+  Coffee,
+  UserCheck,
+  CheckCircle2,
+  ArrowRightLeft
 } from 'lucide-react';
 import DashboardService from '../../services/DashboardService';
 import type { DashboardStats } from '../../services/DashboardService';
-
-
 import ProjectService from '../../services/ProjectService';
-import type { DuAnDto } from '../../services/ProjectTypes';
+import type { DuAnDto, ThanhVienDuAnDto } from '../../services/ProjectTypes';
 import SprintService from '../../services/SprintService';
 import type { SprintDto } from '../../services/SprintTypes';
 import TaskService from '../../services/TaskService';
 import type { CongViecDto } from '../../services/TaskTypes';
 import { TrangThaiCongViec } from '../../services/TaskTypes';
 import UserService from '../../services/UserService';
+import { AssignModal, MoveSprintModal } from '../../components/Dashboard/TaskActionModals';
 import './Dashboard.css';
 
 const DashboardPage: React.FC = () => {
@@ -38,6 +40,17 @@ const DashboardPage: React.FC = () => {
   const [tasks, setTasks] = useState<CongViecDto[]>([]);
   const [boardLoading, setBoardLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+
+  // Danh sách thành viên của dự án đang chọn (dùng cho modal Giao lại)
+  const [members, setMembers] = useState<ThanhVienDuAnDto[]>([]);
+
+  // State quản lý 3 modal hành động trên task card
+  // assignModal: task đang được giao lại
+  const [assignModal, setAssignModal] = useState<CongViecDto | null>(null);
+  // moveSprintModal: task đang được chuyển sprint
+  const [moveSprintModal, setMoveSprintModal] = useState<CongViecDto | null>(null);
+  // approveLoading: ID task đang được duyệt (để hiện spinner trên nút)
+  const [approveLoading, setApproveLoading] = useState<number | null>(null);
 
   // Khởi tạo: Lấy profile và danh sách dự án
   useEffect(() => {
@@ -64,20 +77,23 @@ const DashboardPage: React.FC = () => {
     initData();
   }, []);
 
-  // Fetch Sprints, Tasks, và Skill Coverage khi đổi Dự án
+  // Fetch Sprints, Tasks, Members và Dashboard Stats khi đổi Dự án
   useEffect(() => {
     const fetchBoardData = async () => {
       if (!selectedProjectId) return;
       try {
         setBoardLoading(true);
-        const [sprintList, taskList, stats] = await Promise.all([
+        // Fetch song song để tăng tốc độ tải
+        const [sprintList, taskList, stats, memberList] = await Promise.all([
           SprintService.getByProjectId(Number(selectedProjectId)),
           TaskService.getByProjectId(Number(selectedProjectId)),
-          DashboardService.getDashboardData(Number(selectedProjectId))
+          DashboardService.getDashboardData(Number(selectedProjectId)),
+          ProjectService.getMembers(Number(selectedProjectId))
         ]);
         setSprints(sprintList || []);
         setTasks(taskList || []);
         setDashboardStats(stats);
+        setMembers(memberList || []);
       } catch (error) {
         console.error('Error fetching board data:', error);
       } finally {
@@ -86,6 +102,42 @@ const DashboardPage: React.FC = () => {
     };
     fetchBoardData();
   }, [selectedProjectId]);
+
+  /**
+   * Refresh danh sách task sau khi thực hiện hành động thành công.
+   * Đóng modal và tải lại task list từ API.
+   */
+  const refreshTasks = async () => {
+    if (!selectedProjectId) return;
+    try {
+      const taskList = await TaskService.getByProjectId(Number(selectedProjectId));
+      setTasks(taskList || []);
+    } catch (err) {
+      console.error('Không thể refresh tasks:', err);
+    }
+    // Đóng tất cả modal sau khi refresh
+    setAssignModal(null);
+    setMoveSprintModal(null);
+  };
+
+  /**
+   * Xử lý duyệt task (Review → Done):
+   * Gọi API updateStatus với trạng thái Done (3).
+   * Chỉ hiển thị nút này khi task đang ở trạng thái Review.
+   */
+  const handleApproveTask = async (task: CongViecDto) => {
+    try {
+      setApproveLoading(task.id);
+      await TaskService.updateStatus(task.id, TrangThaiCongViec.Done);
+      // Refresh task list sau khi duyệt thành công
+      const taskList = await TaskService.getByProjectId(Number(selectedProjectId));
+      setTasks(taskList || []);
+    } catch (err: any) {
+      alert(err.message || 'Không thể duyệt task. Vui lòng thử lại.');
+    } finally {
+      setApproveLoading(null);
+    }
+  };
 
 
 
@@ -220,13 +272,18 @@ const DashboardPage: React.FC = () => {
                       ) : (
                         colTasks.map(task => (
                           <div key={task.id} className="k-task-card">
+                            {/* Header: ID task và mức ưu tiên */}
                             <div className="k-task-header">
                               <span className="k-task-id">#{task.id}</span>
                               {task.doUuTien === 2 ? <span className="k-prio high">Cao</span> :
                                 task.doUuTien === 1 ? <span className="k-prio medium">Vừa</span> :
                                   <span className="k-prio low">Thấp</span>}
                             </div>
+
+                            {/* Tên task */}
                             <h5 className="k-task-title" title={task.tieuDe}>{task.tieuDe}</h5>
+
+                            {/* Footer: Assignee và thời gian ước tính */}
                             <div className="k-task-footer">
                               <div className="k-assignee">
                                 <div className="k-avatar">
@@ -237,6 +294,42 @@ const DashboardPage: React.FC = () => {
                               <div className="k-time">
                                 <Clock size={12} /> {task.thoiGianUocTinh}h
                               </div>
+                            </div>
+
+                            {/* Nhóm 3 nút hành động theo ngữ cảnh */}
+                            <div className="k-task-actions">
+                              {/* Nút Giao lại – luôn hiển thị */}
+                              <button
+                                className="k-action-btn assign"
+                                title="Giao lại task cho người khác"
+                                onClick={() => setAssignModal(task)}
+                              >
+                                <UserCheck size={12} /> Giao lại
+                              </button>
+
+                              {/* Nút Duyệt – chỉ hiện khi task đang ở trạng thái Review */}
+                              {task.trangThai === TrangThaiCongViec.Review && (
+                                <button
+                                  className="k-action-btn approve"
+                                  title="Duyệt – chuyển sang Hoàn thành"
+                                  onClick={() => handleApproveTask(task)}
+                                  disabled={approveLoading === task.id}
+                                >
+                                  <CheckCircle2 size={12} />
+                                  {approveLoading === task.id ? 'Đang...' : 'Duyệt'}
+                                </button>
+                              )}
+
+                              {/* Nút Chuyển Sprint – ẩn nếu chỉ có 1 sprint */}
+                              {sprints.length > 1 && (
+                                <button
+                                  className="k-action-btn move-sprint"
+                                  title="Chuyển task sang Sprint khác"
+                                  onClick={() => setMoveSprintModal(task)}
+                                >
+                                  <ArrowRightLeft size={12} /> Sprint
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))
@@ -250,6 +343,34 @@ const DashboardPage: React.FC = () => {
         );
       })}
     </div>
+  );
+
+  /**
+   * Render 2 modal hành động (Giao lại & Chuyển Sprint).
+   * Chỉ hiển thị khi có task đang được chọn xử lý.
+   */
+  const renderActionModals = () => (
+    <>
+      {/* Modal Giao lại task */}
+      {assignModal && (
+        <AssignModal
+          task={assignModal}
+          members={members}
+          onClose={() => setAssignModal(null)}
+          onSuccess={refreshTasks}
+        />
+      )}
+
+      {/* Modal Chuyển Sprint */}
+      {moveSprintModal && (
+        <MoveSprintModal
+          task={moveSprintModal}
+          sprints={sprints}
+          onClose={() => setMoveSprintModal(null)}
+          onSuccess={refreshTasks}
+        />
+      )}
+    </>
   );
 
   if (loading) {
@@ -320,6 +441,9 @@ const DashboardPage: React.FC = () => {
       ) : (
         <div className="empty-master-board">Vui lòng chọn một dự án để bắt đầu điều hành.</div>
       )}
+
+      {/* Render các modal hành động (Giao lại / Chuyển Sprint) */}
+      {renderActionModals()}
     </div>
   );
 };

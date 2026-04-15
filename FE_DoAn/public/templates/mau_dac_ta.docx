@@ -1,0 +1,16 @@
+32. *Application Tier - SpringBoot Backend
+33. Tầng này áp dụng mô hình MVC với các thành phần cụ thể:
+34. Model (M)
+•	Entity Classes: Các class như User.java, Product.java đại diện cho database tables
+•	DTO Classes: UserDTO.java, ProductDTO.java để transfer data
+•	Repository Interfaces: UserRepository.java extends JpaRepository để truy xuất dữ liệu
+•	Service Classes: UserService.java, ProductService.java chứa business logic
+35. View (V)
+•	ResponseEntity: Trả về JSON response cho client
+•	DTO Response: Các class như ApiResponse.java, UserResponse.java để format output
+•	Exception Handler: GlobalExceptionHandler.java để xử lý lỗi và trả về response phù hợp
+36. Controller (C)
+REST Controllers: UserController.java, TripController.java, VehicleController,… với các annotation: 
+•	@RestController: Định nghĩa controller
+•	@RequestMapping("/api/users"): Base URL mapping
+•	@GetMapping, @PostMapping, @PutMapping, @DeleteMapping: HTTP method mapping

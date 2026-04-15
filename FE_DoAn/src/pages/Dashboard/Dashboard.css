@@ -427,3 +427,308 @@
 .workload-progress-fill.warning {
     box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
 }
+
+/* =============================================
+   TASK ACTION BUTTONS – 3 nút hành động trên card
+   ============================================= */
+
+/* Nhóm 3 nút nhỏ hiển thị ở cuối mỗi task card */
+.k-task-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--slate-100);
+  justify-content: flex-end;
+}
+
+/* Nút hành động nhỏ dạng icon + text ngắn */
+.k-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--slate-200);
+  background: white;
+  color: var(--slate-600);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.k-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Nút Giao lại – màu Indigo */
+.k-action-btn.assign:hover {
+  background: #eff6ff;
+  border-color: #6366f1;
+  color: #4f46e5;
+}
+
+/* Nút Duyệt – màu Emerald, chỉ hiện khi task ở trạng thái Review */
+.k-action-btn.approve {
+  border-color: #10b981;
+  color: #059669;
+  background: #f0fdf4;
+}
+
+.k-action-btn.approve:hover {
+  background: #10b981;
+  color: white;
+  border-color: #059669;
+}
+
+/* Nút Chuyển Sprint – màu Amber */
+.k-action-btn.move-sprint:hover {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+/* =============================================
+   TASK ACTION MODALS – Modal Giao việc & Chuyển Sprint
+   ============================================= */
+
+/* Overlay chung cho các modal hành động task */
+.task-action-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  animation: overlayFadeIn 0.2s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Hộp modal */
+.task-action-modal {
+  background: white;
+  width: 90%;
+  max-width: 440px;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header của modal */
+.tam-header {
+  padding: 20px 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--slate-100);
+}
+
+.tam-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Icon badge trong header */
+.tam-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.tam-icon-badge.assign  { background: #eff6ff; }
+.tam-icon-badge.sprint  { background: #fffbeb; }
+
+.tam-header h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--slate-800);
+  margin: 0 0 2px;
+}
+
+.tam-header p {
+  font-size: 0.8rem;
+  color: var(--slate-400);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Nút đóng modal */
+.tam-close-btn {
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  padding: 7px;
+  cursor: pointer;
+  color: var(--slate-400);
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.tam-close-btn:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+/* Body của modal */
+.tam-body {
+  padding: 20px 24px;
+}
+
+/* Task info box – hiển thị tên task đang xử lý */
+.tam-task-info {
+  background: var(--slate-50);
+  border: 1px solid var(--slate-100);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tam-task-info-icon {
+  font-size: 1.1rem;
+  margin-top: 1px;
+}
+
+.tam-task-info-text .task-id-small {
+  font-size: 0.7rem;
+  color: var(--slate-400);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.tam-task-info-text .task-title-small {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--slate-800);
+  line-height: 1.4;
+}
+
+/* Nhãn của dropdown */
+.tam-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--slate-600);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Dropdown select trong modal */
+.tam-select {
+  width: 100%;
+  padding: 11px 16px;
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--slate-800);
+  background: white;
+  outline: none;
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.tam-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Footer của modal */
+.tam-footer {
+  padding: 14px 24px 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Nút Hủy */
+.tam-btn-cancel {
+  padding: 9px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--slate-200);
+  background: white;
+  color: var(--slate-600);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tam-btn-cancel:hover {
+  background: var(--slate-50);
+  border-color: var(--slate-300);
+}
+
+/* Nút Xác nhận chính */
+.tam-btn-confirm {
+  padding: 9px 22px;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+}
+
+.tam-btn-confirm.assign-confirm {
+  background: #6366f1;
+}
+
+.tam-btn-confirm.assign-confirm:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.tam-btn-confirm.sprint-confirm {
+  background: #f59e0b;
+  color: white;
+}
+
+.tam-btn-confirm.sprint-confirm:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.tam-btn-confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
