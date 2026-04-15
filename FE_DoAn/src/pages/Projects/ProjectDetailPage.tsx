@@ -19,7 +19,8 @@ import {
   Shield,
   Activity,
   Play,
-  Search
+  Search,
+  Download
 } from 'lucide-react';
 
 import ProjectService, { ProjectRole } from '../../services/ProjectService';
@@ -181,10 +182,13 @@ const ProjectDetailPage: React.FC = () => {
             ]);
             setSprints(sprintsData || []);
             setDocuments(docsData || []);
+          } else {
+            showToast('Tài liệu không đúng định dạng. Vui lòng kiểm tra lại file mẫu.', 'error');
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('AI processing failed:', error);
-          showToast('Có lỗi xảy ra khi AI đang phân tích. Vui lòng kiểm tra lại định dạng tài liệu.', 'error');
+          const errorMsg = error.response?.data?.message || 'Tài liệu không đúng định dạng.';
+          showToast(errorMsg, 'error');
         } finally {
           setDocLoading(false);
         }
@@ -697,22 +701,33 @@ const ProjectDetailPage: React.FC = () => {
             <Sparkles size={22} className="ai-icon-title" />
             <h2>Trợ lý AI & Đặc tả Dự án</h2>
           </div>
-          {canUploadDocs && (
-            <div className="upload-wrapper">
-              <input
-                type="file"
-                id="doc-upload"
-                hidden
-                onChange={handleFileUpload}
-                accept=".doc,.docx,.xls,.xlsx"
-                disabled={docLoading}
-              />
-              <label htmlFor="doc-upload" className={`upload-btn-premium ${docLoading ? 'loading' : ''}`}>
-                {docLoading ? <Loader2 className="spin" size={18} /> : <Upload size={18} />}
-                <span>{docLoading ? 'Đang tải lên...' : 'Tải lên đặc tả (.docx)'}</span>
-              </label>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <a 
+              href="/templates/mau_dac_ta.docx" 
+              download 
+              className="btn-download-template"
+              title="Tải tệp mẫu (.docx)"
+            >
+              <Download size={18} />
+              <span>Tải biểu mẫu</span>
+            </a>
+            {canUploadDocs && (
+              <div className="upload-wrapper">
+                <input
+                  type="file"
+                  id="doc-upload"
+                  hidden
+                  onChange={handleFileUpload}
+                  accept=".doc,.docx,.xls,.xlsx"
+                  disabled={docLoading}
+                />
+                <label htmlFor="doc-upload" className={`upload-btn-premium ${docLoading ? 'loading' : ''}`}>
+                  {docLoading ? <Loader2 className="spin" size={18} /> : <Upload size={18} />}
+                  <span>{docLoading ? 'Đang tải lên...' : 'Tải lên đặc tả'}</span>
+                </label>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="ai-content-box">

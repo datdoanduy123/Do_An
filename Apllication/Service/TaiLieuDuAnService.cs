@@ -160,11 +160,13 @@ namespace Apllication.Service
 
                     var headers = firstRow.GetTableCells().Select(c => NormalizeText(c.GetText())).ToList();
 
-                    bool isTaskTable = (headers.Any(h => h.Contains("stt") || h.Contains("module"))) && 
-                                       (headers.Any(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ")));
+                    bool isTaskTable = (headers.Any(h => h.Contains("stt") || h.Contains("id") || h == "no.")) && 
+                                       (headers.Any(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ") || h.Contains("công việc")));
 
+                    bool foundTaskTable = false;
                     if (isTaskTable)
                     {
+                        foundTaskTable = true;
                         string currentModuleName = "";
                         var sprintCache = new Dictionary<string, int>();
                         var tasksInTable = new List<(CongViec Task, string DepStr)>(); 
@@ -303,6 +305,16 @@ namespace Apllication.Service
                         }
                     }
                 }
+
+                if (!tables.Any() || !tables.Any(t => {
+                    var firstRow = t.GetRow(0);
+                    if (firstRow == null || firstRow.GetTableCells().Count < 3) return false;
+                    var headers = firstRow.GetTableCells().Select(c => NormalizeText(c.GetText())).ToList();
+                    return headers.Any(h => h.Contains("tên công việc") || h.Contains("title") || h.Contains("nhiệm vụ") || h.Contains("công việc"));
+                }))
+                {
+                    throw new Exception("Tài liệu không đúng định dạng.");
+                }
             }
 
             return true;
@@ -335,7 +347,7 @@ namespace Apllication.Service
                 int priorityIdx = headers.FindIndex(h => h.Contains("ưu tiên") || h.Contains("priority"));
                 int depIdx = headers.FindIndex(h => h.Contains("phụ thuộc") || h.Contains("dependency") || h.Contains("tiền đề"));
 
-                if (titleIdx < 0) return false; // Không tìm thấy cột chứa tên công việc
+                if (titleIdx < 0) throw new Exception("Tài liệu không đúng định dạng.");
 
                 string currentModuleName = "";
                 var sprintCache = new Dictionary<string, int>();
