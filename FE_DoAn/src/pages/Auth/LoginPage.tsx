@@ -25,13 +25,13 @@ const LoginPage: React.FC = () => {
 
     try {
       const response = await AuthService.login({ tenDangNhap, matKhau });
-      
+
       if (response.success && response.data?.token) {
         AuthService.setSession(response.data.token);
-        
+
         try {
           const profile = await UserService.getProfile();
-          
+
           const isAdminOrManager = profile.vaiTros?.some((r: string) => {
             const nr = r.toLowerCase().replace(/\s+/g, '');
             return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
@@ -61,7 +61,7 @@ const LoginPage: React.FC = () => {
       <div className="login-card">
         <div className="login-header">
           <h1>Đăng nhập</h1>
-          <p>Hệ thống Quản trị Dự án</p>
+          {/* <p>Hệ thống Quản trị Dự án</p> */}
         </div>
 
         {error && (
@@ -103,10 +103,10 @@ const LoginPage: React.FC = () => {
             {loading ? 'Đang xử lý...' : 'Đăng nhập'}
           </button>
         </form>
-        
+
         <div className="login-footer">
           <p className="copyright">
-            © 2024 Project Management System
+            © 2026 Project Management System
           </p>
         </div>
       </div>

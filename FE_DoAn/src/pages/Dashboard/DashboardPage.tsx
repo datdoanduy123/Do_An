@@ -13,7 +13,8 @@ import {
   Coffee,
   UserCheck,
   CheckCircle2,
-  ArrowRightLeft
+  ArrowRightLeft,
+  GitMerge // Icon dùng để hiển thị phụ thuộc task
 } from 'lucide-react';
 import DashboardService from '../../services/DashboardService';
 import type { DashboardStats } from '../../services/DashboardService';
@@ -282,6 +283,26 @@ const DashboardPage: React.FC = () => {
 
                             {/* Tên task */}
                             <h5 className="k-task-title" title={task.tieuDe}>{task.tieuDe}</h5>
+
+                            {/* Phần hiển thị danh sách task phụ thuộc (dependencies) */}
+                            {task.dependencies && task.dependencies.length > 0 && (
+                              <div className="k-dependencies">
+                                <div className="k-dep-label">
+                                  <GitMerge size={11} />
+                                  <span>Phụ thuộc ({task.dependencies.length})</span>
+                                </div>
+                                <div className="k-dep-list">
+                                  {task.dependencies.map(dep => (
+                                    <span key={dep.dependsOnTaskId} className="k-dep-badge" title={dep.dependsOnTaskTitle}>
+                                      #{dep.dependsOnTaskId}
+                                      {dep.dependsOnTaskTitle && (
+                                        <span className="k-dep-title"> – {dep.dependsOnTaskTitle}</span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Footer: Assignee và thời gian ước tính */}
                             <div className="k-task-footer">

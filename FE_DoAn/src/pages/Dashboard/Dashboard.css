@@ -174,7 +174,65 @@
 .k-prio.medium { background: #fffbeb; color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.1); }
 .k-prio.low { background: #f0fdf4; color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.1); }
 
-.k-task-title { font-size: 1rem; font-weight: 700; color: var(--slate-800); margin-bottom: 20px; line-height: 1.5; }
+.k-task-title { font-size: 1rem; font-weight: 700; color: var(--slate-800); margin-bottom: 12px; line-height: 1.5; }
+
+/* --- PHẦN PHỤ THUỘC TASK (DEPENDENCIES) --- */
+/* Container bọc toàn bộ phần phụ thuộc */
+.k-dependencies {
+  margin-bottom: 14px;
+  background: #f5f3ff;
+  border: 1px solid #e0d9ff;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+/* Nhãn tiêu đề "Phụ thuộc (n)" hiển thị kèm icon GitMerge */
+.k-dep-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #7c3aed;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+/* Danh sách các badge phụ thuộc - wrap nếu nhiều items */
+.k-dep-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* Mỗi badge phụ thuộc: hiển thị ID và tiêu đề task */
+.k-dep-badge {
+  display: inline-flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #ddd6fe;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #5b21b6;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Phần tiêu đề task trong badge - mờ hơn để phân biệt với ID */
+.k-dep-title {
+  font-weight: 500;
+  color: #7c3aed;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+  display: inline-block;
+}
 
 .k-task-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 14px; border-top: 1px solid var(--slate-50); }
 .k-assignee { display: flex; align-items: center; gap: 10px; }
