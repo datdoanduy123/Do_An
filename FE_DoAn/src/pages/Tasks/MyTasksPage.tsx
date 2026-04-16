@@ -220,7 +220,7 @@ const MyTasksPage: React.FC = () => {
           {filteredTasks.length > 0 ? (
             (() => {
               // Nhóm các task theo Sprint
-              const groups: { [key: string]: { name: string; status?: number; tasks: CongViecDto[] } } = {};
+              const groups: { [key: string]: { name: string; status?: number; tasks: CongViecDto[]; startDate?: string; endDate?: string } } = {};
               
               filteredTasks.forEach(task => {
                 const key = task.sprintId ? `sprint-${task.sprintId}` : 'backlog';
@@ -228,6 +228,8 @@ const MyTasksPage: React.FC = () => {
                   groups[key] = {
                     name: task.sprintId ? (task.tenSprint || `Sprint ${task.sprintId}`) : 'Công việc ngoài Sprint',
                     status: task.sprintStatus,
+                    startDate: task.ngayBatDauSprint,
+                    endDate: task.ngayKetThucSprint,
                     tasks: []
                   };
                 }
@@ -264,6 +266,11 @@ const MyTasksPage: React.FC = () => {
                       <div className="sprint-info">
                         <Calendar size={16} />
                         <span className="sprint-name">{group.name}</span>
+                        {group.startDate && group.endDate && (
+                          <span className="sprint-dates-header">
+                            ({new Date(group.startDate).toLocaleDateString('vi-VN')} - {new Date(group.endDate).toLocaleDateString('vi-VN')})
+                          </span>
+                        )}
                         {sprintStatusInfo && (
                           <span className={`sprint-status-tag ${sprintStatusInfo.class}`}>
                             {sprintStatusInfo.label}
@@ -319,11 +326,6 @@ const MyTasksPage: React.FC = () => {
                                 <div className="task-meta">
                                   <span className="time-tracking">
                                     <strong>{task.thoiGianThucTe || 0}h</strong> / {task.thoiGianUocTinh}h
-                                  </span>
-                                  <span className="dot">•</span>
-                                  <span className="deadline-text">
-                                    <Calendar size={12} />
-                                    {task.ngayKetThucDuKien ? new Date(task.ngayKetThucDuKien).toLocaleDateString('vi-VN') : 'Không có hạn'}
                                   </span>
                                 </div>
                               </div>

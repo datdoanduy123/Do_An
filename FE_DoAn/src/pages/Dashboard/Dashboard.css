@@ -168,7 +168,7 @@
 .k-task-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--primary-light); }
 
 .k-task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.k-task-id { font-size: 0.8rem; color: var(--slate-200); font-weight: 700; }
+.k-task-id { font-size: 0.8rem; color: var(--slate-800); font-weight: 700; }
 .k-prio { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 6px; }
 .k-prio.high { background: #fef2f2; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.1); }
 .k-prio.medium { background: #fffbeb; color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.1); }
@@ -527,6 +527,19 @@
   background: #eff6ff;
   border-color: #6366f1;
   color: #4f46e5;
+}
+
+/* Nút Từ chối – màu Đỏ, chỉ hiện khi task ở trạng thái Review */
+.k-action-btn.reject {
+  border-color: #fca5a5;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.k-action-btn.reject:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #dc2626;
 }
 
 /* Nút Duyệt – màu Emerald, chỉ hiện khi task ở trạng thái Review */

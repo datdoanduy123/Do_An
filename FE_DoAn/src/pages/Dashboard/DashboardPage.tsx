@@ -13,8 +13,9 @@ import {
   Coffee,
   UserCheck,
   CheckCircle2,
+  XCircle,        // Icon dùng cho nút Từ chối task
   ArrowRightLeft,
-  GitMerge // Icon dùng để hiển thị phụ thuộc task
+  GitMerge        // Icon dùng để hiển thị phụ thuộc task
 } from 'lucide-react';
 import DashboardService from '../../services/DashboardService';
 import type { DashboardStats } from '../../services/DashboardService';
@@ -26,6 +27,7 @@ import TaskService from '../../services/TaskService';
 import type { CongViecDto } from '../../services/TaskTypes';
 import { TrangThaiCongViec } from '../../services/TaskTypes';
 import UserService from '../../services/UserService';
+import SignalRService from '../../services/SignalRService';
 import { AssignModal, MoveSprintModal } from '../../components/Dashboard/TaskActionModals';
 import './Dashboard.css';
 
@@ -52,6 +54,8 @@ const DashboardPage: React.FC = () => {
   const [moveSprintModal, setMoveSprintModal] = useState<CongViecDto | null>(null);
   // approveLoading: ID task đang được duyệt (để hiện spinner trên nút)
   const [approveLoading, setApproveLoading] = useState<number | null>(null);
+  // rejectLoading: ID task đang được từ chối (để hiện spinner trên nút)
+  const [rejectLoading, setRejectLoading] = useState<number | null>(null);
 
   // Khởi tạo: Lấy profile và danh sách dự án
   useEffect(() => {
@@ -105,6 +109,59 @@ const DashboardPage: React.FC = () => {
   }, [selectedProjectId]);
 
   /**
+   * useEffect: Kết nối SignalR và lắng nghe sự kiện 'TaskUpdated' từ backend.
+   * Khi backend phát sự kiện (sau mọi thao tác cập nhật task), frontend tự động
+   * fetch lại danh sách task cho dự án đang chọn – không cần refresh trang.
+   * Debounce 800ms để tránh gọi API nhiều lần liên tiếp khi nhiều người cùng thao tác.
+   */
+  useEffect(() => {
+    if (!selectedProjectId) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Hàm fetch nhẹ: chỉ lấy lại task list (không setBoardLoading để tránh nhấp nháy UI)
+    const silentRefreshTasks = async () => {
+      try {
+        const taskList = await TaskService.getByProjectId(Number(selectedProjectId));
+        setTasks(taskList || []);
+      } catch (err) {
+        console.warn('[SignalR] Không thể refresh tasks silently:', err);
+      }
+    };
+
+    // Handler nhận sự kiện: debounce để gom nhiều sự kiện liên tiếp thành 1 request
+    const handleTaskUpdated = (updatedProjectId: number) => {
+      // Chỉ xử lý nếu sự kiện thuộc dự án đang xem
+      if (updatedProjectId !== Number(selectedProjectId)) return;
+
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        silentRefreshTasks();
+      }, 800);
+    };
+
+    // Kết nối SignalR, tham gia group dự án, đăng ký lắng nghe
+    const connectSignalR = async () => {
+      try {
+        await SignalRService.startConnection();
+        await SignalRService.joinProject(Number(selectedProjectId));
+        SignalRService.on('TaskUpdated', handleTaskUpdated);
+      } catch (err) {
+        console.warn('[SignalR] Không thể kết nối realtime:', err);
+      }
+    };
+
+    connectSignalR();
+
+    // Cleanup: hủy đăng ký và rời khỏi group khi đổi dự án hoặc unmount
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      SignalRService.off('TaskUpdated');
+      SignalRService.leaveProject(Number(selectedProjectId));
+    };
+  }, [selectedProjectId]);
+
+  /**
    * Refresh danh sách task sau khi thực hiện hành động thành công.
    * Đóng modal và tải lại task list từ API.
    */
@@ -140,7 +197,24 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-
+  /**
+   * Xử lý từ chối task (Review → Todo):
+   * Gọi API updateStatus với trạng thái Todo (0) – trả task về chưa bắt đầu.
+   * Chỉ hiển thị nút này khi task đang ở trạng thái Review.
+   */
+  const handleRejectTask = async (task: CongViecDto) => {
+    try {
+      setRejectLoading(task.id);
+      await TaskService.updateStatus(task.id, TrangThaiCongViec.Todo);
+      // Refresh task list sau khi từ chối thành công
+      const taskList = await TaskService.getByProjectId(Number(selectedProjectId));
+      setTasks(taskList || []);
+    } catch (err: any) {
+      alert(err.message || 'Không thể từ chối task. Vui lòng thử lại.');
+    } finally {
+      setRejectLoading(null);
+    }
+  };
 
   const getSprintStatusLabel = (status: number, tienDo: number, hasActiveTasks: boolean) => {
     if (status === 2) return { text: 'Hoàn thành', class: 'bg-emerald-100 text-emerald-700' };
@@ -317,41 +391,58 @@ const DashboardPage: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* Nhóm 3 nút hành động theo ngữ cảnh */}
-                            <div className="k-task-actions">
-                              {/* Nút Giao lại – luôn hiển thị */}
-                              <button
-                                className="k-action-btn assign"
-                                title="Giao lại task cho người khác"
-                                onClick={() => setAssignModal(task)}
-                              >
-                                <UserCheck size={12} /> Giao lại
-                              </button>
-
-                              {/* Nút Duyệt – chỉ hiện khi task đang ở trạng thái Review */}
-                              {task.trangThai === TrangThaiCongViec.Review && (
+                            {/* Nhóm nút hành động theo ngữ cảnh:
+                                Task Hoàn thành (Done) sẽ không có nút nào – chỉ hiển thị cho các trạng thái khác */}
+                            {task.trangThai !== TrangThaiCongViec.Done && (
+                              <div className="k-task-actions">
+                                {/* Nút Giao lại – hiển thị khi task chưa hoàn thành */}
                                 <button
-                                  className="k-action-btn approve"
-                                  title="Duyệt – chuyển sang Hoàn thành"
-                                  onClick={() => handleApproveTask(task)}
-                                  disabled={approveLoading === task.id}
+                                  className="k-action-btn assign"
+                                  title="Giao lại task cho người khác"
+                                  onClick={() => setAssignModal(task)}
                                 >
-                                  <CheckCircle2 size={12} />
-                                  {approveLoading === task.id ? 'Đang...' : 'Duyệt'}
+                                  <UserCheck size={12} /> Giao lại
                                 </button>
-                              )}
 
-                              {/* Nút Chuyển Sprint – ẩn nếu chỉ có 1 sprint */}
-                              {sprints.length > 1 && (
-                                <button
-                                  className="k-action-btn move-sprint"
-                                  title="Chuyển task sang Sprint khác"
-                                  onClick={() => setMoveSprintModal(task)}
-                                >
-                                  <ArrowRightLeft size={12} /> Sprint
-                                </button>
-                              )}
-                            </div>
+                                {/* Nút Từ chối và Duyệt – chỉ hiện khi task đang ở trạng thái Review */}
+                                {task.trangThai === TrangThaiCongViec.Review && (
+                                  <>
+                                    {/* Nút Từ chối: trả task về Todo */}
+                                    <button
+                                      className="k-action-btn reject"
+                                      title="Từ chối – trả lại trạng thái Chưa bắt đầu"
+                                      onClick={() => handleRejectTask(task)}
+                                      disabled={rejectLoading === task.id}
+                                    >
+                                      <XCircle size={12} />
+                                      {rejectLoading === task.id ? 'Đang...' : 'Từ chối'}
+                                    </button>
+
+                                    {/* Nút Duyệt: chuyển sang Hoàn thành */}
+                                    <button
+                                      className="k-action-btn approve"
+                                      title="Duyệt – chuyển sang Hoàn thành"
+                                      onClick={() => handleApproveTask(task)}
+                                      disabled={approveLoading === task.id}
+                                    >
+                                      <CheckCircle2 size={12} />
+                                      {approveLoading === task.id ? 'Đang...' : 'Duyệt'}
+                                    </button>
+                                  </>
+                                )}
+
+                                {/* Nút Chuyển Module – ẩn nếu chỉ có 1 module */}
+                                {sprints.length > 1 && (
+                                  <button
+                                    className="k-action-btn move-sprint"
+                                    title="Chuyển task sang Module khác"
+                                    onClick={() => setMoveSprintModal(task)}
+                                  >
+                                    <ArrowRightLeft size={12} /> Module
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))
                       )}

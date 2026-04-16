@@ -165,6 +165,13 @@
   color: #1e293b;
 }
 
+.sprint-dates-header {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
 .sprint-status-tag {
   font-size: 0.7rem;
   font-weight: 700;
