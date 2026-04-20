@@ -151,10 +151,25 @@
   background: var(--slate-200);
 }
 
-.kanban-column { background: white; padding: 24px; min-height: 300px; }
+.kanban-column { background: white; padding: 24px; min-height: 300px; border-right: 1px solid var(--slate-100); }
+.kanban-column:last-child { border-right: none; }
+
 .k-col-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.k-col-header h4 { font-size: 0.85rem; font-weight: 800; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.1em; }
+.k-col-header h4 { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* Colors for each column status */
+.col-todo h4 { color: #64748b; }
+.col-inprog h4 { color: var(--primary); }
+.col-review h4 { color: var(--orange); }
+.col-done h4 { color: var(--emerald); }
+
 .k-count { background: var(--slate-100); color: var(--slate-600); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; }
+
+/* Dynamic count colors */
+.col-todo .k-count { background: #f1f5f9; color: #475569; }
+.col-inprog .k-count { background: #e0e7ff; color: #4338ca; }
+.col-review .k-count { background: #fffbe3; color: #92400e; }
+.col-done .k-count { background: #dcfce7; color: #15803d; }
 
 .k-task-card {
   background: white;
