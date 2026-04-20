@@ -47,7 +47,7 @@ const MyTasksPage: React.FC = () => {
     trangThai: 0
   });
 
-  
+
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -221,7 +221,7 @@ const MyTasksPage: React.FC = () => {
             (() => {
               // Nhóm các task theo Sprint
               const groups: { [key: string]: { name: string; status?: number; tasks: CongViecDto[]; startDate?: string; endDate?: string } } = {};
-              
+
               filteredTasks.forEach(task => {
                 const key = task.sprintId ? `sprint-${task.sprintId}` : 'backlog';
                 if (!groups[key]) {
@@ -240,7 +240,7 @@ const MyTasksPage: React.FC = () => {
               const sortedGroupKeys = Object.keys(groups).sort((a, b) => {
                 if (a === 'backlog') return 1;
                 if (b === 'backlog') return -1;
-                
+
                 const statusA = groups[a].status ?? -1;
                 const statusB = groups[b].status ?? -1;
 
@@ -248,7 +248,7 @@ const MyTasksPage: React.FC = () => {
                 const priority = { 1: 0, 0: 1, 2: 2 };
                 const pA = priority[statusA as keyof typeof priority] ?? 3;
                 const pB = priority[statusB as keyof typeof priority] ?? 3;
-                
+
                 return pA - pB;
               });
 
@@ -256,135 +256,161 @@ const MyTasksPage: React.FC = () => {
                 const group = groups[groupKey];
                 const sprintStatusInfo = groupKey === 'backlog' ? null : (
                   group.status === 1 ? { label: 'Đang diễn ra', class: 'active' } :
-                  group.status === 0 ? { label: 'Chưa bắt đầu', class: 'upcoming' } :
-                  { label: 'Đã kết thúc', class: 'ended' }
+                    group.status === 0 ? { label: 'Chưa bắt đầu', class: 'upcoming' } :
+                      { label: 'Đã kết thúc', class: 'ended' }
                 );
 
                 return (
                   <div key={groupKey} className="sprint-group">
                     <div className={`sprint-group-header ${groupKey}`}>
                       <div className="sprint-info">
-                        <Calendar size={16} />
-                        <span className="sprint-name">{group.name}</span>
+                        <div className="module-icon-box">
+                          <Flag size={20} />
+                        </div>
+                        <div className="module-title-box">
+                          <span className="module-label">MODULE / SPRINT</span>
+                          <span className="sprint-name">{group.name}</span>
+                        </div>
                         {group.startDate && group.endDate && (
-                          <span className="sprint-dates-header">
-                            ({new Date(group.startDate).toLocaleDateString('vi-VN')} - {new Date(group.endDate).toLocaleDateString('vi-VN')})
-                          </span>
+                          <div className="sprint-dates-header v2">
+                             {new Date(group.startDate).toLocaleDateString('vi-VN')} - {new Date(group.endDate).toLocaleDateString('vi-VN')}
+                          </div>
                         )}
                         {sprintStatusInfo && (
-                          <span className={`sprint-status-tag ${sprintStatusInfo.class}`}>
+                          <span className={`sprint-status-tag v2 ${sprintStatusInfo.class}`}>
                             {sprintStatusInfo.label}
                           </span>
                         )}
                       </div>
-                      <span className="task-count">{group.tasks.length} công việc</span>
+                      <div className="module-stats">
+                        <span className="task-count">{group.tasks.length} công việc</span>
+                      </div>
                     </div>
-                    
+
                     <div className="sprint-tasks-container">
-                      {group.tasks.map(task => {
-                        const priority = getPriorityColor(task.doUuTien);
-                        const status = getStatusInfo(task.trangThai);
-                        const isWorkable = isTaskWorkable(task);
-                        const isLocked = task.sprintId && !isWorkable;
+                      {[1, 0, 2, 3, 4].map(statusId => {
+                        const statusTasks = group.tasks.filter(t => t.trangThai === statusId);
+                        if (statusTasks.length === 0) return null;
+                        const statusInfo = getStatusInfo(statusId);
 
                         return (
-                          <div key={task.id} className={`task-row-item ${isLocked ? 'locked' : ''}`}>
-                            <div className="task-main-info">
-                              <div className="task-status-icon">
-                                {isLocked ? <Lock size={20} color="#94a3b8" /> : (task.trangThai === 3 ? <CheckCircle2 size={20} color="#10b981" /> : <Clock size={20} color="#64748b" />)}
+                          <div key={statusId} className="status-sub-group">
+                            <div className={`status-sub-header ${statusInfo.class}`}>
+                              <div className="status-label-box">
+                                <div className={`status-dot ${statusInfo.class}`}></div>
+                                <span>{statusInfo.label}</span>
                               </div>
-                              <div className="task-text">
-                                <div className="title-row">
-                                  <h4>{task.tieuDe}</h4>
-                                  {task.sprintId && task.sprintStatus === 0 && !isWorkable && <span className="locked-badge"><Lock size={12} /> Sprint chưa bắt đầu</span>}
-                                  {task.sprintId && task.sprintStatus === 2 && <span className="locked-badge"><Lock size={12} /> Sprint đã kết thúc</span>}
-                                </div>
-                                <div className="task-progress-box">
-                                  <div className="progress-bar-wrapper">
-                                    <div
-                                      className="progress-fill"
-                                      style={{
-                                        width: `${calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh)}%`,
-                                        backgroundColor: calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh) >= 100 ? '#10b981' : '#6366f1'
-                                      }}
-                                    ></div>
-                                  </div>
-                                  <span className="progress-text">{calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh)}%</span>
-                                </div>
-                                {task.dependencies && task.dependencies.length > 0 && (
-                                  <div className="task-row-dependencies">
-                                    <Link size={12} />
-                                    <div className="dep-list">
-                                      {task.dependencies.map(dep => (
-                                        <span key={dep.dependsOnTaskId} title={dep.dependsOnTaskTitle} className="dep-tag">
-                                          #{dep.dependsOnTaskId}
-                                        </span>
-                                      ))}
+                              <span className="status-count">{statusTasks.length} công việc</span>
+                            </div>
+                            <div className="status-tasks-list">
+                              {statusTasks.map(task => {
+                                const priority = getPriorityColor(task.doUuTien);
+                                const status = getStatusInfo(task.trangThai);
+                                const isWorkable = isTaskWorkable(task);
+                                const isLocked = task.sprintId && !isWorkable;
+
+                                return (
+                                  <div key={task.id} className={`task-row-item ${isLocked ? 'locked' : ''}`}>
+                                    <div className="task-main-info">
+                                      <div className="task-status-icon">
+                                        {isLocked ? <Lock size={20} color="#94a3b8" /> : (task.trangThai === 3 ? <CheckCircle2 size={20} color="#10b981" /> : <Clock size={20} color="#64748b" />)}
+                                      </div>
+                                      <div className="task-text">
+                                        <div className="title-row">
+                                          <h4>{task.tieuDe}</h4>
+                                          {task.sprintId && task.sprintStatus === 0 && !isWorkable && <span className="locked-badge"><Lock size={12} /> Sprint chưa bắt đầu</span>}
+                                          {task.sprintId && task.sprintStatus === 2 && <span className="locked-badge"><Lock size={12} /> Sprint đã kết thúc</span>}
+                                        </div>
+                                        <div className="task-progress-box">
+                                          <div className="progress-bar-wrapper">
+                                            <div
+                                              className="progress-fill"
+                                              style={{
+                                                width: `${calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh)}%`,
+                                                backgroundColor: calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh) >= 100 ? '#10b981' : '#6366f1'
+                                              }}
+                                            ></div>
+                                          </div>
+                                          <span className="progress-text">{calculateProgress(task.thoiGianThucTe, task.thoiGianUocTinh)}%</span>
+                                        </div>
+                                        {task.dependencies && task.dependencies.length > 0 && (
+                                          <div className="task-row-dependencies">
+                                            <Link size={12} />
+                                            <div className="dep-list">
+                                              {task.dependencies.map(dep => (
+                                                <span key={dep.dependsOnTaskId} title={dep.dependsOnTaskTitle} className="dep-tag">
+                                                  #{dep.dependsOnTaskId}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                        <div className="task-meta">
+                                          <span className="time-tracking">
+                                            <strong>{task.thoiGianThucTe || 0}h</strong> / {task.thoiGianUocTinh}h
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="task-tags">
+                                      <span className="priority-tag" style={{ backgroundColor: priority.bg, color: priority.color }}>
+                                        <Flag size={12} fill={priority.color} />
+                                        {priority.label}
+                                      </span>
+                                      <span className={`status-pill ${status.class}`}>{status.label}</span>
+                                    </div>
+
+                                    <div className="task-actions">
+                                      <div className="status-quick-actions">
+                                        {!isLocked && task.trangThai !== 1 && task.trangThai !== 3 && (
+                                          <button
+                                            className="action-btn start"
+                                            onClick={() => handleOpenProgressModal(task, 1)}
+                                            title="Bắt đầu làm"
+                                          >
+                                            Làm việc
+                                          </button>
+                                        )}
+                                        {!isLocked && task.trangThai === 1 && (
+                                          <button
+                                            className="action-btn log"
+                                            onClick={() => handleOpenProgressModal(task)}
+                                            title="Cập nhật tiến độ"
+                                          >
+                                            Cập nhật
+                                          </button>
+                                        )}
+                                        {task.trangThai === 2 && (
+                                          <span className="awaiting-review">Chờ phê duyệt</span>
+                                        )}
+                                        {!isLocked && task.trangThai === 2 && (
+                                          currentUser?.vaiTros?.some((r: string) => {
+                                            const nr = r.toLowerCase().replace(/\s+/g, '');
+                                            return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
+                                          }) || currentUser?.id === task.createdBy
+                                        ) && (
+                                          <button
+                                            className="action-btn done"
+                                            onClick={() => handleOpenProgressModal(task, 3)}
+                                            title="Hoàn thành"
+                                          >
+                                            Xong
+                                          </button>
+                                        )}
+
+                                        {task.sprintId && task.sprintStatus === 0 && !isWorkable && (
+                                          <span className="locked-info" title="Sprint này chưa được quản lý bắt đầu.">Đang đợi bắt đầu</span>
+                                        )}
+                                        {task.sprintId && task.sprintStatus === 2 && (
+                                          <span className="locked-info" title="Sprint đã kết thúc, bạn không thể cập nhật thêm.">Đã đóng</span>
+                                        )}
+                                      </div>
+                                      <button className="icon-btn-ghost"><MoreVertical size={18} /></button>
                                     </div>
                                   </div>
-                                )}
-                                <div className="task-meta">
-                                  <span className="time-tracking">
-                                    <strong>{task.thoiGianThucTe || 0}h</strong> / {task.thoiGianUocTinh}h
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="task-tags">
-                              <span className="priority-tag" style={{ backgroundColor: priority.bg, color: priority.color }}>
-                                <Flag size={12} fill={priority.color} />
-                                {priority.label}
-                              </span>
-                              <span className={`status-pill ${status.class}`}>{status.label}</span>
-                            </div>
-
-                            <div className="task-actions">
-                              <div className="status-quick-actions">
-                                {!isLocked && task.trangThai !== 1 && task.trangThai !== 3 && (
-                                  <button
-                                    className="action-btn start"
-                                    onClick={() => handleOpenProgressModal(task, 1)}
-                                    title="Bắt đầu làm"
-                                  >
-                                    Làm việc
-                                  </button>
-                                )}
-                                {!isLocked && task.trangThai === 1 && (
-                                  <button
-                                    className="action-btn log"
-                                    onClick={() => handleOpenProgressModal(task)}
-                                    title="Cập nhật tiến độ"
-                                  >
-                                    Cập nhật
-                                  </button>
-                                )}
-                                {task.trangThai === 2 && (
-                                  <span className="awaiting-review">Chờ phê duyệt</span>
-                                )}
-                                {!isLocked && task.trangThai === 2 && (
-                                  currentUser?.vaiTros?.some((r: string) => {
-                                    const nr = r.toLowerCase().replace(/\s+/g, '');
-                                    return nr === 'quanly' || nr === 'admin' || nr === 'quảnlý';
-                                  }) || currentUser?.id === task.createdBy
-                                ) && (
-                                  <button
-                                    className="action-btn done"
-                                    onClick={() => handleOpenProgressModal(task, 3)}
-                                    title="Hoàn thành"
-                                  >
-                                    Xong
-                                  </button>
-                                )}
-
-                                {task.sprintId && task.sprintStatus === 0 && !isWorkable && (
-                                  <span className="locked-info" title="Sprint này chưa được quản lý bắt đầu.">Đang đợi bắt đầu</span>
-                                )}
-                                {task.sprintId && task.sprintStatus === 2 && (
-                                  <span className="locked-info" title="Sprint đã kết thúc, bạn không thể cập nhật thêm.">Đã đóng</span>
-                                )}
-                              </div>
-                              <button className="icon-btn-ghost"><MoreVertical size={18} /></button>
+                                );
+                              })}
                             </div>
                           </div>
                         );
